@@ -1,0 +1,18 @@
+0 -> PDF Geral Carta de vinhos -> http://147.93.10.167:8012/lidio_BeatrizJC/uploads/Carta_De_Vinhos_2025.pdf
+1 -> Guia Harmonização (Brinde) -> http://147.93.10.167:8012/lidio_BeatrizJC/uploads/Brinde_Oficial.pdf
+2 -> Fotos do espaço para o fluxo 3 -> http://147.93.10.167:8012/lidio_BeatrizJC/uploads/Ambiente1.jpg http://147.93.10.167:8012/lidio_BeatrizJC/uploads/Ambiente2.jpg http://147.93.10.167:8012/lidio_BeatrizJC/uploads/Ambiente3.jpg
+3 -> Video sobre o boulevard encantado -> http://147.93.10.167:8012/lidio_BeatrizJC/uploads/Video_Boulevard.mp4
+
+
+cadastrar_interesse1 -> Compra produto pelo link
+cadastrar_interesse2 -> Compra produto com a Barbara
+cadastrar_interesse3 -> Experiência
+cadastrar_interesse4 -> Locação de espaço
+cadastrar_interesse5 -> Dúvidas
+
+Idéia, documento de contexto técnico sobre cada vinho, para informações mais detalhadas.
+
+
+TODO: CRUDS de edição de midias serem possiveis, necessita front com botão de UPLOAD e GET de produtos.
+
+- Evitar que Ingrid mande mais de uma mensagem sem necessiade, exemplo se o cliente ja disser o que ele deseja ela não deve perguntar o que ele quer.

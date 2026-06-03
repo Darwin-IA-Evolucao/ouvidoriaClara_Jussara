@@ -1,0 +1,2121 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://147.93.10.167:3042/insere",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "telefoneCliente",
+              "value": "={{ $('dados-cliente').item.json.telefone }}"
+            },
+            {
+              "name": "instanciaCliente",
+              "value": "={{ $('principal').item.json.body.instance }}"
+            }
+          ]
+        },
+        "options": {
+          "redirect": {
+            "redirect": {}
+          },
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "debf7b6a-1243-42eb-a8e7-1ebde8a1eb08",
+      "name": "insere-antilooping",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        432,
+        496
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=http://147.93.10.167:3042/busca/{{ $('dados-cliente').item.json.telefone }}/{{ $('principal').item.json.body.instance }}",
+        "options": {}
+      },
+      "id": "a6ceb1ed-5cda-4bcf-be4d-b3ee91f17fea",
+      "name": "verifica-status-antilooping",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        672,
+        496
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n  const key = item.json?.body?.data?.key ?? {};\n\n  const jid = key.remoteJid ?? '';\n  const jidAlt = key.remoteJidAlt ?? '';\n\n  const telefone = jid.includes('@s.whatsapp.net') ? jid : jidAlt;\n\n  return {\n    json: {\n      telefone\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -96,
+        496
+      ],
+      "id": "e908fe6f-8214-4411-9cf7-6cf43338295a",
+      "name": "inverte-lid"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3f9d2cea-a5b5-40de-ae06-2d8bf9ecf6a2",
+              "name": "telefone",
+              "value": "={{ $('inverte-lid').item.json.telefone.split(/[:@]/)[0] }}",
+              "type": "string"
+            },
+            {
+              "id": "ff662111-f890-4a4d-a06b-362007f6b176",
+              "name": "nome",
+              "value": "={{ $('principal').item.json.body.data.pushName}}",
+              "type": "string"
+            },
+            {
+              "id": "21fa48b3-b90e-49b4-b981-759dbd598780",
+              "name": "porta",
+              "value": "3072",
+              "type": "string"
+            },
+            {
+              "id": "39153f8e-9641-4cc9-b01f-22594a0bff0d",
+              "name": "link-porta-evo",
+              "value": "http://31.97.85.59:8085",
+              "type": "string"
+            },
+            {
+              "id": "63fadd53-f037-4e56-8e28-0e4c2cdbff53",
+              "name": "link-dify",
+              "value": "http://46.224.52.82/v1/chat-messages",
+              "type": "string"
+            },
+            {
+              "id": "899d4cdd-cdee-4dac-81eb-23eafd1c1c56",
+              "name": "bearer-dify",
+              "value": "Bearer app-vzCTnpB6SM2kUoApo14pngou",
+              "type": "string"
+            },
+            {
+              "id": "729e84bf-fc63-4eaf-8af4-6dd4294176ab",
+              "name": "instance",
+              "value": "={{ $('principal').item.json.body.instance }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5b73deae-973c-4afb-8206-9b335feaa72f",
+      "name": "dados-cliente",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        160,
+        496
+      ]
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1152,
+        448
+      ],
+      "id": "dc66f107-f835-4aff-905d-13d33d139e56",
+      "name": "No Operation, do nothing2"
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2768,
+        560
+      ],
+      "id": "83d441e6-1f9c-484a-b904-1b537685c7c2",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "binaryPropertyName": "=data",
+        "options": {}
+      },
+      "id": "220f7fef-8260-4ea4-8ca8-4697076852e5",
+      "name": "Transcribe a recording",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.5,
+      "position": [
+        2176,
+        576
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "dP2HvIZaYul9fHHn",
+          "name": "Conta Darwin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $('principal').item.json.body.data.message.audioMessage.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('principal').item.json.body.apikey }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "44726bac-0644-47fb-917c-8bd64063a7e2",
+      "name": "audio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1648,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $('principal').item.json.body.data.message.imageMessage.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('principal').item.json.body.apikey }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "1a964cd8-24e9-4a4b-99fd-ff89eabe8115",
+      "name": "imagem",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1648,
+        752
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "text": "={{ $('principal').item.json.body.data.message.imageMessage.caption || ''}} ",
+        "inputType": "base64",
+        "options": {}
+      },
+      "id": "3733e7fc-50ed-4c0f-aed6-e98a79899fbe",
+      "name": "Analyze image",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.5,
+      "position": [
+        2176,
+        752
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "dP2HvIZaYul9fHHn",
+          "name": "Conta Darwin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://147.93.10.167:{{$('dados-cliente').item.json[\"porta\"]}}/addMessage",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "telefone",
+              "value": "={{ $('dados-cliente').item.json.telefone}}"
+            },
+            {
+              "name": "nome",
+              "value": "={{ $('dados-cliente').item.json.nome}}"
+            },
+            {
+              "name": "instance",
+              "value": "={{ $('dados-cliente').item.json.instance}}"
+            },
+            {
+              "name": "conteudo",
+              "value": "={{ $('principal').item.json.body.data.contextInfo.quotedMessage.conversation || ''}} {{ $json.content }} {{ $('principal').item.json.body.data.message.conversation }}{{ $json.text }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2944,
+        576
+      ],
+      "id": "4a48d667-c9ca-4770-8b54-1735f33f36cd",
+      "name": "Add Mensagem"
+    },
+    {
+      "parameters": {
+        "content": "## API Não-Oficial",
+        "height": 416,
+        "width": 816,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1552,
+        960
+      ],
+      "typeVersion": 1,
+      "id": "4282b3a0-55ed-4686-baba-be59794c392a",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## API Oficial",
+        "height": 416,
+        "width": 800,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1552,
+        496
+      ],
+      "typeVersion": 1,
+      "id": "57cf6507-b006-4d7b-b7af-adb066b8d04c",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('principal').item.json.body.data.key.fromMe }}",
+                    "rightValue": "=true",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "18789d22-6505-4237-b289-3a11e70f0b6f"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "11afe730-b649-463f-9b01-8e3bdc7bd07b",
+                    "leftValue": "={{ $('principal').item.json.body.data.messageType }}",
+                    "rightValue": "=reactionMessage",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "fabf6736-499c-4677-afca-595fa4eb7890",
+                    "leftValue": "={{ $('principal').item.json.body.data.messageType }}",
+                    "rightValue": "=documentMessage",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "f33adc59-019d-4900-aa48-a3fc63611817",
+                    "leftValue": "={{ $('verifica-status-antilooping').item.json.bloqueado }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "3023734a-03fa-4bf4-814b-05112a52e652",
+                    "leftValue": "={{ $('principal').item.json.body.data.message.stickerMessage }}",
+                    "rightValue": "=",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "8405bc22-d9a3-4818-b799-3e78903c5b66",
+                    "leftValue": "={{ $('principal').item.json.body.data.messageType }}",
+                    "rightValue": "conversation",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "848e33b7-214a-46ca-a4a6-7978f7dcf4f8",
+                    "leftValue": "={{ $('principal').item.json.body.data.messageType }}",
+                    "rightValue": "audioMessage",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "1db031f1-91c1-4c36-ab3e-6965ceb2272c",
+                    "leftValue": "={{ $('principal').item.json.body.data.messageType }}",
+                    "rightValue": "imageMessage",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        976,
+        400
+      ],
+      "id": "ad84055a-13d2-41aa-b3c1-a0ffbe4d7aa4",
+      "name": "Switch2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://31.97.85.59:7245/decrypt",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "url",
+              "value": "={{ $('principal').item.json.body.data.message.audioMessage.url }}"
+            },
+            {
+              "name": "mediaType",
+              "value": "=Audio"
+            },
+            {
+              "name": "mediaKey",
+              "value": "={{ $('principal').item.json.body.data.message.audioMessage.mediaKey }}"
+            }
+          ]
+        },
+        "options": {
+          "redirect": {
+            "redirect": {}
+          },
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "90ed3c8b-dcf7-43cd-9d17-04329607c316",
+      "name": "Convertendo6",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1648,
+        1040
+      ],
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "base64",
+        "options": {
+          "mimeType": "audio/mpeg"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        2000,
+        1040
+      ],
+      "id": "cab1ffbf-70d4-4268-a930-930b4694292b",
+      "name": "Convert to File6"
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "base64",
+        "options": {
+          "mimeType": "image/jpeg"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        2000,
+        1200
+      ],
+      "id": "35976821-0d3a-4a3e-b5f7-8710e4dcdad8",
+      "name": "Convert to File7"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0e37f9af-7ad3-4161-8dfc-3e68396dcac7",
+              "name": "base64",
+              "value": "={{ JSON.parse($json.data).base64 }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1824,
+        1200
+      ],
+      "id": "4f000de5-cfac-431d-b45c-419bb7500ceb",
+      "name": "Edit Fields8"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://31.97.85.59:7245/decrypt",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "url",
+              "value": "={{ $('principal').item.json.body.data.message.imageMessage.url }}"
+            },
+            {
+              "name": "mediaType",
+              "value": "=Image"
+            },
+            {
+              "name": "mediaKey",
+              "value": "={{ $('principal').item.json.body.data.message.imageMessage.mediaKey }}"
+            }
+          ]
+        },
+        "options": {
+          "redirect": {
+            "redirect": {}
+          },
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "171dd5f0-df1b-4cb8-8f10-08d534a76b07",
+      "name": "Convertendo7",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1648,
+        1200
+      ],
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0e37f9af-7ad3-4161-8dfc-3e68396dcac7",
+              "name": "base64",
+              "value": "={{ JSON.parse($json.data).base64 }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1824,
+        1040
+      ],
+      "id": "aa3bbfcc-de57-4630-a0af-14eae22e56d3",
+      "name": "Edit Fields9"
+    },
+    {
+      "parameters": {
+        "url": "=http://147.93.10.167:{{$('Pegar Dados').item.json[\"porta\"]}}/getMessages/{{ $json['telefone'] }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -16,
+        1680
+      ],
+      "id": "b00b87dc-b476-42ca-aeca-5f3fa89185cd",
+      "name": "GetMensagens"
+    },
+    {
+      "parameters": {
+        "url": "=http://147.93.10.167:{{$('Pegar Dados').item.json[\"porta\"]}}/conversation/{{ $('Pegar Dados').item.json['telefone'] }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        192,
+        1680
+      ],
+      "id": "94f618e3-7e24-40b1-ad49-e29bd8424a73",
+      "name": "Get Conversation ID"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8e5e986a-c907-4e92-b97f-9225967c4e6f",
+              "leftValue": "={{ $('Get Conversation ID').item.json.exists }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        576,
+        1680
+      ],
+      "id": "636111c7-fa10-4786-940b-edd69ef18c12",
+      "name": "Conversation ID existe"
+    },
+    {
+      "parameters": {
+        "url": "=http://147.93.10.167:{{$('Pegar Dados').item.json[\"porta\"]}}/busca/cliente/{{ $('Pegar Dados').item.json.telefone }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        384,
+        1680
+      ],
+      "id": "fc581ac6-6066-4c00-acf6-6f89152d2755",
+      "name": "Verificar Cliente Existe"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2ce40495-baff-42f0-b102-54210e2b4000",
+              "leftValue": "={{ $('Verificar Cliente Existe').item.json.ativo }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        784,
+        1696
+      ],
+      "id": "4e6f91f9-1ad0-4a9f-a3b4-4e9ffed5da9d",
+      "name": "Cliente Existe"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f2ee10c0-28d4-4ebf-9a6b-8ec9b86e8926",
+              "leftValue": "={{ $('Get Conversation ID').item.json.exists }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2592,
+        1712
+      ],
+      "id": "d068787a-0162-4704-913b-696fe87269ac",
+      "name": "Verificar Conversation ID"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=http://147.93.10.167:{{$('Pegar Dados').item.json[\"porta\"]}}/setConversation",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "telefone",
+              "value": "={{ $('Pegar Dados').item.json.telefone }}"
+            },
+            {
+              "name": "conversationId",
+              "value": "={{ $json.conversation_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2800,
+        1808
+      ],
+      "id": "463dff14-63d3-4ee3-9b10-a64f84557e2f",
+      "name": "Setar Conversation ID"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "return.messages",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        3440,
+        1696
+      ],
+      "id": "dea4a04b-f664-4e9c-8656-b76f9f3c0ac5",
+      "name": "Split Out1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Pegar Dados').item.json[\"link-porta-evo\"]}}/message/sendText/{{ $('Pegar Dados').item.json.instance }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "429683C4C977415CAAFCCE10F7D57E11"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"number\": \"{{ $('Pegar Dados').item.json.telefone }}\",\n  \"text\": \"{{ $json['return.messages'] }}\",\n  \"delay\": 123,\n  \"linkPreview\": true,\n  \"mentionsEveryOne\": true\n}",
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "id": "45102b12-3d7f-4e8b-8b7a-426159c85a61",
+      "name": "EVOLUTION2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4080,
+        1744
+      ],
+      "retryOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Pegar Dados').item.json[\"link-dify\"]}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $('Pegar Dados').item.json[\"bearer-dify\"]}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "message",
+              "value": "=Olá, falo do número do telefone {{ $('Buscar Cliente').item.json.resultado.telefone }}, meu nome é {{ $('Buscar Cliente').item.json.resultado.nome }} eu já estou cadastrado então não precisa me cadastrar novamente e nem perguntar meus dados novamente, haja como se ja me conhecesse. Minha mensagem é \"{{ $('GetMensagens').item.json.mensagem }}\" "
+            },
+            {
+              "name": "user",
+              "value": "={{ $('Pegar Dados').item.json.telefonePadronizado }}"
+            },
+            {
+              "name": "inputs",
+              "value": "={{ $json.inputs ?? {} }}"
+            },
+            {
+              "name": "query",
+              "value": "=Olá, falo do número do telefone {{ $('Buscar Cliente').item.json.resultado.telefone }}, meu nome é {{ $('Buscar Cliente').item.json.resultado.nome }} eu já estou cadastrado então não precisa me cadastrar novamente e nem perguntar meus dados novamente, haja como se ja me conhecesse. Minha mensagem é \"{{ $('GetMensagens').item.json.mensagem }}\" "
+            },
+            {
+              "name": "instance",
+              "value": "={{ $('Pegar Dados').item.json.instance }}"
+            },
+            {
+              "name": "response_mode",
+              "value": "streaming"
+            },
+            {
+              "name": "conversation_id"
+            },
+            {
+              "name": "phone",
+              "value": "={{ $('Pegar Dados').item.json.telefonePadronizado }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1216,
+        1680
+      ],
+      "id": "624ea7e3-8b57-4480-b475-accb246d0a44",
+      "name": "Dify c/cliente s/conversationID"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Pegar Dados').item.json[\"link-dify\"]}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $('Pegar Dados').item.json[\"bearer-dify\"]}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "message",
+              "value": "=Olá, falo do número do telefone {{ $('Pegar Dados').item.json.telefone }}, Minha mensagem é {{ $('GetMensagens').item.json.mensagem }}"
+            },
+            {
+              "name": "user",
+              "value": "={{ $('Pegar Dados').item.json.telefonePadronizado }}"
+            },
+            {
+              "name": "inputs",
+              "value": "={{ $json.inputs ?? {} }}"
+            },
+            {
+              "name": "query",
+              "value": "=Olá, falo do número do telefone {{ $('Pegar Dados').item.json.telefone }},  Minha mensagem é {{ $('GetMensagens').item.json.mensagem }}"
+            },
+            {
+              "name": "message_Id",
+              "value": "={{ $('Pegar Dados').item.json.telefonePadronizado }}"
+            },
+            {
+              "name": "instance",
+              "value": "={{ $('Pegar Dados').item.json.instance }}"
+            },
+            {
+              "name": "response_mode",
+              "value": "streaming"
+            },
+            {
+              "name": "conversation_id"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1216,
+        1856
+      ],
+      "id": "3d7e5d7f-9e71-4ef5-bec1-a3538d915e6e",
+      "name": "Dify s/cliente s/conversationID"
+    },
+    {
+      "parameters": {
+        "url": "=http://147.93.10.167:{{$('Pegar Dados').item.json[\"porta\"]}}/busca/dados/{{ $('Pegar Dados').item.json.telefone }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        992,
+        1680
+      ],
+      "id": "fb1d2da7-cefa-4b17-9fbc-6ab3188d9838",
+      "name": "Buscar Cliente"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "741ffe88-24b8-4d87-b584-a319c2ff9b20",
+              "name": "porta",
+              "value": "3072",
+              "type": "string"
+            },
+            {
+              "id": "2595aa25-f168-42e0-91a8-d526c4f9ae07",
+              "name": "link-porta-evo",
+              "value": "http://31.97.85.59:8085",
+              "type": "string"
+            },
+            {
+              "id": "4fac42a5-e4fe-4f0b-984b-a067153e2c3b",
+              "name": "link-dify",
+              "value": "http://46.224.52.82/v1/chat-messages",
+              "type": "string"
+            },
+            {
+              "id": "330b2739-d56f-4e1e-8d09-35f4f6b62b64",
+              "name": "bearer-dify",
+              "value": "Bearer app-vzCTnpB6SM2kUoApo14pngou",
+              "type": "string"
+            },
+            {
+              "id": "e64507c6-8f1b-4d77-9fbe-5662467d9599",
+              "name": "telefone",
+              "value": "={{$('responder').item.json.body.telefone}}",
+              "type": "string"
+            },
+            {
+              "id": "351df852-979e-4c35-b62b-dcdf03bc1f0d",
+              "name": "instance",
+              "value": "={{$('responder').item.json.body.instance}}",
+              "type": "string"
+            },
+            {
+              "id": "0ab03e6d-f81a-4296-963a-25b799bd1dad",
+              "name": "telefonePadronizado",
+              "value": "={{ $('responder').item.json.body.telefonePadronizado }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -224,
+        1680
+      ],
+      "id": "da2f884a-d790-4fd8-92c5-302b17852787",
+      "name": "Pegar Dados"
+    },
+    {
+      "parameters": {
+        "jsCode": "/* ===== CONFIG ===== */\nconst GROUP_SIZE = 2;   // nº de frases por bloco no plain-text\n\n/* ---------- util 1: normalizar texto (merge de vários {\"messages\":...}) --- */\nfunction normalizeMessages(raw, groupSize = GROUP_SIZE) {\n  if (!raw || typeof raw !== 'string') return [];\n\n  /* 0) ■ VERIFICA SE EXISTEM VÁRIOS BLOCOS {\"messages\":...} ---------------- */\n  const jsonBlocks = raw.match(/({\\s*\"messages\"\\s*:\\s*\\[[\\s\\S]*?\\]\\s*})/g);  // g = todos\n  if (jsonBlocks && jsonBlocks.length) {\n    let merged = [];\n    for (const block of jsonBlocks) {\n      try {\n        const parsed = JSON.parse(block);\n        if (parsed.messages && Array.isArray(parsed.messages))\n          merged = merged.concat(parsed.messages);\n      } catch (_) { /* ignora bloco mal-formado */ }\n    }\n    if (merged.length) return merged;\n    // se achou blocos mas não conseguiu parsear, continua ↓\n  }\n\n  /* 1) ■ UM ÚNICO JSON {\"messages\":[...]} --------------------------------- */\n  try {\n    const parsed = JSON.parse(raw);\n    if (parsed && typeof parsed === 'object' && parsed.messages) {\n      return parsed.messages;\n    }\n    return [raw.trim()];\n  } catch (_) { /* não era JSON único */ }\n\n  /* 2) ■ Enumeração 1. 2. 3. ---------------------------------------------- */\n  const bullets = raw.trim().split(/\\s*\\d+\\.\\s+/).filter(Boolean);\n  if (bullets.length > 1) return bullets;\n\n  /* 3) ■ Plain-text → divide em frases e agrupa --------------------------- */\n  const sentences = raw\n    .trim()\n    .split(/(?<=[.!?])\\s+/)           // após . ! ?\n    .map(s => s.trim())\n    .filter(Boolean);\n\n  const grouped = [];\n  for (let i = 0; i < sentences.length; i += groupSize) {\n    grouped.push(sentences.slice(i, i + groupSize).join(' '));\n  }\n  return grouped.length ? grouped : [raw.trim()];\n}\n\n\n/* ---------- util 2: evita itens vazios ---------- */\nconst fillEmpty = (arr, fallback) =>\n  arr.map(v => (v && v.trim()) ? v : fallback);\n\n/* ---------- coleta streaming ---------- */\nconst data         = $input.all();\nconst payloadLines = data[0]?.json?.data?.split('\\n') || [];\n\nlet conversationID  = '';\nlet finalMessageRaw = '';          // vai acumular!\nlet agentThoughts   = [];\n\nfor (const line of payloadLines) {\n  const clean = line.replace(/^data:\\s*/, '').trim();\n  if (!clean || clean === '[DONE]') continue;\n\n  try {\n    const evt = JSON.parse(clean);\n\n    if (evt.event === 'agent_thought') {\n      if (evt.thought) agentThoughts.push(evt.thought);\n      conversationID = evt.conversation_id || conversationID;\n\n    } else if (evt.event === 'agent_message') {\n      // --- CONCATE N A  ---\n      if (typeof evt.answer === 'string') {\n        finalMessageRaw += evt.answer;\n      }\n    }\n\n  } catch {\n    console.log('Linha SSE não-JSON ignorada:', clean);\n  }\n}\n\n/* ---------- blindagem ---------- */\nconst lastThought   = agentThoughts.slice(-1)[0] || 'Sem pensamento disponível';\nconst safeThoughts  = fillEmpty(agentThoughts, lastThought);\n\nconst normalized    = normalizeMessages(finalMessageRaw || lastThought);\nconst finalMessage  = JSON.stringify({ messages: normalized });\n\n/* ---------- saída ---------- */\nreturn [\n  {\n    json: {\n      event:           'final_output',\n      conversation_id: conversationID,\n      agent_thoughts:  safeThoughts,\n      final_message:   finalMessage      // string JSON segura\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2432,
+        1712
+      ],
+      "id": "1a844061-615d-495f-bd6f-1a364f13ee1e",
+      "name": "Code7"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f770800a-462e-4ae0-9c08-5432f8fd7ba7",
+              "name": "key",
+              "value": "={{ $json.return.keys()[0] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3216,
+        1696
+      ],
+      "id": "92db22e2-1efe-436b-9764-1d6332f709ce",
+      "name": "Edit Fields10"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ae9e650e-6c2d-42a1-ab44-5f4c003a0b99",
+              "name": "return",
+              "value": "={{ $('Code7').item.json.final_message }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2992,
+        1696
+      ],
+      "id": "3c9d3206-e6b3-4a94-b29b-4cdc4322a749",
+      "name": "Edit Fields11"
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "=http://147.93.10.167:{{$('Pegar Dados').item.json[\"porta\"]}}/clearMessages/{{ $('Pegar Dados').item.json.telefone }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "a154ed61-d1c7-4bb8-a937-69c0c3044505",
+      "name": "Deleta mensagens12",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3968,
+        1600
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "992af7fd-1e23-4ccc-a8c0-a490adaa70a8",
+      "name": "Loop Over Items18",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        3648,
+        1696
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 3
+      },
+      "id": "9c12a41e-ad65-4348-a405-d41bd0173035",
+      "name": "Wait24",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        3856,
+        1744
+      ],
+      "webhookId": "fb4d4504-9f37-4266-ad77-014e8099172f"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "f43e886a-a547-4f83-8038-87645a62a841sdrUnique",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -352,
+        496
+      ],
+      "id": "01f398d7-9d60-4e89-a1c2-5e7a168771ef",
+      "name": "principal",
+      "webhookId": "f43e886a-a547-4f83-8038-87645a62a841"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "c76e44d9-48ec-449e-9633-2934dc79954crespondersdrUnique",
+        "options": {}
+      },
+      "name": "responder",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        1680
+      ],
+      "webhookId": "c76e44d9-48ec-449e-9633-2934dc79954c",
+      "id": "768f323f-7837-4597-a839-8f7425239f87"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "808f0e3b-8449-4d7b-8e33-bed687e3a64csdrUnique",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -336,
+        160
+      ],
+      "id": "9892caa5-ca22-4625-b071-f0d1556803cc",
+      "name": "Webhook3",
+      "webhookId": "808f0e3b-8449-4d7b-8e33-bed687e3a64c"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "275ee036-d02e-4661-a393-0c52a051a5d7sdrUnique",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -336,
+        -32
+      ],
+      "id": "2d1cff67-8296-464c-ab2f-ed79b869108a",
+      "name": "Webhook5",
+      "webhookId": "275ee036-d02e-4661-a393-0c52a051a5d7"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://31.97.85.59:8085/message/sendText/sdrUnique",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "429683C4C977415CAAFCCE10F7D57E11"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "={{ $json.body.mensagem }}"
+            },
+            {
+              "name": "number",
+              "value": "=5515998223027"
+            }
+          ]
+        },
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "id": "d552bfe0-ef50-4648-afee-255226afda65",
+      "name": "Enviar Mensagem Para o Vendedor1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        96,
+        -32
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://31.97.85.59:8085/message/sendMedia/sdrUnique",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "429683C4C977415CAAFCCE10F7D57E11"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $('Webhook3').item.json.body.number }}"
+            },
+            {
+              "name": "mediatype",
+              "value": "={{ $('Webhook3').item.json.body.mediatype }}"
+            },
+            {
+              "name": "media",
+              "value": "={{ $('Webhook3').item.json.body.media }}"
+            },
+            {
+              "name": "delay",
+              "value": 123
+            },
+            {
+              "name": "mimetype",
+              "value": "={{ $('Webhook3').item.json.body.mimetype }}"
+            },
+            {
+              "name": "fileName",
+              "value": "={{ $('Webhook3').item.json.body.filename }}"
+            },
+            {
+              "name": "caption",
+              "value": "={{ $('Webhook3').item.json.body.caption }}"
+            }
+          ]
+        },
+        "options": {
+          "redirect": {
+            "redirect": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        96,
+        160
+      ],
+      "id": "969697f8-5c36-46b8-8431-9b8b2e843243",
+      "name": "Envia Midia1",
+      "retryOnFail": true,
+      "maxTries": 5
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {}
+      },
+      "id": "ae91513b-f8c3-498c-a23e-565fe3f4bfc9",
+      "name": "OpenAI",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.5,
+      "position": [
+        2176,
+        1040
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "dP2HvIZaYul9fHHn",
+          "name": "Conta Darwin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "text": "={{ $('principal').item.json.body.data.message.imageMessage.caption || ''}}",
+        "inputType": "base64",
+        "options": {}
+      },
+      "id": "d75b819e-a817-49b6-9c79-97d18439ad77",
+      "name": "Analyze image1",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.5,
+      "position": [
+        2176,
+        1200
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "dP2HvIZaYul9fHHn",
+          "name": "Conta Darwin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Pegar Dados').item.json[\"link-dify\"]}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $('Pegar Dados').item.json[\"bearer-dify\"]}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "message",
+              "value": "={{ $('GetMensagens').item.json.mensagem }}"
+            },
+            {
+              "name": "user",
+              "value": "={{ $('Pegar Dados').item.json.telefonePadronizado }}"
+            },
+            {
+              "name": "inputs",
+              "value": "={{ $json.inputs ?? {} }}"
+            },
+            {
+              "name": "query",
+              "value": "={{ $('GetMensagens').item.json.mensagem }}"
+            },
+            {
+              "name": "message_Id",
+              "value": "={{ $('Pegar Dados').item.json.telefonePadronizado }}"
+            },
+            {
+              "name": "instance",
+              "value": "={{ $('Pegar Dados').item.json.instance }}"
+            },
+            {
+              "name": "response_mode",
+              "value": "streaming"
+            },
+            {
+              "name": "conversation_id",
+              "value": "={{ $('Get Conversation ID').item.json.conversationId }}"
+            },
+            {
+              "name": "phone",
+              "value": "={{ $('Pegar Dados').item.json.telefonePadronizado }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1216,
+        1520
+      ],
+      "id": "44a21379-1140-491b-93f5-0a8ff54b1c75",
+      "name": "Dify c/ conversationID"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b55e5ff6-a097-4c78-ae4a-3a9137a74348",
+              "leftValue": "={{ $json[\"data\"] }}",
+              "rightValue": "completion_request_error",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1472,
+        1680
+      ],
+      "id": "559d15ce-08d4-4c4d-b2b1-340e35a5b94e",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Pegar Dados').item.json[\"link-porta-evo\"]}}/message/sendText/{{ $('Pegar Dados').item.json.instance }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "429683C4C977415CAAFCCE10F7D57E11"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"number\": \"{{ $('Pegar Dados').item.json.telefone }}\",\n  \"text\": Peço desculpas mas devido a uma pequena instabilidade na inteligência artificial que utilizo, não consegui processar sua mensagem, poderia tentar novamente em alguns minutinhos 😓\",\n  \"delay\": 123,\n  \"linkPreview\": true,\n  \"mentionsEveryOne\": true\n}",
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "id": "99d142fb-41e4-4c7b-a4d2-0fc7e7faed49",
+      "name": "EVOLUTION",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2432,
+        1552
+      ],
+      "retryOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "=http://147.93.10.167:{{$('Pegar Dados').item.json[\"porta\"]}}/clearMessages/{{ $('Pegar Dados').item.json.telefone }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "99aef714-30da-49f6-a6a7-aac6c6b88dea",
+      "name": "Deleta mensagens",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2656,
+        1552
+      ],
+      "executeOnce": true
+    }
+  ],
+  "connections": {
+    "insere-antilooping": {
+      "main": [
+        [
+          {
+            "node": "verifica-status-antilooping",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "verifica-status-antilooping": {
+      "main": [
+        [
+          {
+            "node": "Switch2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "inverte-lid": {
+      "main": [
+        [
+          {
+            "node": "dados-cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "dados-cliente": {
+      "main": [
+        [
+          {
+            "node": "insere-antilooping",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Add Mensagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "audio": {
+      "main": [
+        [
+          {
+            "node": "Transcribe a recording",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "imagem": {
+      "main": [
+        [
+          {
+            "node": "Analyze image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch2": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Convertendo6",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Convertendo7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convertendo6": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File6": {
+      "main": [
+        [
+          {
+            "node": "OpenAI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File7": {
+      "main": [
+        [
+          {
+            "node": "Analyze image1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields8": {
+      "main": [
+        [
+          {
+            "node": "Convert to File7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convertendo7": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields9": {
+      "main": [
+        [
+          {
+            "node": "Convert to File6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GetMensagens": {
+      "main": [
+        [
+          {
+            "node": "Get Conversation ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Conversation ID": {
+      "main": [
+        [
+          {
+            "node": "Verificar Cliente Existe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conversation ID existe": {
+      "main": [
+        [
+          {
+            "node": "Dify c/ conversationID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Cliente Existe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar Cliente Existe": {
+      "main": [
+        [
+          {
+            "node": "Conversation ID existe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cliente Existe": {
+      "main": [
+        [
+          {
+            "node": "Buscar Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Dify s/cliente s/conversationID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar Conversation ID": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields11",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Setar Conversation ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Setar Conversation ID": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields11",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items18",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EVOLUTION2": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items18",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dify c/cliente s/conversationID": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dify s/cliente s/conversationID": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Cliente": {
+      "main": [
+        [
+          {
+            "node": "Dify c/cliente s/conversationID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pegar Dados": {
+      "main": [
+        [
+          {
+            "node": "GetMensagens",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code7": {
+      "main": [
+        [
+          {
+            "node": "Verificar Conversation ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields10": {
+      "main": [
+        [
+          {
+            "node": "Split Out1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields11": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields10",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items18": {
+      "main": [
+        [
+          {
+            "node": "Deleta mensagens12",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait24",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait24": {
+      "main": [
+        [
+          {
+            "node": "EVOLUTION2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "principal": {
+      "main": [
+        [
+          {
+            "node": "inverte-lid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "responder": {
+      "main": [
+        [
+          {
+            "node": "Pegar Dados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook3": {
+      "main": [
+        [
+          {
+            "node": "Envia Midia1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook5": {
+      "main": [
+        [
+          {
+            "node": "Enviar Mensagem Para o Vendedor1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Analyze image1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Dify c/ conversationID": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "EVOLUTION",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EVOLUTION": {
+      "main": [
+        [
+          {
+            "node": "Deleta mensagens",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "b7c00b28bba3ea49c718b7797405d62c3fee2b5df9d9f21d6b8603c8a205e0dd"
+  }
+}

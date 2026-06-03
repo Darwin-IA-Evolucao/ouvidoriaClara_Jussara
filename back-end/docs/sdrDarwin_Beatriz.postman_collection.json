@@ -1,0 +1,1039 @@
+{
+  "info": {
+    "name": "sdrDarwin Beatriz - API",
+    "_postman_id": "sdr-darwin-beatriz-collection",
+    "description": "Coleção completa de endpoints da API sdrDarwin Beatriz. Base URL: http://147.93.10.167:3064",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://147.93.10.167:3071",
+      "type": "string"
+    },
+    {
+      "key": "idInteresse",
+      "value": "1",
+      "description": "Preenchido automaticamente pelo script do POST /interesse",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Usuário",
+      "item": [
+        {
+          "name": "GET - Health Check (Greetings)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": ["{{baseUrl}}"],
+              "path": [""]
+            },
+            "description": "Verifica se a API está funcionando."
+          }
+        },
+        {
+          "name": "POST - Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"celular\": \"11999999999\",\n  \"senha\": \"senha123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["login"]
+            },
+            "description": "Realiza login do usuário."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Categoria",
+      "item": [
+        {
+          "name": "POST - Criar Categoria",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nomeCategoria\": \"Eletrônicos\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/categoria",
+              "host": ["{{baseUrl}}"],
+              "path": ["categoria"]
+            }
+          }
+        },
+        {
+          "name": "GET - Listar Todas as Categorias",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/categoria",
+              "host": ["{{baseUrl}}"],
+              "path": ["categoria"]
+            }
+          }
+        },
+        {
+          "name": "GET - Buscar Categoria por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/categoria/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["categoria", "1"]
+            }
+          }
+        },
+        {
+          "name": "PUT - Atualizar Categoria",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nomeCategoria\": \"Eletrodomésticos\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/categoria/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["categoria", "1"]
+            }
+          }
+        },
+        {
+          "name": "DELETE - Deletar Categoria",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/categoria/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["categoria", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cliente",
+      "item": [
+        {
+          "name": "POST - Criar Cliente",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"telefoneCliente\": \"11987654321\",\n  \"nomeCliente\": \"João da Silva\",\n  \"cidadeCliente\": \"São Paulo\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/cliente",
+              "host": ["{{baseUrl}}"],
+              "path": ["cliente"]
+            }
+          }
+        },
+        {
+          "name": "POST - Criar Cliente via Dify",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"telefoneCliente\": \"11987654322\",\n  \"nomeCliente\": \"Maria Oliveira\",\n  \"cidadeCliente\": \"Campinas\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/dify/cliente",
+              "host": ["{{baseUrl}}"],
+              "path": ["dify", "cliente"]
+            }
+          }
+        },
+        {
+          "name": "GET - Listar Todos os Clientes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cliente",
+              "host": ["{{baseUrl}}"],
+              "path": ["cliente"]
+            }
+          }
+        },
+        {
+          "name": "GET - Buscar Cliente por Telefone",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cliente/11987654321",
+              "host": ["{{baseUrl}}"],
+              "path": ["cliente", "11987654321"]
+            }
+          }
+        },
+        {
+          "name": "GET - Verificar se Cliente Existe",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cliente/existe/11987654321",
+              "host": ["{{baseUrl}}"],
+              "path": ["cliente", "existe", "11987654321"]
+            }
+          }
+        },
+        {
+          "name": "GET - Total de Clientes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cliente/total",
+              "host": ["{{baseUrl}}"],
+              "path": ["cliente", "total"]
+            }
+          }
+        },
+        {
+          "name": "GET - Cidades com Total de Clientes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cliente/cidades",
+              "host": ["{{baseUrl}}"],
+              "path": ["cliente", "cidades"]
+            }
+          }
+        },
+        {
+          "name": "GET - Clientes Inativos (Gelo)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cliente/gelo",
+              "host": ["{{baseUrl}}"],
+              "path": ["cliente", "gelo"]
+            }
+          }
+        },
+        {
+          "name": "GET - Buscar Cliente Ativo por Telefone",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/busca/cliente/11987654321",
+              "host": ["{{baseUrl}}"],
+              "path": ["busca", "cliente", "11987654321"]
+            }
+          }
+        },
+        {
+          "name": "GET - Buscar Dados do Cliente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/busca/dados/11987654321",
+              "host": ["{{baseUrl}}"],
+              "path": ["busca", "dados", "11987654321"]
+            }
+          }
+        },
+        {
+          "name": "PUT - Atualizar Cliente",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nomeCliente\": \"João da Silva Atualizado\",\n  \"cidadeCliente\": \"Santos\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/cliente/11987654321",
+              "host": ["{{baseUrl}}"],
+              "path": ["cliente", "11987654321"]
+            }
+          }
+        },
+        {
+          "name": "DELETE - Deletar Cliente",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cliente/11987654321",
+              "host": ["{{baseUrl}}"],
+              "path": ["cliente", "11987654321"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Robô (Liga / Desliga)",
+      "item": [
+        {
+          "name": "POST - Desligar Robô",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/desligar/11987654321",
+              "host": ["{{baseUrl}}"],
+              "path": ["desligar", "11987654321"]
+            },
+            "description": "Desliga o robô para o telefone informado."
+          }
+        },
+        {
+          "name": "DELETE - Ligar Robô",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ligar/11987654321",
+              "host": ["{{baseUrl}}"],
+              "path": ["ligar", "11987654321"]
+            },
+            "description": "Liga o robô para o telefone informado."
+          }
+        },
+        {
+          "name": "GET - Verificar se Robô está Ligado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ligado/11987654321",
+              "host": ["{{baseUrl}}"],
+              "path": ["ligado", "11987654321"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Produto",
+      "item": [
+        {
+          "name": "GET - Listar Todos os Produtos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/produto",
+              "host": ["{{baseUrl}}"],
+              "path": ["produto"]
+            }
+          }
+        },
+        {
+          "name": "GET - Buscar Produto por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/produto/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["produto", "1"]
+            }
+          }
+        },
+        {
+          "name": "GET - Buscar Produtos por Categoria",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/produto/categoria/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["produto", "categoria", "1"]
+            }
+          }
+        },
+        {
+          "name": "PUT - Atualizar Produto",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"proCod\": \"PROD-001\",\n  \"proDes\": \"Smartphone Samsung Galaxy A54\",\n  \"proPdv\": 189900,\n  \"descricaoProduto\": \"Smartphone com tela AMOLED, 128GB de armazenamento e câmera tripla.\",\n  \"idCategoria\": 1,\n  \"valorPromocao\": 169900,\n  \"ativo\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/produto/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["produto", "1"]
+            }
+          }
+        },
+        {
+          "name": "DELETE - Deletar Produto",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/produto/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["produto", "1"]
+            }
+          }
+        },
+        {
+          "name": "POST - Importar Planilha de Produtos (multipart)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "",
+                  "description": "Arquivo .xlsx com a planilha de produtos (colunas: ProCod, ProDes, ProPdv, Ativo)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/produto/importar",
+              "host": ["{{baseUrl}}"],
+              "path": ["produto", "importar"]
+            },
+            "description": "Importa produtos em lote via planilha Excel. Envie o arquivo .xlsx no campo 'file'."
+          }
+        },
+        {
+          "name": "GET - Busca Aproximada de Produtos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/produto/busca?q=cadeira&limit=15",
+              "host": ["{{baseUrl}}"],
+              "path": ["produto", "busca"],
+              "query": [
+                { "key": "q", "value": "cadeira", "description": "Texto de busca livre (obrigatório)" },
+                { "key": "limit", "value": "15", "description": "Máx de resultados (padrão 15, máx 50)" }
+              ]
+            },
+            "description": "Busca híbrida: FTS (full-text search) + ILIKE por palavra. Retorna produtos rankeados por relevância. Trocar 'q' pelo que o cliente digitou."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Interesse",
+      "item": [
+        {
+          "name": "Fluxo Completo (Dify / WhatsApp)",
+          "item": [
+            {
+              "name": "1. POST - Criar Interesse (só telefone)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "if (res.idInteresse) {",
+                      "    pm.collectionVariables.set('idInteresse', res.idInteresse);",
+                      "    console.log('idInteresse salvo:', res.idInteresse);",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"telefoneCliente\": \"11987654321\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/interesse",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["interesse"]
+                },
+                "description": "Cria o cabeçalho do pedido com apenas o telefone. O script 'Tests' salva o idInteresse na variável {{idInteresse}} automaticamente."
+              }
+            },
+            {
+              "name": "2. POST - Adicionar Itens ao Interesse",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"idProdutos\":  [1, 150, 3000, 15000, 36999],\n  \"quantidades\": [2,   1,    5,     3,     10]\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/interesse/{{idInteresse}}/itens",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["interesse", "{{idInteresse}}", "itens"]
+                },
+                "description": "Adiciona produtos ao interesse. Preços buscados automaticamente (valorpromocao > 0 tem prioridade). Envia notificação ao vendedor após inserir."
+              }
+            },
+            {
+              "name": "3. GET - Consultar Itens do Interesse",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/interesse/{{idInteresse}}/itens",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["interesse", "{{idInteresse}}", "itens"]
+                }
+              }
+            },
+            {
+              "name": "4. GET - Consultar Cabeçalho do Interesse",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/interesse/{{idInteresse}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["interesse", "{{idInteresse}}"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Fluxo Chat (Dify Chat)",
+          "item": [
+            {
+              "name": "1. POST - Criar Interesse Chat",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "if (res.idInteresse) {",
+                      "    pm.collectionVariables.set('idInteresse', res.idInteresse);",
+                      "    console.log('idInteresse salvo:', res.idInteresse);",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"telefoneCliente\": \"11987654321\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/interesse-chat",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["interesse-chat"]
+                }
+              }
+            },
+            {
+              "name": "2. POST - Adicionar Itens ao Interesse Chat",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"idProdutos\":  [500, 1200, 8000],\n  \"quantidades\": [1,   3,    2]\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/interesse-chat/{{idInteresse}}/itens",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["interesse-chat", "{{idInteresse}}", "itens"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Gerenciamento",
+          "item": [
+            {
+              "name": "GET - Listar Todos os Interesses",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/interesse",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["interesse"]
+                }
+              }
+            },
+            {
+              "name": "GET - Buscar Interesse por ID",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/interesse/{{idInteresse}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["interesse", "{{idInteresse}}"]
+                }
+              }
+            },
+            {
+              "name": "GET - Status / Resumo dos Interesses",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/interesse/status",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["interesse", "status"]
+                },
+                "description": "Retorna totais: totalInteresses, aprovados, recusados, emNegociacao e valores agregados."
+              }
+            },
+            {
+              "name": "GET - Data de Aviso do Interesse",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/interesse/aviso/{{idInteresse}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["interesse", "aviso", "{{idInteresse}}"]
+                }
+              }
+            },
+            {
+              "name": "PUT - Atualizar Interesse",
+              "request": {
+                "method": "PUT",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"interesseCliente\": \"Observação atualizada\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/interesse/{{idInteresse}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["interesse", "{{idInteresse}}"]
+                }
+              }
+            },
+            {
+              "name": "PUT - Aprovar Interesse",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/interesse/aprovar/{{idInteresse}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["interesse", "aprovar", "{{idInteresse}}"]
+                }
+              }
+            },
+            {
+              "name": "PUT - Iniciar Negociação",
+              "request": {
+                "method": "PUT",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"valorAviso\": 1500.00,\n  \"dataAviso\": \"2026-03-20\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/interesse/negociar/{{idInteresse}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["interesse", "negociar", "{{idInteresse}}"]
+                }
+              }
+            },
+            {
+              "name": "PUT - Renegociar Interesse",
+              "request": {
+                "method": "PUT",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"valorAviso\": 1200.00,\n  \"dataAviso\": \"2026-04-05\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/interesse/renegociar/{{idInteresse}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["interesse", "renegociar", "{{idInteresse}}"]
+                }
+              }
+            },
+            {
+              "name": "PUT - Reprovar Interesse",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/interesse/reprovar/{{idInteresse}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["interesse", "reprovar", "{{idInteresse}}"]
+                }
+              }
+            },
+            {
+              "name": "DELETE - Deletar Interesse",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/interesse/{{idInteresse}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["interesse", "{{idInteresse}}"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Casos de Teste",
+          "item": [
+            {
+              "name": "Erro: produtos e qtds de tamanhos diferentes",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"idProdutos\":  [1, 2, 3],\n  \"quantidades\": [10, 20]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/interesse/{{idInteresse}}/itens",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["interesse", "{{idInteresse}}", "itens"]
+                },
+                "description": "Deve retornar erro: número de produtos e quantidades não correspondem."
+              }
+            },
+            {
+              "name": "Erro: produto inexistente",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"idProdutos\":  [999999999],\n  \"quantidades\": [1]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/interesse/{{idInteresse}}/itens",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["interesse", "{{idInteresse}}", "itens"]
+                },
+                "description": "Deve retornar erro: produto não encontrado ou inativo."
+              }
+            },
+            {
+              "name": "Interesse com 10 produtos variados",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"idProdutos\":  [1, 500, 1000, 2500, 5000, 10000, 18000, 25000, 33000, 37000],\n  \"quantidades\": [1,  2,    3,    1,    5,     2,     1,     4,     2,     1]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/interesse/{{idInteresse}}/itens",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["interesse", "{{idInteresse}}", "itens"]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Mensagens",
+      "item": [
+        {
+          "name": "POST - Adicionar Mensagem",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"telefone\": \"11987654321\",\n  \"nome\": \"João da Silva\",\n  \"instance\": \"instancia-principal\",\n  \"conteudo\": \"Olá, tenho interesse nos produtos!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/addMessage",
+              "host": ["{{baseUrl}}"],
+              "path": ["addMessage"]
+            }
+          }
+        },
+        {
+          "name": "GET - Buscar Mensagens por Telefone",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/getMessages/11987654321",
+              "host": ["{{baseUrl}}"],
+              "path": ["getMessages", "11987654321"]
+            }
+          }
+        },
+        {
+          "name": "DELETE - Limpar Mensagens por Telefone",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/clearMessages/11987654321",
+              "host": ["{{baseUrl}}"],
+              "path": ["clearMessages", "11987654321"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Contatos / Conversation",
+      "item": [
+        {
+          "name": "GET - Listar Todos os Contatos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/contatos",
+              "host": ["{{baseUrl}}"],
+              "path": ["contatos"]
+            }
+          }
+        },
+        {
+          "name": "GET - Buscar Contato por Telefone",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/contatos/11987654321",
+              "host": ["{{baseUrl}}"],
+              "path": ["contatos", "11987654321"]
+            }
+          }
+        },
+        {
+          "name": "GET - Buscar Conversation ID por Telefone",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/conversation/11987654321",
+              "host": ["{{baseUrl}}"],
+              "path": ["conversation", "11987654321"]
+            },
+            "description": "Retorna o conversationId e o campo 'exists' (bool) para o telefone informado."
+          }
+        },
+        {
+          "name": "PUT - Definir Conversation ID",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"telefone\": \"11987654321\",\n  \"conversationId\": \"conv-abc123xyz456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/setConversation",
+              "host": ["{{baseUrl}}"],
+              "path": ["setConversation"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Leads",
+      "item": [
+        {
+          "name": "GET - Listar Todos os Leads",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/leads",
+              "host": ["{{baseUrl}}"],
+              "path": ["leads"]
+            }
+          }
+        },
+        {
+          "name": "PUT - Ativar Lead",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/leads/ativar/11987654321",
+              "host": ["{{baseUrl}}"],
+              "path": ["leads", "ativar", "11987654321"]
+            }
+          }
+        },
+        {
+          "name": "DELETE - Desativar Lead",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/leads/11987654321",
+              "host": ["{{baseUrl}}"],
+              "path": ["leads", "11987654321"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Mídia",
+      "item": [
+        {
+          "name": "POST - Upload de Mídia para Produto (multipart)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "",
+                  "description": "Imagem ou vídeo do produto"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/midia/upload/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["midia", "upload", "1"]
+            },
+            "description": "Faz upload de arquivo de mídia (imagem/vídeo) vinculado ao produto de ID 1."
+          }
+        },
+        {
+          "name": "GET - Listar Mídias por Produto",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/midia/produto/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["midia", "produto", "1"]
+            }
+          }
+        },
+        {
+          "name": "GET - Buscar Mídia por ID de Produto",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/midia/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["midia", "1"]
+            }
+          }
+        },
+        {
+          "name": "POST - Enviar Mídia para Cliente (WhatsApp)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idProduto\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/midia/11987654321",
+              "host": ["{{baseUrl}}"],
+              "path": ["midia", "11987654321"]
+            },
+            "description": "Envia a mídia do produto para o cliente via WhatsApp."
+          }
+        },
+        {
+          "name": "POST - Enviar Mídia via Chat para Cliente",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idProduto\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/midia-chat/11987654321",
+              "host": ["{{baseUrl}}"],
+              "path": ["midia-chat", "11987654321"]
+            }
+          }
+        },
+        {
+          "name": "DELETE - Deletar Mídia por ID",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/midia/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["midia", "1"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

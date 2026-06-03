@@ -1,10 +1,8 @@
 package controllers
 
 import (
-	"back-end/apperror"
 	"back-end/models"
 	"back-end/usecases"
-	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -19,44 +17,35 @@ func NewMensagemController(usecase *usecases.MensagemUseCase) *MensagemControlle
 }
 
 func (ctrl *MensagemController) AddMensagem(c *gin.Context) {
-	var msg models.Message
-	if err := c.BindJSON(&msg); err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "Formato inválido.", "error": err.Error()})
+	var addMensagem models.AddMensagem
+	if err := c.ShouldBindJSON(&addMensagem); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Erro ao receber request em AddMensagem: " + err.Error()})
 		return
 	}
-	resultado, err := ctrl.usecase.AddMensagem(msg)
+	err := ctrl.usecase.AddMensagem(&addMensagem)
 	if err != nil {
-		var appErr *apperror.AppError
-		if errors.As(err, &appErr) {
-			c.IndentedJSON(appErr.StatusCode, gin.H{"error": appErr.Message})
-			return
-		}
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao adicionar mensagem: " + err.Error()})
 		return
 	}
-	c.String(http.StatusOK, resultado)
+	c.JSON(http.StatusOK, gin.H{"message": "Mensagem adicionada com sucesso"})
 }
 
 func (ctrl *MensagemController) GetMessagesByTelefone(c *gin.Context) {
 	telefone := c.Param("telefone")
-	resposta, err := ctrl.usecase.GetMensagens(telefone)
+	menssagens, err := ctrl.usecase.GetMensagens(telefone)
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao buscar mensagens: " + err.Error()})
 		return
 	}
-	c.IndentedJSON(http.StatusOK, resposta)
+	c.JSON(http.StatusOK, gin.H{"mensagem": menssagens})
 }
 
 func (ctrl *MensagemController) ClearMessagesByTelefone(c *gin.Context) {
 	telefone := c.Param("telefone")
-	if err := ctrl.usecase.ClearMensagens(telefone); err != nil {
-		var appErr *apperror.AppError
-		if errors.As(err, &appErr) {
-			c.IndentedJSON(appErr.StatusCode, gin.H{"error": appErr.Message})
-			return
-		}
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	err := ctrl.usecase.DeleteMensagens(telefone)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao apagar mensagens: " + err.Error()})
 		return
 	}
-	c.String(http.StatusOK, "Sucesso!")
+	c.JSON(http.StatusOK, gin.H{"message": "Mensagens apagadas com sucesso"})
 }

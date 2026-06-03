@@ -43,6 +43,22 @@ CREATE TABLE conversas (
     data TEXT(10) NOT NULL
 );
 
+CREATE TABLE atividade_clientes (
+    telefone TEXT NOT NULL,
+    ultima_interacao TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    lembrete_10min BOOLEAN NOT NULL DEFAULT FALSE,
+    lembrete_1day BOOLEAN NOT NULL DEFAULT FALSE,
+
+    CONSTRAINT atividade_clientes_pkey
+        PRIMARY KEY (telefone),
+
+    CONSTRAINT atividade_clientes_telefone_fkey
+        FOREIGN KEY (telefone)
+        REFERENCES contatos (telefone)
+        ON DELETE CASCADE
+);
+
+
 CREATE TABLE mensagens (
     id SERIAL PRIMARY KEY,
     telefone TEXT(64) NOT NULL,
@@ -58,13 +74,13 @@ CREATE TABLE enderecos (
 );
 
 CREATE TABLE reclamacao (
-    id SERIAL PRIMARY KEY,
+    idreclamacao SERIAL PRIMARY KEY,
     telefone TEXT(64) NOT NULL,
     categoria TEXT DEFAULT '' NOT NULL,
     endereco TEXT DEFAULT '' NOT NULL,
     bairro TEXT DEFAULT '' NOT NULL,
     reclamacao TEXT DEFAULT '' NOT NULL,
-    data TIMESTAMP DEFAULT now() NOT NULL,
+    data_criacao TIMESTAMP DEFAULT now() NOT NULL,
     tipo TEXT DEFAULT '' NOT NULL,
     status TEXT DEFAULT 'Em análise' NOT NULL,
     detalhes JSONB DEFAULT '{}' NOT NULL

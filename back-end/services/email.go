@@ -12,7 +12,7 @@ func emailDestino() string {
 	if to := os.Getenv("EMAIL_DESTINO"); to != "" {
 		return to
 	}
-	return "gabinetevereadorarruda@gmail.com"
+	return "darwinartificialintelligence@gmail.com"
 }
 
 func SendEmail(to, subject, body, filename string) error {

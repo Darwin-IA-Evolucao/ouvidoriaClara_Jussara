@@ -3,11 +3,9 @@ package services
 import (
 	"back-end/config"
 	"back-end/models"
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -82,38 +80,36 @@ func ConvertRequerimento(requerimento string) (string, error) {
 }
 
 func EnviarNotificacao(telefone, nome, categoria string, numero int64) error {
-	msg := map[string]string{
-		"telefone_cliente": telefone,
-		"content": fmt.Sprintf(
-			"Olá, %s :D! Só passando pra avisar que a sua solicitação de categoria %s foi protocolada pela Prefeitura Municipal de São Roque com o número %d.\nEspero que a situação seja resolvida o mais rápido possível, abraços!",
-			nome, categoria, numero,
-		),
+	mensagem := fmt.Sprintf(
+		"Olá, %s :D! Só passando pra avisar que a sua solicitação de categoria %s foi protocolada pela Prefeitura Municipal de Sorocaba com o número %d.\nEspero que a situação seja resolvida o mais rápido possível, abraços!",
+		nome, categoria, numero,
+	)
+
+	baseURL := os.Getenv("WEBHOOK_ENVIAR_MENSAGEM")
+	client := &http.Client{
+		Timeout: time.Second * 10,
 	}
 
-	body, err := json.Marshal(msg)
+	data := url.Values{}
+	data.Set("mensagem", mensagem)
+	data.Set("telefone", telefone)
+	data.Set("instance", "ouvidoria_clara_jussara")
+
+	req, err := http.NewRequest("POST", baseURL, strings.NewReader(data.Encode()))
 	if err != nil {
-		return fmt.Errorf("erro ao gerar JSON: %w", err)
+		return err
 	}
 
-	client := &http.Client{Timeout: 10 * time.Second}
-	req, err := http.NewRequest("POST", os.Getenv("WEBHOOK_PROTOCOLO"), bytes.NewBuffer(body))
-	if err != nil {
-		return fmt.Errorf("erro ao criar requisição: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("erro ao enviar requisição: %w", err)
+		return err
 	}
 	defer resp.Body.Close()
 
-	respBody, _ := io.ReadAll(resp.Body)
-	log.Printf("Resposta do webhook (status %d): %s", resp.StatusCode, string(respBody))
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("requisição falhou com status %d", resp.StatusCode)
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("erro ao enviar requisição: %s", resp.Status)
 	}
-
 	return nil
 }

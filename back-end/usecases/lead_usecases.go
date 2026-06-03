@@ -1,39 +1,37 @@
 package usecases
 
 import (
-	"back-end/config"
 	"back-end/models"
 	"back-end/repository"
-	"strconv"
+	"database/sql"
 )
 
 type LeadUseCases struct {
-	repository repository.LeadRepository
+	repository repository.LeadRepository    
 }
 
-func NewLeadUseCases(repo repository.LeadRepository) LeadUseCases {
-	return LeadUseCases{repository: repo}
-}
-
-func (uc LeadUseCases) GetLeads() ([]models.Lead, error) {
-	return uc.repository.GetAllLeads()
-}
-
-func (uc LeadUseCases) GetAllLeads() ([]models.Lead, string, error) {
-	leads, err := uc.repository.GetAllLeads()
-	if err != nil {
-		return nil, "", err
+func NewLeadUseCases(repo repository.LeadRepository) LeadUseCases{
+	return LeadUseCases{
+		repository: repo,
 	}
-	count := 0
-	for _, lead := range leads {
-		if lead.Ativo {
-			count++
-		}
-	}
-	ocupacao := strconv.Itoa(count) + "/" + strconv.Itoa(config.GetPlanoLimite())
-	return leads, ocupacao, nil
 }
 
-func (uc LeadUseCases) DesativarLead(telefone string) error {
-	return uc.repository.DesativarLead(telefone)
+func (usecase LeadUseCases)  DesativarLead(telefone string) (sql.Result,error){
+	return usecase.repository.DesativarLead(telefone)
+}
+
+func (usecase LeadUseCases)  AtivarLead(telefone string) (sql.Result,error){
+	return usecase.repository.AtivarLead(telefone)
+}
+
+func (usecase LeadUseCases) GetAllLeads() ([]models.Contact, error){
+	return usecase.repository.GetAllLeads()
+}
+
+func (usecase LeadUseCases) GetCountContatosAtivos() (int, error){
+	return usecase.repository.GetCountContatosAtivos()
+}
+
+func (usecase LeadUseCases) GetCountContatos() (int, error){
+	return usecase.repository.GetCountContatos()
 }

@@ -19,38 +19,36 @@ type Relatorio struct {
 func GetRelatorioDiario(conn *sqlx.DB) (*Relatorio, error) {
 	const query = `
 	SELECT
-		(SELECT COUNT(*) FROM interesse WHERE datainteresse >= now() - INTERVAL '1 day') AS total_interesse,
-		(SELECT COUNT(*) FROM contatos WHERE data_criacao >= now() - INTERVAL '24 hours' AND (ehservidorouoficial = true OR ehservidorouoficial is null)) AS total_contatos,
+		(SELECT COUNT(*) FROM reclamacao WHERE data_criacao >= now() - INTERVAL '1 day') AS total_interesse,
+		(SELECT COUNT(*) FROM contatos WHERE data_criacao >= now() - INTERVAL '24 hours',
 		(SELECT COUNT(DISTINCT c.telefone)
 		FROM contatos c
 		WHERE c.data_criacao >= now() - INTERVAL '24 hours'
-			AND (c.ehservidorouoficial = true OR c.ehservidorouoficial is null)
 			AND (  
 					EXISTS (
-						SELECT 1 FROM interesse i
-						WHERE i.fk_cliente_telefonecliente = c.telefone
-						AND i.datainteresse >= now() - INTERVAL '24 hours'
+						SELECT 1 FROM reclamacao i
+						WHERE i.telefone = c.telefone
+						AND i.data_criacao >= now() - INTERVAL '24 hours'
 					)
 				)
 		) AS total_contatos_convertidos,
 		(SELECT COUNT(DISTINCT c.telefone)
 			FROM contatos c
-			LEFT JOIN interesse i
-			ON c.telefone = i.fk_cliente_telefonecliente
-			AND i.datainteresse >= now() - INTERVAL '24 hours'
+			LEFT JOIN reclamacao i
+			ON c.telefone = i.telefone
+			AND i.data_criacao >= now() - INTERVAL '24 hours'
 			WHERE c.data_criacao >= now() - INTERVAL '24 hours'
-			AND i.fk_cliente_telefonecliente IS NULL
-			AND (c.ehservidorouoficial = true OR c.ehservidorouoficial is null)
+			AND i.telefone IS NULL
 		) AS total_contatos_reativar,
 		(SELECT COUNT(*) FROM cliente WHERE data_criacao >= now() - INTERVAL '24 hours') AS total_clientes_novos,
-		(SELECT COUNT(DISTINCT cl.telefonecliente)
+		(SELECT COUNT(DISTINCT cl.telefone)
 		FROM cliente cl
 		WHERE cl.data_criacao < now() - INTERVAL '24 hours'
 			AND (
 					EXISTS (
-						SELECT 1 FROM interesse i
-						WHERE i.fk_cliente_telefonecliente = cl.telefonecliente
-						AND i.datainteresse >= now() - INTERVAL '24 hours'
+						SELECT 1 FROM reclamacao i
+						WHERE i.telefone = cl.telefone
+						AND i.data_criacao >= now() - INTERVAL '24 hours'
 					)
 				)
 		) AS total_clientes_recorrentes;
@@ -68,13 +66,13 @@ func GerarMensagemRelatorio(dados Relatorio) string {
 	hoje := time.Now().Format("02/01/2006")
 
 	msg := "📊 *Relatório Diário Darwin IA* 📊\n\n"
-	msg += fmt.Sprintf("Olá ! Aqui é a Laura sua IA, segue o relatório de hoje (%s):\n\n", hoje)
+	msg += fmt.Sprintf("Olá ! Aqui é a Ju sua IA, segue o relatório de hoje (%s):\n\n", hoje)
 	msg += "🔥 *Interesses (24h)*\n"
 	msg += fmt.Sprintf("- Total: %d\n\n", dados.TotalInteresse)
 	msg += "📞 *Contatos (24h)*\n"
 	msg += fmt.Sprintf("- Recebidos: %d\n", dados.TotalContatos)
-	msg += fmt.Sprintf("- Convertidos em interesse: %d\n", dados.TotalConvertidos)
-	msg += fmt.Sprintf("- Para reativação: %d\n\n", dados.TotalReativar)
+	msg += fmt.Sprintf("- Convertidos em reclamacao: %d\n", dados.TotalConvertidos)
+	msg += fmt.Sprintf("- Para auxiliar na finalização: %d\n\n", dados.TotalReativar)
 	msg += "👥 *Clientes*\n"
 	msg += fmt.Sprintf("- Novos cadastros (24h): %d\n", dados.TotalClientesNovos)
 	msg += fmt.Sprintf("- Cliente antigo: %d", dados.TotalClientesRecorrentes)
@@ -86,7 +84,7 @@ func RelatorioDiario(conn *sqlx.DB) {
 	telefone := "5515998223027"
 	for {
 		agora := time.Now()
-		proxima := time.Date(agora.Year(), agora.Month(), agora.Day(), 10, 18, 0, 0, agora.Location())
+		proxima := time.Date(agora.Year(), agora.Month(), agora.Day(), 8, 0, 0, 0, agora.Location())
 		if !agora.Before(proxima) {
 			proxima = proxima.Add(24 * time.Hour)
 		}
@@ -105,11 +103,10 @@ func RelatorioDiario(conn *sqlx.DB) {
 func GetRelatorioGelando(conn *sqlx.DB) (*Relatorio, error) {
 	const query = `SELECT count(*) AS total_contatos
 FROM contatos c
-LEFT JOIN interesse cl
-ON c.telefone = cl.fk_cliente_telefonecliente
-WHERE cl.fk_cliente_telefonecliente IS NULL
-AND data_criacao > CURRENT_DATE - INTERVAL '24 hours'
-AND (c.ehservidorouoficial = true OR c.ehservidorouoficial IS NULL);`
+LEFT JOIN reclamacao cl
+ON c.telefone = cl.telefone
+WHERE cl.telefone IS NULL
+AND data_criacao > CURRENT_DATE - INTERVAL '24 hours';`
 	var relatorio Relatorio
 	err := conn.Get(&relatorio, query)
 	if err != nil {
@@ -123,12 +120,12 @@ func GerarMensagemGelando(dados Relatorio) string {
 	hoje := time.Now().Format("02/01/2006")
 
 	msg := "📊🧊 *Relatório Clientes Gelando Darwin IA* 🧊📊\n\n"
-	msg += fmt.Sprintf("Olá ! Aqui é a Laura sua IA, notamos que há clientes gelando no dia de hoje (%s):\n\n", hoje)
+	msg += fmt.Sprintf("Olá ! Aqui é a Ju sua IA, notamos que há clientes que não finalizaram suas reclamações e estão virando clientes gelados no dia de hoje (%s):\n\n", hoje)
 
 	msg += fmt.Sprintf("- Total de clientes gelando: %d\n", dados.TotalContatos)
 
-	msg += "Sugerimos entrar no painel de controle e verificar os clientes gelando para reativar o contato.\n\n"
-	msg += "Link do painel: https://unique.sdr.darwinsistema.com.br"
+	msg += "Sugerimos entrar no painel de controle e verificar os contatos que estão gelando para auxiliar na finalização.\n\n"
+	msg += "Link do painel: https://jussara.ouvidoria.darwinsistema.com.br"
 
 	return msg
 }
@@ -138,7 +135,7 @@ func RelatorioGelando(conn *sqlx.DB) {
 	telefone2 := "5515998223027"
 	for {
 		agora := time.Now()
-		proxima := time.Date(agora.Year(), agora.Month(), agora.Day(), 10, 16, 0, 0, agora.Location())
+		proxima := time.Date(agora.Year(), agora.Month(), agora.Day(), 8, 0, 0, 0, agora.Location())
 		if !agora.Before(proxima) {
 			proxima = proxima.Add(24 * time.Hour)
 		}
@@ -165,41 +162,41 @@ func GetRelatorioMensal(conn *sqlx.DB) (*Relatorio, error) {
         date_trunc('month', now()) AS inicio_mes_atual
 	)
 	SELECT 
-    (SELECT COUNT(*) FROM interesse i, periodo p WHERE datainteresse >= p.inicio_mes_passado AND datainteresse < p.inicio_mes_atual) AS total_interesse,
+    (SELECT COUNT(*) FROM reclamacao i, periodo p WHERE data_criacao >= p.inicio_mes_passado AND data_criacao < p.inicio_mes_atual) AS total_interesse,
     (SELECT COUNT(*) FROM contatos c, periodo p WHERE data_criacao >= p.inicio_mes_passado AND data_criacao < p.inicio_mes_atual AND (c.ehservidorouoficial = true OR c.ehservidorouoficial is null)) AS total_contatos,
     (SELECT COUNT(DISTINCT c.telefone) FROM contatos c, periodo p 
         WHERE c.data_criacao >= p.inicio_mes_passado AND c.data_criacao < p.inicio_mes_atual
         AND (c.ehservidorouoficial = true OR c.ehservidorouoficial is null)
         AND (  
 			EXISTS (
-			    SELECT 1 FROM interesse i
-				WHERE i.fk_cliente_telefonecliente = c.telefone
-				AND i.datainteresse >= p.inicio_mes_passado
-				AND i.datainteresse < p.inicio_mes_atual
+			    SELECT 1 FROM reclamacao i
+				WHERE i.telefone = c.telefone
+				AND i.data_criacao >= p.inicio_mes_passado
+				AND i.data_criacao < p.inicio_mes_atual
 			)
 		)
     ) AS total_contatos_convertidos,
     (SELECT COUNT(DISTINCT c.telefone)
 		FROM contatos c
         CROSS JOIN periodo p
-		LEFT JOIN interesse i
-        ON c.telefone = i.fk_cliente_telefonecliente    
-        AND i.datainteresse >= p.inicio_mes_passado
-        AND i.datainteresse < p.inicio_mes_atual
+		LEFT JOIN reclamacao i
+        ON c.telefone = i.telefone    
+        AND i.data_criacao >= p.inicio_mes_passado
+        AND i.data_criacao < p.inicio_mes_atual
 		WHERE c.data_criacao >= p.inicio_mes_passado 
         AND c.data_criacao < p.inicio_mes_atual   
         AND (c.ehservidorouoficial = true OR c.ehservidorouoficial is null)
-	    AND i.fk_cliente_telefonecliente IS NULL) AS total_contatos_reativar,
+	    AND i.telefone IS NULL) AS total_contatos_reativar,
     (SELECT COUNT(*) FROM cliente cl, periodo p WHERE data_criacao >= p.inicio_mes_passado AND data_criacao < p.inicio_mes_atual) AS total_clientes_novos,
-    (SELECT COUNT(DISTINCT cl.telefonecliente)
+    (SELECT COUNT(DISTINCT cl.telefone)
 		FROM cliente cl, periodo p
 		WHERE data_criacao < p.inicio_mes_passado
 			AND (
 				EXISTS (
-					SELECT 1 FROM interesse i
-					WHERE i.fk_cliente_telefonecliente = cl.telefonecliente
-					AND i.datainteresse >= p.inicio_mes_passado
-					AND i.datainteresse < p.inicio_mes_atual
+					SELECT 1 FROM reclamacao i
+					WHERE i.telefone = cl.telefone
+					AND i.data_criacao >= p.inicio_mes_passado
+					AND i.data_criacao < p.inicio_mes_atual
 				)
 			)
 	) AS total_clientes_recorrentes;
@@ -224,7 +221,7 @@ func GerarMensagemRelatorioMensal(dados Relatorio) string {
 	msg += fmt.Sprintf("- Total: %d\n\n", dados.TotalInteresse)
 	msg += "📞 Contatos\n"
 	msg += fmt.Sprintf("- Recebidos: %d\n", dados.TotalContatos)
-	msg += fmt.Sprintf("- Convertidos em interesse: %d\n", dados.TotalConvertidos)
+	msg += fmt.Sprintf("- Convertidos em reclamacao: %d\n", dados.TotalConvertidos)
 	msg += fmt.Sprintf("- Para reativação: %d\n\n", dados.TotalReativar)
 	msg += "👥 Clientes\n"
 	msg += fmt.Sprintf("- Novos cadastros: %d\n", dados.TotalClientesNovos)
@@ -243,7 +240,7 @@ func RelatorioMensal(conn *sqlx.DB) {
 			agora = agora.AddDate(1, 0, 0) // Avança para o próximo ano
 		}
 
-		proxima := time.Date(agora.Year(), proximoMes, 1, 10, 17, 0, 0, agora.Location())
+		proxima := time.Date(agora.Year(), proximoMes, 1, 18, 0, 0, 0, agora.Location())
 		fmt.Printf("[RELATORIO MENSAL] Próximo envio programado para: %s\n", proxima.Format("02/01/2006 15:04:05"))
 		time.Sleep(time.Until(proxima))
 

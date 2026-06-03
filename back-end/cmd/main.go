@@ -1,6 +1,7 @@
 package main
 
 import (
+	"back-end/config"
 	"back-end/controllers"
 	"back-end/database"
 	"back-end/repository"
@@ -86,6 +87,12 @@ func main() {
 
 	server.Use(CORSMiddleware())
 	server.Use(CleanJSONMiddleware())
+
+	go config.RelatorioDiario(dbConnection)
+	go config.RelatorioGelando(dbConnection)
+	go config.RelatorioMensal(dbConnection)
+	go config.CheckInativos10Min(dbConnection)
+	go config.CheckInativos1Day(dbConnection)
 
 	routes.SetupReclamacaoRoutes(server, controllers.NewReclamacaoController(usecases.NewReclamacaoUseCases(repository.NewReclamacaoRepository(dbConnection))))
 	routes.SetupEnderecoRoutes(server, controllers.NewEnderecoController(usecases.NewEnderecoUseCases(repository.NewEnderecoRepository(dbConnection))))

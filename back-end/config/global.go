@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -13,7 +12,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-var planos = map[string]int{"bronze": 200, "prata": 1000, "ouro": 5000}
+var planos = map[string]int{"bronze": 200, "prata": 1000, "ouro": 500000}
 
 var Mensagem string
 var Respondendo bool
@@ -55,20 +54,6 @@ func PadronizaTelefone(telefone string) string {
 	return telefone
 }
 
-func DentroHorario() bool {
-	now := time.Now()
-	horaAtual := now.Hour()
-	diaSemana := now.Weekday()
-	// Horário comercial: das 8h às 18h
-	//TODO refatorar baseado no documento
-	if horaAtual >= 8 && horaAtual < 18 {
-		if diaSemana != 0 && diaSemana != 7 {
-			return true
-		}
-	}
-	return false
-}
-
 func EnviarMensagem(telefone, mensagem string) error {
 	baseURL := os.Getenv("WEBHOOK_ENVIAR_MENSAGEM")
 	client := &http.Client{
@@ -78,7 +63,7 @@ func EnviarMensagem(telefone, mensagem string) error {
 	data := url.Values{}
 	data.Set("mensagem", mensagem)
 	data.Set("telefone", telefone)
-	data.Set("instance", "sdrUnique_1")
+	data.Set("instance", "ouvidoria_clara_jussara")
 
 	req, err := http.NewRequest("POST", baseURL, strings.NewReader(data.Encode()))
 	if err != nil {
@@ -143,13 +128,13 @@ func FormatarTelefone(tel string) string {
 	return tel
 }
 
-func CheckInativos10Min(db *sqlx.DB) {
+func CheckInativos1Day(db *sqlx.DB) {
 	for {
 		const query = `
 			SELECT a.telefone FROM atividade_clientes a
-			LEFT JOIN interesse i ON i.fk_cliente_telefonecliente = a.telefone
-			WHERE a.lembrete_10min = false
-			AND i.idinteresse IS NULL
+			LEFT JOIN reclamacao i ON i.telefone = a.telefone
+			WHERE a.lembrete_1day = false
+			AND i.idreclamacao IS NULL
 			AND a.ultima_interacao < NOW() - INTERVAL '23 hours';
 			`
 
@@ -162,8 +147,50 @@ func CheckInativos10Min(db *sqlx.DB) {
 		}
 
 		for _, tel := range telefonesInativo {
-			msg := "⚠ ATENÇÃO ❌\n"
-			msg += "Olá ! Você ainda está ai? Seu pedido ainda não foi concluido. Aguardo seu retorno para concluirmos. Obrigada 😊"
+			msg := "📢 Olá!\n"
+			msg += "Seu atendimento ainda está em aberto há quase 24 horas. Aguardamos sua resposta para dar continuidade à solicitação. Obrigada 😊"
+			telPadronizado := PadronizaTelefone(tel)
+			err := EnviarMensagem(telPadronizado, msg)
+			if err != nil {
+				fmt.Println("Erro ao enviar notificação para ", telPadronizado, ":", err)
+				continue
+			} else {
+				// Atualiza o lembrete para true
+				const updateQuery = `
+					UPDATE atividade_clientes
+					SET lembrete_1day = true
+					WHERE telefone = $1;`
+				_, err := db.Exec(updateQuery, tel)
+				if err != nil {
+					fmt.Println("Erro ao atualizar lembrete para ", tel, ":", err)
+				}
+			}
+		}
+		time.Sleep(1 * time.Minute) // Espera 1 minuto antes de rodar novamente
+	}
+}
+
+func CheckInativos10Min(db *sqlx.DB) {
+	for {
+		const query = `
+			SELECT a.telefone FROM atividade_clientes a
+			LEFT JOIN reclamacao i ON i.telefone = a.telefone
+			WHERE a.lembrete_10min = false
+			AND i.idreclamacao IS NULL
+			AND a.ultima_interacao < NOW() - INTERVAL '10 minutes';
+			`
+
+		var telefonesInativo []string
+		err := db.Select(&telefonesInativo, query)
+		if err != nil {
+			fmt.Println("Erro ao buscar telefones inativos:", err)
+			time.Sleep(1 * time.Minute) // Espera 1 minuto antes de rodar novamente
+			continue
+		}
+
+		for _, tel := range telefonesInativo {
+			msg := "📢 Olá!\n"
+			msg += "Seu atendimento ainda está em aberto. Aguardamos sua resposta para dar continuidade à solicitação. Obrigada 😊"
 			telPadronizado := PadronizaTelefone(tel)
 			err := EnviarMensagem(telPadronizado, msg)
 			if err != nil {
@@ -217,12 +244,4 @@ func EnviarRelatorio(telefone, mensagem string) error {
 		return fmt.Errorf("erro ao enviar requisição: %s", resp.Status)
 	}
 	return nil
-}
-
-func GetPlanoLimite() int {
-	limite, err := strconv.Atoi(os.Getenv("PLANO_LIMITE"))
-	if err != nil {
-		return 5000
-	}
-	return limite
 }

@@ -2,7 +2,6 @@ package repository
 
 import (
 	"back-end/models"
-	"database/sql"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -15,74 +14,72 @@ func NewMensagemRepo(db *sqlx.DB) *MensagemRepo {
 	return &MensagemRepo{db: db}
 }
 
-func (r *MensagemRepo) GetCountContatosAtivos() (int, error) {
-	const query = `SELECT COUNT(*) FROM contatos WHERE ativo = true`
-	var count int
-	err := r.db.Get(&count, query)
-	return count, err
+// -------- CONTATO --------
+func (r *MensagemRepo) GetContatoByTelefone(telefone string) (*models.Contato, error) {
+	return NewContatoRepo(r.db).GetContatoByTelefone(telefone)
+}
+func (r *MensagemRepo) UpdateInstanciaContato(telefone string, instancia string) error {
+	return NewContatoRepo(r.db).UpdateInstanciaContato(telefone, instancia)
 }
 
-func (r *MensagemRepo) GetCountContatoAtivoByTelefone(telefone string) (int, error) {
-	const query = `SELECT COUNT(*) FROM contatos WHERE telefone = $1 AND ativo = true`
-	var count int
-	err := r.db.Get(&count, query, telefone)
-	return count, err
+func (r *MensagemRepo) CreateContato(contato *models.Contato) error {
+	return NewContatoRepo(r.db).CreateContato(contato)
 }
 
-func (r *MensagemRepo) CreateMensagem(telefone, conteudo string) error {
-	const query = `INSERT INTO mensagens (telefone, conteudo) VALUES ($1, $2)`
-	_, err := r.db.Exec(query, telefone, conteudo)
-	return err
+func (r *MensagemRepo) GetClienteBloqueadoById(telefoneCliente string) error {
+	return NewContatoRepo(r.db).GetClienteBloqueadoById(telefoneCliente)
 }
 
-func (r *MensagemRepo) GetCountConversaHoje(telefone, data string) (int, error) {
-	const query = `SELECT COUNT(*) FROM conversas WHERE telefone = $1 AND data = $2`
-	var count int
-	err := r.db.Get(&count, query, telefone, data)
-	return count, err
+func (r *MensagemRepo) GetCountContatos() (int, error) {
+	return NewContatoRepo(r.db).GetCountContatos()
 }
 
-func (r *MensagemRepo) CreateConversa(telefone, data string) error {
-	const query = `INSERT INTO conversas (telefone, data) VALUES ($1, $2)`
-	_, err := r.db.Exec(query, telefone, data)
-	return err
-}
-
-func (r *MensagemRepo) AtivarContato(telefone string) error {
-	const query = `UPDATE contatos SET ativo = true WHERE telefone = $1`
+// -------- ATIVIDADE CLIENTE --------
+func (r *MensagemRepo) UpdateUltimaInteracao(telefone string) error {
+	const query = `INSERT INTO atividade_clientes (telefone) VALUES ($1) ON CONFLICT (telefone) DO UPDATE SET ultima_interacao = CURRENT_TIMESTAMP`
 	_, err := r.db.Exec(query, telefone)
 	return err
 }
 
-func (r *MensagemRepo) GetCountMensagens(telefone string) (int, error) {
-	const query = `SELECT COUNT(*) FROM mensagens WHERE telefone = $1`
-	var count int
-	err := r.db.Get(&count, query, telefone)
-	return count, err
+// -------- MENSAGEM --------
+func (r *MensagemRepo) CreateMensagem(mensagem *models.Mensagem) error {
+	const query = `INSERT INTO mensagens (telefone, conteudo) VALUES ($1, $2) RETURNING id`
+	err := r.db.Get(&mensagem.ID, query, mensagem.Telefone, mensagem.Conteudo)
+	return err
 }
-
-func (r *MensagemRepo) GetMensagensByTelefone(telefone string) ([]models.Message, error) {
-	const query = `SELECT telefone, conteudo FROM mensagens WHERE telefone = $1`
-	var mensagens []models.Message
+func (r *MensagemRepo) GetMensagensNaoEnviadasBytelefone(telefone string) ([]models.Mensagem, error) {
+	const query = `SELECT * FROM mensagens WHERE telefone = $1 AND foienviado = false`
+	var mensagens []models.Mensagem
 	err := r.db.Select(&mensagens, query, telefone)
 	return mensagens, err
 }
-
+func (r *MensagemRepo) SetFoiEnviado(id int) error {
+	const query = `UPDATE mensagens SET foienviado = true WHERE id = $1`
+	_, err := r.db.Exec(query, id)
+	return err
+}
 func (r *MensagemRepo) DeleteMensagens(telefone string) error {
-	const query = `DELETE FROM mensagens WHERE telefone = $1`
+	const query = `DELETE FROM mensagens WHERE telefone = $1 AND foienviado = true`
 	_, err := r.db.Exec(query, telefone)
 	return err
 }
+func (r *MensagemRepo) GetCountMensagens(telefone string) (int, error) {
+	const query = `SELECT COUNT(*) FROM mensagens WHERE telefone = $1 AND foienviado = false`
+	var count int
+	err := r.db.Get(&count, query, telefone)
+	return count, err
+}
 
-func (r *MensagemRepo) GetConversationId(telefone string) (string, error) {
-	const query = `SELECT conversation_id FROM contatos WHERE telefone = $1`
-	var conversationID sql.NullString
-	err := r.db.Get(&conversationID, query, telefone)
-	if err != nil {
-		return "", err
-	}
-	if conversationID.Valid {
-		return conversationID.String, nil
-	}
-	return "", nil
+// -------- BLOQUEIO --------
+func (r *MensagemRepo) GetAvisoPlano() (models.AvisoPlanoAtigido, error) {
+	const query = `SELECT * FROM aviso_plano_atingido;`
+	var aviso models.AvisoPlanoAtigido
+	err := r.db.Get(&aviso, query)
+	return aviso, err
+}
+
+func (r *MensagemRepo) SetAvisado() error {
+	const query = `UPDATE aviso_plano_atingido SET avisado = true, data = CURRENT_TIMESTAMP`
+	_, err := r.db.Exec(query)
+	return err
 }

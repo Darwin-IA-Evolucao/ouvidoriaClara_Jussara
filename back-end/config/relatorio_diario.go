@@ -125,7 +125,7 @@ func GerarMensagemGelando(dados Relatorio) string {
 	msg += fmt.Sprintf("- Total de clientes gelando: %d\n", dados.TotalContatos)
 
 	msg += "Sugerimos entrar no painel de controle e verificar os contatos que estão gelando para auxiliar na finalização.\n\n"
-	msg += "Link do painel: https://jussara.ouvidoria.darwinsistema.com.br"
+	msg += "Link do painel: https://vereadorajussara.ouvidoria.darwinsistema.com.br"
 
 	return msg
 }

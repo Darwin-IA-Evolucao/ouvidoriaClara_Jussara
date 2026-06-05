@@ -73,7 +73,7 @@ CREATE TABLE mensagens (
 CREATE TABLE enderecos (
     logradouro TEXT NOT NULL,
     bairro TEXT DEFAULT '' NOT NULL,
-    regiao INTEGER DEFAULT 1 NOT NULL
+    regiao TEXT DEFAULT '' NOT NULL
 );
 
 CREATE TABLE reclamacao (

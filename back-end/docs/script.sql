@@ -25,6 +25,7 @@ CREATE TABLE contatos (
     nome TEXT,
     conversation_id TEXT,
     ativo BOOLEAN DEFAULT true,
+    instance TEXT DEFAULT '' NOT NULL,
     data_criacao DATE DEFAULT CURRENT_DATE NOT NULL
 );
 
@@ -96,8 +97,12 @@ CREATE TABLE protocolo (
 
 CREATE TABLE usuarios (
     id SERIAL PRIMARY KEY,
-    usuario TEXT(64) NOT NULL UNIQUE,
-    senha TEXT(64) NOT NULL
+    unidade TEXT DEFAULT '' NOT NULL,
+    celular TEXT(64) NOT NULL UNIQUE,
+    senha TEXT(64) NOT NULL,
+    endereco TEXT DEFAULT '' NOT NULL,
+    ativo BOOLEAN DEFAULT true NOT NULL,
+    role TEXT DEFAULT 'user' NOT NULL
 );
 
 

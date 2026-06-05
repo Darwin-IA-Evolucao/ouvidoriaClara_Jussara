@@ -2,6 +2,7 @@ package repository
 
 import (
 	"back-end/models"
+	"fmt"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -11,15 +12,23 @@ type UsuarioRepository struct {
 }
 
 func NewUsuarioRepository(conn *sqlx.DB) UsuarioRepository {
-	return UsuarioRepository{connection: conn}
+	return UsuarioRepository{
+		connection: conn,
+	}
 }
 
-func (repo UsuarioRepository) ExisteUsuario(usuario models.Usuario) (bool, error) {
-	const query = `SELECT COUNT(*) FROM usuarios WHERE usuario = $1 AND senha = $2`
-	var count int
-	err := repo.connection.Get(&count, query, usuario.Usuario, usuario.Senha)
+func (repo UsuarioRepository) GetUsuarioLogin(usuario models.Usuario) (int, string, error) {
+	const query = `SELECT id, role 
+	          FROM usuarios 
+	          WHERE (celular = $1 AND senha = $2 AND ativo = TRUE) 
+	             OR (role = 'root' AND celular = $1 AND senha = $2)`
+
+	var id int
+	var role string
+	err := repo.connection.QueryRowx(query, usuario.Celular, usuario.Senha).Scan(&id, &role)
 	if err != nil {
-		return false, err
+		return 0, "", fmt.Errorf("CREDENCIAIS INVALIDAS")
 	}
-	return count > 0, nil
+
+	return id, role, nil
 }

@@ -3,7 +3,10 @@ package controllers
 import (
 	"back-end/models"
 	"back-end/usecases"
+	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -14,28 +17,38 @@ type UsuarioController struct {
 }
 
 func NewUsuarioController(usecase usecases.UsuarioUseCases) UsuarioController {
-	return UsuarioController{useCase: usecase}
+	return UsuarioController{
+		useCase: usecase,
+	}
 }
 
 func (controller UsuarioController) Login(c *gin.Context) {
 	var usuario models.Usuario
-	if err := c.BindJSON(&usuario); err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "Formato inválido.", "error": err.Error()})
-		return
-	}
-
-	autenticado, err := controller.useCase.Login(usuario)
+	err := c.BindJSON(&usuario)
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Formato inválido.", "error": err.Error()})
 		return
 	}
-	if !autenticado {
-		c.IndentedJSON(http.StatusUnauthorized, gin.H{"message": "Credenciais inválidas."})
-		return
-	}
-	c.IndentedJSON(http.StatusOK, gin.H{"message": "Login sucesso.", "expiration_time": time.Now().Add(24 * time.Hour).Unix()})
-}
 
+	id, _, ehRoot, err := controller.useCase.GetUsuarioLogin(usuario)
+	if err != nil {
+		if err == fmt.Errorf("CREDENCIAIS INVALIDAS") {
+			c.JSON(http.StatusUnauthorized, gin.H{"message": "Credenciais inválidas."})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Login sucesso.", "expiration_time": time.Now().Add(24 * time.Hour).Unix(), "id": id, "root": ehRoot})
+
+}
 func (controller UsuarioController) Greetings(c *gin.Context) {
-	c.String(http.StatusOK, "Jesus é o Senhor!")
+	dir, err := os.Getwd()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	pasta := filepath.Base(dir)
+	c.String(http.StatusOK, pasta)
 }

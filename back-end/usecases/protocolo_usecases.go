@@ -16,14 +16,14 @@ func NewProtocoloUseCases(repo repository.ProtocoloRepository) ProtocoloUseCases
 }
 
 func (uc ProtocoloUseCases) EnviarProtocolo(protocolo models.Protocolo) error {
-	if err := uc.repository.CreateProtocolo(protocolo.Numero, protocolo.ID); err != nil {
+	if err := uc.repository.CreateProtocolo(protocolo.Numero, protocolo.IDReclamacao); err != nil {
 		return err
 	}
-	if err := uc.repository.MarcarResolvido(protocolo.ID); err != nil {
+	if err := uc.repository.MarcarResolvido(protocolo.IDReclamacao); err != nil {
 		return err
 	}
 
-	dados, err := uc.repository.GetDadosReclamacao(protocolo.ID)
+	dados, err := uc.repository.GetDadosReclamacao(protocolo.IDReclamacao)
 	if err != nil {
 		return err
 	}
@@ -32,7 +32,7 @@ func (uc ProtocoloUseCases) EnviarProtocolo(protocolo models.Protocolo) error {
 		log.Printf("Erro ao enviar notificação: %v", err)
 	}
 
-	if err := uc.repository.MarcarAvisado(protocolo.ID); err != nil {
+	if err := uc.repository.MarcarAvisado(protocolo.IDProtocolo); err != nil {
 		log.Printf("Erro ao marcar protocolo como avisado: %v", err)
 	}
 

@@ -115,3 +115,5 @@ CREATE INDEX idx_reclamacao_regiao ON reclamacao (regiao);
 CREATE INDEX idx_enderecos_logradouro ON enderecos (logradouro);
 CREATE INDEX idx_mensagens_telefone ON mensagens (telefone);
 CREATE INDEX idx_conversas_telefone_data ON conversas (telefone, data);
+
+INSERT INTO Enderecos (logradouro, bairro, regiao) VALUES ()

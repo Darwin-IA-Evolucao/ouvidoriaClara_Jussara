@@ -19,6 +19,8 @@ DROP TABLE IF EXISTS conversas CASCADE;
 DROP TABLE IF EXISTS contatos CASCADE;
 DROP TABLE IF EXISTS enderecos CASCADE;
 DROP TABLE IF EXISTS usuarios CASCADE;
+DROP TABLE IF EXISTS cliente CASCADE;
+DROP TABLE IF EXISTS atividade_clientes CASCADE;
 
 CREATE TABLE contatos (
     telefone TEXT PRIMARY KEY,
@@ -40,8 +42,8 @@ CREATE TABLE cliente (
 );
 
 CREATE TABLE conversas (
-    telefone TEXT(64) NOT NULL,
-    data TEXT(10) NOT NULL
+    telefone TEXT NOT NULL,
+    data TEXT NOT NULL
 );
 
 CREATE TABLE atividade_clientes (
@@ -62,8 +64,8 @@ CREATE TABLE atividade_clientes (
 
 CREATE TABLE mensagens (
     id SERIAL PRIMARY KEY,
-    telefone TEXT(64) NOT NULL,
-    conteudo TEXT(1000),
+    telefone TEXT NOT NULL,
+    conteudo TEXT,
     data TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     foienviado BOOLEAN DEFAULT false NOT NULL
 );
@@ -71,12 +73,12 @@ CREATE TABLE mensagens (
 CREATE TABLE enderecos (
     logradouro TEXT NOT NULL,
     bairro TEXT DEFAULT '' NOT NULL,
-    regiao INTEGER DEFAULT 1 NOT NULL
+    regiao TEXT DEFAULT '' NOT NULL
 );
 
 CREATE TABLE reclamacao (
     idreclamacao SERIAL PRIMARY KEY,
-    telefone TEXT(64) NOT NULL,
+    telefone TEXT NOT NULL,
     categoria TEXT DEFAULT '' NOT NULL,
     endereco TEXT DEFAULT '' NOT NULL,
     bairro TEXT DEFAULT '' NOT NULL,
@@ -92,14 +94,14 @@ CREATE TABLE protocolo (
     idreclamacao INTEGER NOT NULL,
     numero TEXT DEFAULT '' NOT NULL,
     avisado BOOLEAN DEFAULT false NOT NULL,
-    CONSTRAINT fk_protocolo FOREIGN KEY (idreclamacao) REFERENCES reclamacao (id) ON DELETE CASCADE
+    CONSTRAINT fk_protocolo FOREIGN KEY (idreclamacao) REFERENCES reclamacao (idreclamacao) ON DELETE CASCADE
 );
 
 CREATE TABLE usuarios (
     id SERIAL PRIMARY KEY,
     unidade TEXT DEFAULT '' NOT NULL,
-    celular TEXT(64) NOT NULL UNIQUE,
-    senha TEXT(64) NOT NULL,
+    celular TEXT NOT NULL UNIQUE,
+    senha TEXT NOT NULL,
     endereco TEXT DEFAULT '' NOT NULL,
     ativo BOOLEAN DEFAULT true NOT NULL,
     role TEXT DEFAULT 'user' NOT NULL
@@ -113,3 +115,5 @@ CREATE INDEX idx_reclamacao_regiao ON reclamacao (regiao);
 CREATE INDEX idx_enderecos_logradouro ON enderecos (logradouro);
 CREATE INDEX idx_mensagens_telefone ON mensagens (telefone);
 CREATE INDEX idx_conversas_telefone_data ON conversas (telefone, data);
+
+INSERT INTO Enderecos (logradouro, bairro, regiao) VALUES ()

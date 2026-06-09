@@ -1,9 +1,12 @@
 package usecases
 
 import (
+	"back-end/apperror"
 	"back-end/models"
 	"back-end/repository"
 	"back-end/services"
+	"database/sql"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -152,18 +155,178 @@ func (uc ReclamacaoUseCases) ReprovarInquerito(id string) error {
 	return uc.repository.UpdateStatus(id, "reprovado")
 }
 
-func (uc ReclamacaoUseCases) CreateOcorrencia(request models.OcorrenciaRequest) error {
-	if !ehCategoria(request.Categoria) {
-		return fmt.Errorf("Categoria inválida")
+func (uc ReclamacaoUseCases) CreateOcorrencia(request models.OcorrenciaRequest) (int, error) {
+	if request.Telefone == "" {
+		return 0, apperror.BadRequest("Telefone obrigatório")
 	}
+	request.Categoria = strings.ToLower(request.Categoria)
+	if !ehCategoria(request.Categoria) {
+		return 0, apperror.BadRequest("Categoria inválida")
+	}
+
 	request.Telefone = normalizeTelefone(request.Telefone)
 
 	data := models.OcorrenciaData{
-		Telefone: request.Telefone,
-		Categoria: request.Categoria,
+		Telefone:   request.Telefone,
+		Categoria:  request.Categoria,
 		Reclamacao: request.SituacaoResumida,
-		Detalhes: request.DetalhesReclamacao,
+		Detalhes:   request.DetalhesReclamacao,
 	}
 
-	return uc.repository.CreateOcorrencia(data)
+	id, err := uc.repository.CreateOcorrencia(data)
+	if err != nil {
+		return 0, apperror.Internal(err.Error())
+	}
+	return id, nil
+}
+
+func (uc ReclamacaoUseCases) GetAllOcorrencias(telefone string) ([]models.Ocorrencia, error) {
+	if telefone != "" {
+		telefone = normalizeTelefone(telefone)
+	}
+	list, err := uc.repository.GetAllOcorrencias(telefone)
+	if err != nil {
+		return nil, apperror.Internal(err.Error())
+	}
+	return list, nil
+}
+
+func (uc ReclamacaoUseCases) GetOcorrenciaById(id string) (models.Ocorrencia, error) {
+	o, err := uc.repository.GetOcorrenciaById(id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return models.Ocorrencia{}, apperror.NotFound("Ocorrência não encontrada")
+		}
+		return models.Ocorrencia{}, apperror.Internal(err.Error())
+	}
+	return *o, nil
+}
+
+func (uc ReclamacaoUseCases) UpdateOcorrencia(id string, request models.OcorrenciaUpdateRequest) error {
+	atual, err := uc.repository.GetOcorrenciaById(id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return apperror.NotFound("Ocorrência não encontrada")
+		}
+		return apperror.Internal(err.Error())
+	}
+
+	categoria := atual.Categoria
+	if request.Categoria != "" {
+		if !ehCategoria(request.Categoria) {
+			return apperror.BadRequest("Categoria inválida")
+		}
+		categoria = strings.ToLower(request.Categoria)
+	}
+
+	situacao := atual.SituacaoResumida
+	if request.SituacaoResumida != "" {
+		situacao = request.SituacaoResumida
+	}
+
+	status := atual.Status
+	if request.Status != "" {
+		status = request.Status
+	}
+
+	detalhes := atual.Detalhes
+	detalhes = mergeDetalhes(detalhes, request.DetalhesReclamacao)
+
+	data := models.OcorrenciaData{
+		Telefone:   atual.Telefone,
+		Categoria:  categoria,
+		Reclamacao: situacao,
+		Detalhes:   detalhes,
+	}
+
+	if err := uc.repository.UpdateOcorrencia(id, data, status); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return apperror.NotFound("Ocorrência não encontrada")
+		}
+		return apperror.Internal(err.Error())
+	}
+	return nil
+}
+
+func (uc ReclamacaoUseCases) DeleteOcorrencia(id string) error {
+	if err := uc.repository.DeleteOcorrencia(id); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return apperror.NotFound("Ocorrência não encontrada")
+		}
+		return apperror.Internal(err.Error())
+	}
+	return nil
+}
+
+func mergeDetalhes(atual, patch models.DetalhesReclamacao) models.DetalhesReclamacao {
+	if patch.EnderecoOcorrencia != "" {
+		atual.EnderecoOcorrencia = patch.EnderecoOcorrencia
+	}
+	if patch.ConheceTutor != "" {
+		atual.ConheceTutor = patch.ConheceTutor
+	}
+	if patch.CondicoesAnimal != "" {
+		atual.CondicoesAnimal = patch.CondicoesAnimal
+	}
+	if patch.FrequenciaMausTratos != "" {
+		atual.FrequenciaMausTratos = patch.FrequenciaMausTratos
+	}
+	if patch.NomeAnimal != "" {
+		atual.NomeAnimal = patch.NomeAnimal
+	}
+	if patch.EspecieAnimal != "" {
+		atual.EspecieAnimal = patch.EspecieAnimal
+	}
+	if patch.IdadeAnimal != "" {
+		atual.IdadeAnimal = patch.IdadeAnimal
+	}
+	if patch.SexoAnimal != "" {
+		atual.SexoAnimal = patch.SexoAnimal
+	}
+	if patch.BairroAnimal != "" {
+		atual.BairroAnimal = patch.BairroAnimal
+	}
+	if patch.NomeResponsavelAnimal != "" {
+		atual.NomeResponsavelAnimal = patch.NomeResponsavelAnimal
+	}
+	if patch.TelefoneResponsavelAnimal != "" {
+		atual.TelefoneResponsavelAnimal = patch.TelefoneResponsavelAnimal
+	}
+	if patch.HistoricoAnimal != "" {
+		atual.HistoricoAnimal = patch.HistoricoAnimal
+	}
+	if patch.TemCadUnico != "" {
+		atual.TemCadUnico = patch.TemCadUnico
+	}
+	if patch.EhProtetorIndependente != "" {
+		atual.EhProtetorIndependente = patch.EhProtetorIndependente
+	}
+	if patch.SituacaoAnimal != "" {
+		atual.SituacaoAnimal = patch.SituacaoAnimal
+	}
+	if patch.QuandoCruzou != "" {
+		atual.QuandoCruzou = patch.QuandoCruzou
+	}
+	if patch.InfoSaudeAnimal != "" {
+		atual.InfoSaudeAnimal = patch.InfoSaudeAnimal
+	}
+	if patch.DetalhesDenuncia != "" {
+		atual.DetalhesDenuncia = patch.DetalhesDenuncia
+	}
+	if patch.TempoAnimalLocal != "" {
+		atual.TempoAnimalLocal = patch.TempoAnimalLocal
+	}
+	if patch.FerimentosAnimal != "" {
+		atual.FerimentosAnimal = patch.FerimentosAnimal
+	}
+	if patch.ProvidenciasAnimal != "" {
+		atual.ProvidenciasAnimal = patch.ProvidenciasAnimal
+	}
+	if patch.MidiasAnimal != "" {
+		atual.MidiasAnimal = patch.MidiasAnimal
+	}
+	if patch.ProtocoloDenuncia != "" {
+		atual.ProtocoloDenuncia = patch.ProtocoloDenuncia
+	}
+	return atual
 }

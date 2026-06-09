@@ -40,10 +40,29 @@ type OcorrenciaRequest struct {
 }
 
 type OcorrenciaData struct {
-	Telefone string `json:"telefone"`
-	Categoria string `json:"categoria"`
-	Reclamacao string `json:"reclamacao"`
-	Detalhes DetalhesReclamacao `json:"detalhes"`
+	Telefone   string             `json:"telefone"`
+	Categoria  string             `json:"categoria"`
+	Reclamacao string             `json:"reclamacao"`
+	Detalhes   DetalhesReclamacao `json:"detalhes"`
+}
+
+type Ocorrencia struct {
+	ID               int                `json:"id"`
+	Telefone         string             `json:"telefone"`
+	Categoria        string             `json:"categoria"`
+	SituacaoResumida string             `json:"situacaoResumida"`
+	Tipo             string             `json:"tipo"`
+	Status           string             `json:"status"`
+	Detalhes         DetalhesReclamacao `json:"detalhes"`
+	DataCriacao      string             `json:"dataCriacao"`
+	DataAtualizacao  string             `json:"dataAtualizacao"`
+}
+
+type OcorrenciaUpdateRequest struct {
+	SituacaoResumida string `json:"situacaoResumida"`
+	Categoria        string `json:"categoria"`
+	Status           string `json:"status"`
+	DetalhesReclamacao
 }
 
 type Atualizacao struct {

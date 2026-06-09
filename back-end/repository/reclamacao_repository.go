@@ -83,11 +83,115 @@ func (repo ReclamacaoRepository) GetAllReclamacoes() ([]models.Reclamacao, error
 	return reclamacoes, nil
 }
 
-func (repo ReclamacaoRepository) CreateOcorrencia(data models.OcorrenciaData) error {
-	detalhesJSON, _ := json.Marshal(data.Detalhes)
+func (repo ReclamacaoRepository) CreateOcorrencia(data models.OcorrenciaData) (int, error) {
+	detalhesJSON, err := json.Marshal(data.Detalhes)
+	if err != nil {
+		return 0, err
+	}
 	const query = `
-        INSERT INTO reclamacao (telefone, categoria, reclamacao, detalhes)
-        VALUES ($1, $2, $3, $4::jsonb)`
-	_, err := repo.connection.Exec(query, data.Telefone, data.Categoria, data.Reclamacao, detalhesJSON)
-	return err
+		INSERT INTO reclamacao (telefone, categoria, reclamacao, detalhes)
+		VALUES ($1, $2, $3, $4::jsonb)
+		RETURNING idreclamacao`
+	var id int
+	err = repo.connection.QueryRow(query, data.Telefone, data.Categoria, data.Reclamacao, detalhesJSON).Scan(&id)
+	return id, err
+}
+
+func scanOcorrencia(row interface {
+	Scan(dest ...any) error
+}) (models.Ocorrencia, error) {
+	var o models.Ocorrencia
+	var detalhesJSON []byte
+	if err := row.Scan(
+		&o.ID, &o.Telefone, &o.Categoria, &o.SituacaoResumida,
+		&o.Tipo, &o.Status, &detalhesJSON, &o.DataCriacao, &o.DataAtualizacao,
+	); err != nil {
+		return o, err
+	}
+	if len(detalhesJSON) > 0 {
+		if err := json.Unmarshal(detalhesJSON, &o.Detalhes); err != nil {
+			return o, err
+		}
+	}
+	o.Categoria = strings.ToLower(o.Categoria)
+	return o, nil
+}
+
+func (repo ReclamacaoRepository) GetAllOcorrencias(telefone string) ([]models.Ocorrencia, error) {
+	const baseQuery = `
+		SELECT idreclamacao, telefone, categoria, reclamacao, tipo, status, detalhes, data_criacao, data_atualizacao
+		FROM reclamacao`
+
+	var rows *sql.Rows
+	var err error
+	if telefone != "" {
+		rows, err = repo.connection.Query(baseQuery+` WHERE telefone = $1 ORDER BY data_criacao DESC`, telefone)
+	} else {
+		rows, err = repo.connection.Query(baseQuery + ` ORDER BY data_criacao DESC`)
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var ocorrencias []models.Ocorrencia
+	for rows.Next() {
+		o, err := scanOcorrencia(rows)
+		if err != nil {
+			return nil, err
+		}
+		ocorrencias = append(ocorrencias, o)
+	}
+	return ocorrencias, rows.Err()
+}
+
+func (repo ReclamacaoRepository) GetOcorrenciaById(id string) (*models.Ocorrencia, error) {
+	const query = `
+		SELECT idreclamacao, telefone, categoria, reclamacao, tipo, status, detalhes, data_criacao, data_atualizacao
+		FROM reclamacao WHERE idreclamacao = $1`
+	row := repo.connection.QueryRow(query, id)
+	o, err := scanOcorrencia(row)
+	if err != nil {
+		return nil, err
+	}
+	return &o, nil
+}
+
+func (repo ReclamacaoRepository) UpdateOcorrencia(id string, data models.OcorrenciaData, status string) error {
+	detalhesJSON, err := json.Marshal(data.Detalhes)
+	if err != nil {
+		return err
+	}
+	const query = `
+		UPDATE reclamacao
+		SET categoria = $1, reclamacao = $2, detalhes = $3::jsonb, status = $4, data_atualizacao = now()
+		WHERE idreclamacao = $5`
+	result, err := repo.connection.Exec(query, data.Categoria, data.Reclamacao, detalhesJSON, status, id)
+	if err != nil {
+		return err
+	}
+	n, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
+func (repo ReclamacaoRepository) DeleteOcorrencia(id string) error {
+	const query = `DELETE FROM reclamacao WHERE idreclamacao = $1`
+	result, err := repo.connection.Exec(query, id)
+	if err != nil {
+		return err
+	}
+	n, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }

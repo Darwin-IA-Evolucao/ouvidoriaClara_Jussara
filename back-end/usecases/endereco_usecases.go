@@ -4,6 +4,7 @@ import (
 	"back-end/models"
 	"back-end/repository"
 	"strings"
+	"unicode"
 )
 
 type EnderecoUseCases struct {
@@ -14,43 +15,67 @@ func NewEnderecoUseCases(repo repository.EnderecoRepository) EnderecoUseCases {
 	return EnderecoUseCases{repository: repo}
 }
 
-func limparEndereco(input string) string {
-	frasesIrrelevantes := []string{
-		"em frente ao número", "altura do número", "altura do", "próximo à",
-		"próximo ao", "final do", "início da", "em frente", "perto de",
-		"perto do", "ao lado de", "na esquina com", "número", "prox",
-	}
+var frasesIrrelevantes = []string{
+	"em frente ao número", "altura do número", "altura do", "próximo à",
+	"próximo ao", "final do", "início da", "em frente", "perto de",
+	"perto do", "ao lado de", "na esquina com", "número", "prox",
+}
+
+var prefixosLogradouro = []string{
+	"rua ", "r. ", "r ", "avenida ", "av. ", "av ", "travessa ", "trav. ", "tr ",
+	"alameda ", "al. ", "rodovia ", "rod. ", "praça ", "praca ", "beco ",
+}
+
+var stopwords = map[string]bool{
+	"rua": true, "r": true, "avenida": true, "av": true, "travessa": true,
+	"tr": true, "alameda": true, "rodovia": true, "praça": true, "praca": true,
+	"beco": true, "de": true, "da": true, "do": true, "dos": true, "das": true,
+}
+
+func parseEndereco(input string) (logradouro, bairro string) {
 	input = strings.ToLower(input)
 	for _, frase := range frasesIrrelevantes {
 		if idx := strings.Index(input, frase); idx != -1 {
-			return strings.TrimSpace(input[:idx])
+			input = strings.TrimSpace(input[:idx])
+			break
 		}
 	}
-	input = strings.Split(input, ",")[0]
-	return strings.TrimSpace(input)
+
+	partes := strings.Split(input, ",")
+	logradouro = strings.TrimSpace(partes[0])
+	if len(partes) > 1 {
+		candidato := strings.TrimSpace(partes[1])
+		if candidato != "" && !somenteDigitos(candidato) {
+			bairro = candidato
+		}
+	}
+	return logradouro, bairro
 }
 
-func buscaBinaria(lista []models.Logradouro, ruaProc string) (int, bool) {
-	var ruaAtual string
-	ruaProc = strings.ToLower(ruaProc)
-	inicio := 0
-	fim := len(lista) - 1
-	meio := (fim + inicio) / 2
-
-	for fim >= inicio {
-		ruaAtual = strings.ToLower(lista[meio].Logradouro)
-		if ruaAtual == ruaProc {
-			return meio, true
-		}
-		if ruaAtual > ruaProc {
-			fim = meio - 1
-			meio = inicio + (fim-inicio)/2
-		} else {
-			inicio = meio + 1
-			meio = inicio + (fim-inicio)/2
+func somenteDigitos(s string) bool {
+	for _, r := range s {
+		if !unicode.IsDigit(r) && !unicode.IsSpace(r) {
+			return false
 		}
 	}
-	return -1, false
+	return true
+}
+
+func normalizarLogradouro(s string) string {
+	return strings.ToLower(strings.TrimSpace(s))
+}
+
+func palavrasSignificativas(s string) []string {
+	s = normalizarLogradouro(s)
+	palavras := strings.Fields(s)
+	resultado := make([]string, 0, len(palavras))
+	for _, p := range palavras {
+		if len(p) < 3 || stopwords[p] {
+			continue
+		}
+		resultado = append(resultado, p)
+	}
+	return resultado
 }
 
 func levenshteinDistance(s1, s2 string) int {
@@ -147,31 +172,36 @@ func encontraMelhorCorrespondencia(lista []models.Logradouro, termo string, limi
 	return -1, false
 }
 
-func (uc EnderecoUseCases) 	GetRegiao(input string) int {
-	input = limparEndereco(input)
+func (uc EnderecoUseCases) GetRegiao(input string) string {
+	logradouro, bairro := parseEndereco(input)
 
-	if regiao, err := uc.repository.GetRegiaoByLogradouro(input); err == nil {
+	// 1) match direto no banco (com bairro quando disponível)
+	if regiao, err := uc.repository.GetRegiaoByLogradouro(logradouro, bairro); err == nil {
 		return regiao
 	}
-
-	logradouros, err := uc.repository.GetAllLogradouros()
-	if err != nil {
-		return 1
+	
+	// 2) candidatos por palavras-chave (query indexável, poucos registros)
+	palavras := palavrasSignificativas(logradouro)
+	if len(palavras) == 0 {
+		return "Centro"
 	}
 
-	if index, achou := buscaBinaria(logradouros, input); achou {
-		return logradouros[index].Regiao
-	}
-
-	limiteSimilaridade := len(input)
+	limiteSimilaridade := len(logradouro)
 	if limiteSimilaridade > 10 {
 		limiteSimilaridade = 10
 	}
-	if melhorIndex, encontrado := encontraMelhorCorrespondencia(logradouros, input, limiteSimilaridade); encontrado {
-		return logradouros[melhorIndex].Regiao
+
+	for qtdPalavras := len(palavras); qtdPalavras >= 1; qtdPalavras-- {
+		candidatos, err := uc.repository.FindCandidatosPorPalavras(palavras[:qtdPalavras], bairro, 25)
+		if err != nil || len(candidatos) == 0 {
+			continue
+		}
+		if idx, encontrado := encontraMelhorCorrespondencia(candidatos, logradouro, limiteSimilaridade); encontrado {
+			return candidatos[idx].Regiao
+		}
 	}
 
-	return 1
+	return "Centro"
 }
 
 func (uc EnderecoUseCases) CadastrarEnderecos(enderecos []models.Endereco) error {

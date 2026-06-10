@@ -83,6 +83,8 @@ func (repo ReclamacaoRepository) GetAllReclamacoes() ([]models.Reclamacao, error
 	return reclamacoes, nil
 }
 
+// NEW
+
 func (repo ReclamacaoRepository) CreateOcorrencia(data models.OcorrenciaData) (int, error) {
 	detalhesJSON, err := json.Marshal(data.Detalhes)
 	if err != nil {

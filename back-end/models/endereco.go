@@ -9,5 +9,5 @@ type Endereco struct {
 type Logradouro struct {
 	Logradouro string `db:"logradouro"`
 	Bairro     string `db:"bairro"`
-	Regiao     int    `db:"regiao"`
+	Regiao     string    `db:"regiao"`
 }

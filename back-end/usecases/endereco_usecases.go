@@ -147,7 +147,7 @@ func encontraMelhorCorrespondencia(lista []models.Logradouro, termo string, limi
 	return -1, false
 }
 
-func (uc EnderecoUseCases) GetRegiao(input string) int {
+func (uc EnderecoUseCases) 	GetRegiao(input string) int {
 	input = limparEndereco(input)
 
 	if regiao, err := uc.repository.GetRegiaoByLogradouro(input); err == nil {

@@ -183,6 +183,10 @@ func (uc ReclamacaoUseCases) CreateOcorrencia(request models.OcorrenciaRequest) 
 		regiao = uc.enderecoUC.GetRegiaoPorBairro(request.BairroAnimal)
 	}
 	data.Detalhes.Regiao = regiao
+
+	if data.Detalhes.TelefoneResponsavelAnimal != "" {
+		data.Detalhes.TelefoneResponsavelAnimal = normalizeTelefone(data.Detalhes.TelefoneResponsavelAnimal)
+	}
 	id, err := uc.repository.CreateOcorrencia(data)
 	if err != nil {
 		return 0, apperror.Internal(err.Error())

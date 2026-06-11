@@ -15,4 +15,10 @@ func SetupReclamacaoRoutes(router *gin.Engine, reclamacaoController controllers.
 	router.POST("/indicreq/:id", reclamacaoController.AprovarComoAmbos)
 	router.POST("/reprovar/:id", reclamacaoController.ReprovarInquerito)
 	router.GET("/reclamacoes", reclamacaoController.GetAllReclamacoes)
+
+	router.POST("/ocorrencia", reclamacaoController.CreateOcorrencia)
+	router.GET("/ocorrencias", reclamacaoController.GetAllOcorrencias)
+	router.GET("/ocorrencia/:id", reclamacaoController.GetOcorrenciaById)
+	router.PUT("/ocorrencia/:id", reclamacaoController.UpdateOcorrencia)
+	router.DELETE("/ocorrencia/:id", reclamacaoController.DeleteOcorrencia)
 }

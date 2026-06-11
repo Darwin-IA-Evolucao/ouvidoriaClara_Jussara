@@ -1,8 +1,10 @@
 package controllers
 
 import (
+	"back-end/apperror"
 	"back-end/models"
 	"back-end/usecases"
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -94,4 +96,85 @@ func (ctrl ReclamacaoController) ReprovarInquerito(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Inquerito reprovado com sucesso!"})
+}
+
+func (ctrl ReclamacaoController) CreateOcorrencia(c *gin.Context) {
+	var req models.OcorrenciaRequest
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Formato inválido.", "error": err.Error()})
+		return
+	}
+
+	id, err := ctrl.useCase.CreateOcorrencia(req)
+	if err != nil {
+		var appErr *apperror.AppError
+		if errors.As(err, &appErr) {
+			c.IndentedJSON(appErr.StatusCode, gin.H{"error": appErr.Message})
+			return
+		}
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.IndentedJSON(http.StatusCreated, gin.H{"message": "Ocorrência registrada com sucesso", "id": id})
+}
+
+func (ctrl ReclamacaoController) GetAllOcorrencias(c *gin.Context) {
+	telefone := c.Query("telefone")
+	list, err := ctrl.useCase.GetAllOcorrencias(telefone)
+	if err != nil {
+		var appErr *apperror.AppError
+		if errors.As(err, &appErr) {
+			c.IndentedJSON(appErr.StatusCode, gin.H{"error": appErr.Message})
+			return
+		}
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.IndentedJSON(http.StatusOK, list)
+}
+
+func (ctrl ReclamacaoController) GetOcorrenciaById(c *gin.Context) {
+	o, err := ctrl.useCase.GetOcorrenciaById(c.Param("id"))
+	if err != nil {
+		var appErr *apperror.AppError
+		if errors.As(err, &appErr) {
+			c.IndentedJSON(appErr.StatusCode, gin.H{"error": appErr.Message})
+			return
+		}
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.IndentedJSON(http.StatusOK, o)
+}
+
+func (ctrl ReclamacaoController) UpdateOcorrencia(c *gin.Context) {
+	var req models.OcorrenciaUpdateRequest
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Formato inválido.", "error": err.Error()})
+		return
+	}
+	if err := ctrl.useCase.UpdateOcorrencia(c.Param("id"), req); err != nil {
+		var appErr *apperror.AppError
+		if errors.As(err, &appErr) {
+			c.IndentedJSON(appErr.StatusCode, gin.H{"error": appErr.Message})
+			return
+		}
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.IndentedJSON(http.StatusOK, gin.H{"message": "Ocorrência atualizada com sucesso"})
+}
+
+func (ctrl ReclamacaoController) DeleteOcorrencia(c *gin.Context) {
+	if err := ctrl.useCase.DeleteOcorrencia(c.Param("id")); err != nil {
+		var appErr *apperror.AppError
+		if errors.As(err, &appErr) {
+			c.IndentedJSON(appErr.StatusCode, gin.H{"error": appErr.Message})
+			return
+		}
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.IndentedJSON(http.StatusOK, gin.H{"message": "Ocorrência removida com sucesso"})
 }

@@ -83,7 +83,7 @@ func (repo ReclamacaoRepository) GetAllReclamacoes() ([]models.Reclamacao, error
 	return reclamacoes, nil
 }
 
-// NEW
+// --------------------------------------------------------------------------------------- NEW
 
 func (repo ReclamacaoRepository) CreateOcorrencia(data models.OcorrenciaData) (int, error) {
 	detalhesJSON, err := json.Marshal(data.Detalhes)
@@ -91,11 +91,11 @@ func (repo ReclamacaoRepository) CreateOcorrencia(data models.OcorrenciaData) (i
 		return 0, err
 	}
 	const query = `
-		INSERT INTO reclamacao (telefone, categoria, reclamacao, detalhes)
-		VALUES ($1, $2, $3, $4::jsonb)
+		INSERT INTO reclamacao (telefone, categoria, reclamacao, detalhes, eh_manual)
+		VALUES ($1, $2, $3, $4::jsonb, $5)
 		RETURNING idreclamacao`
 	var id int
-	err = repo.connection.QueryRow(query, data.Telefone, data.Categoria, data.Reclamacao, detalhesJSON).Scan(&id)
+	err = repo.connection.QueryRow(query, data.Telefone, data.Categoria, data.Reclamacao, detalhesJSON, data.EhManual).Scan(&id)
 	return id, err
 }
 
@@ -106,7 +106,7 @@ func scanOcorrencia(row interface {
 	var detalhesJSON []byte
 	if err := row.Scan(
 		&o.ID, &o.Telefone, &o.Categoria, &o.SituacaoResumida,
-		&o.Tipo, &o.Status, &detalhesJSON, &o.DataCriacao, &o.DataAtualizacao,
+		&o.Tipo, &o.Status, &detalhesJSON, &o.EhManual, &o.DataCriacao, &o.DataAtualizacao,
 	); err != nil {
 		return o, err
 	}
@@ -121,7 +121,7 @@ func scanOcorrencia(row interface {
 
 func (repo ReclamacaoRepository) GetAllOcorrencias(telefone string) ([]models.Ocorrencia, error) {
 	const baseQuery = `
-		SELECT idreclamacao, telefone, categoria, reclamacao, tipo, status, detalhes, data_criacao, data_atualizacao
+		SELECT idreclamacao, telefone, categoria, reclamacao, tipo, status, detalhes, eh_manual, data_criacao, data_atualizacao
 		FROM reclamacao`
 
 	var rows *sql.Rows

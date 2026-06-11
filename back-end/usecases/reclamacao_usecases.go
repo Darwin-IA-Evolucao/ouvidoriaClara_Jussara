@@ -156,7 +156,7 @@ func (uc ReclamacaoUseCases) ReprovarInquerito(id string) error {
 	return uc.repository.UpdateStatus(id, "reprovado")
 }
 
-//new
+//------------------------------------------------------------------------------------------ new
 
 func (uc ReclamacaoUseCases) CreateOcorrencia(request models.OcorrenciaRequest) (int, error) {
 	if request.Telefone == "" {

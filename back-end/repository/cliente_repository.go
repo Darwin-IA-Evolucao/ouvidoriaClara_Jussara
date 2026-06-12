@@ -50,7 +50,7 @@ func (r *ClienteRepo) DeleteCliente(telefone string) error {
 }
 
 func (r *ClienteRepo) ClienteExiste(telefoneCliente string) (bool, *models.Cliente, error) {
-	const query = `SELECT * FROM cliente WHERE telefonecliente = $1`
+	const query = `SELECT * FROM cliente WHERE telefone = $1`
 
 	var cliente models.Cliente
 	err := r.db.Get(&cliente, query, telefoneCliente)

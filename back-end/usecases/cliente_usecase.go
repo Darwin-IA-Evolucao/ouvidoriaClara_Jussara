@@ -68,6 +68,7 @@ func (u *ClienteUseCase) ClienteExiste(telefoneCliente string) (bool, *models.Cl
 
 func (u *ClienteUseCase) CreateClienteDify(cliente *models.Cliente) error {
 	if !validarCampos(cliente.Telefone, cliente.DataNascimento, cliente.Nome, cliente.Cidade) {
+		fmt.Println(*cliente)
 		return apperror.BadRequest("nome, idade, telefone ou cidade invalidos")
 	}
 	existe, clienteExistente, err := u.ClienteExiste(cliente.Telefone)

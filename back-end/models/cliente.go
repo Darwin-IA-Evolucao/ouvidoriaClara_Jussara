@@ -11,8 +11,8 @@ type Cliente struct {
 	Cidade         string    `db:"cidade" json:"cidade"`
 	Endereco       string    `db:"endereco" json:"endereco"`
 	Bairro         string    `db:"bairro" json:"bairro"`
-	DataNascimento string    `db:"data_nascimento" json:"data_nascimento"`
-	DataCriacao    time.Time `db:"data_criacao" json:"data_criacao"`
+	DataNascimento string    `db:"data_nascimento" json:"dataNascimento"`
+	DataCriacao    time.Time `db:"data_criacao" json:"dataCriacao"`
 }
 
 func (c Cliente) String() string {

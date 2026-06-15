@@ -220,8 +220,8 @@ func (uc ReclamacaoUseCases) CreateOcorrencia(request models.OcorrenciaRequest) 
 
 	if !data.EhManual {
 		//gerar o card
-		msg:= uc.GerarMensagemNovaOcorrencia(*cliente, data)
-		config.EnviarMensagem("5515981226411",msg)
+		msg := uc.GerarMensagemNovaOcorrencia(*cliente, data)
+		config.EnviarMensagem("5515981226411", msg)
 	}
 	return id, nil
 }
@@ -275,14 +275,20 @@ func (uc ReclamacaoUseCases) UpdateOcorrencia(id string, request models.Ocorrenc
 		status = request.Status
 	}
 
+	mensagemFinal := atual.MensagemFinal
+	if request.MensagemFinal != ""{
+		mensagemFinal = request.MensagemFinal
+	}
+	
 	detalhes := atual.Detalhes
 	detalhes = mergeDetalhes(detalhes, request.DetalhesReclamacao)
 
 	data := models.OcorrenciaData{
-		Telefone:   atual.Telefone,
-		Categoria:  categoria,
-		Reclamacao: situacao,
-		Detalhes:   detalhes,
+		Telefone:      atual.Telefone,
+		Categoria:     categoria,
+		Reclamacao:    situacao,
+		Detalhes:      detalhes,
+		MensagemFinal: mensagemFinal,
 	}
 
 	if err := uc.repository.UpdateOcorrencia(id, data, status); err != nil {

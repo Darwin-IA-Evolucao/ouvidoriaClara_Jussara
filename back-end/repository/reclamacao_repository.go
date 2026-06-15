@@ -166,9 +166,9 @@ func (repo ReclamacaoRepository) UpdateOcorrencia(id string, data models.Ocorren
 	}
 	const query = `
 		UPDATE reclamacao
-		SET categoria = $1, reclamacao = $2, detalhes = $3::jsonb, status = $4, data_atualizacao = now()
-		WHERE idreclamacao = $5`
-	result, err := repo.connection.Exec(query, data.Categoria, data.Reclamacao, detalhesJSON, status, id)
+		SET categoria = $1, reclamacao = $2, detalhes = $3::jsonb, status = $4, data_atualizacao = now(), mensagem_final = $5
+		WHERE idreclamacao = $6`
+	result, err := repo.connection.Exec(query, data.Categoria, data.Reclamacao, detalhesJSON, status, data.MensagemFinal, id)
 	if err != nil {
 		return err
 	}

@@ -9,6 +9,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -219,9 +220,14 @@ func (uc ReclamacaoUseCases) CreateOcorrencia(request models.OcorrenciaRequest) 
 	}
 
 	if !data.EhManual {
-		//gerar o card
 		msg := uc.GerarMensagemNovaOcorrencia(*cliente, data)
 		config.EnviarMensagem("5515981226411", msg)
+	}
+
+	if data.Categoria == "geral" {
+		msg := uc.GerarMensagemEmail(*cliente, data)
+		destinatario := os.Getenv("EMAIL_DESTINO")
+		config.EnviarEmail(destinatario, "Nova demanda geral", "text/plain", msg)
 	}
 	return id, nil
 }
@@ -276,10 +282,10 @@ func (uc ReclamacaoUseCases) UpdateOcorrencia(id string, request models.Ocorrenc
 	}
 
 	mensagemFinal := atual.MensagemFinal
-	if request.MensagemFinal != ""{
+	if request.MensagemFinal != "" {
 		mensagemFinal = request.MensagemFinal
 	}
-	
+
 	detalhes := atual.Detalhes
 	detalhes = mergeDetalhes(detalhes, request.DetalhesReclamacao)
 
@@ -381,6 +387,38 @@ func mergeDetalhes(atual, patch models.DetalhesReclamacao) models.DetalhesReclam
 		atual.ProtocoloDenuncia = patch.ProtocoloDenuncia
 	}
 	return atual
+}
+
+func (uc *ReclamacaoUseCases) GerarMensagemEmail(cliente models.Cliente, ocorrencia models.OcorrenciaData) string {
+	var msg strings.Builder
+
+	addCampo := func(emoji, titulo, valor string) {
+		if strings.TrimSpace(valor) != "" {
+			msg.WriteString(fmt.Sprintf("%s %s: %s\n", emoji, titulo, valor))
+		}
+	}
+	dataTime, err := time.Parse("2006-01-02", cliente.DataNascimento)
+	if err != nil {
+		fmt.Println("erro ao gerar card nova ocorrencia: ", err)
+		return ""
+	}
+
+	dataNascimento := dataTime.Format("02/01/2006")
+
+	msg.WriteString("Olá, aqui é a Ju, assistente virtual da Vereadora Jussara Fernandes\n")
+	msg.WriteString("Foi detectado uma nova ocorrência de assuntos gerais, segue os dados:\n\n")
+	msg.WriteString("SOBRE O CLIENTE:\n")
+	addCampo("🪪", "Nome", cliente.Nome)
+	addCampo("📱", "Telefone", cliente.Telefone)
+	addCampo("🎂", "Data de Nascimento", dataNascimento)
+	addCampo("🏙️", "Cidade", cliente.Cidade)
+	addCampo("🏠", "Endereço", cliente.Endereco)
+	addCampo("📍", "Bairro", cliente.Bairro)
+	msg.WriteString("\n\n")
+	msg.WriteString("SOBRE A OCORRÊNCIA:\n")
+	addCampo("📝", "Reclamação", ocorrencia.Reclamacao)
+
+	return msg.String()
 }
 
 func (uc *ReclamacaoUseCases) GerarMensagemNovaOcorrencia(cliente models.Cliente, ocorrencia models.OcorrenciaData) string {

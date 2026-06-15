@@ -2,6 +2,7 @@ package usecases
 
 import (
 	"back-end/apperror"
+	"back-end/config"
 	"back-end/models"
 	"back-end/repository"
 	"back-end/services"
@@ -10,6 +11,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 )
 
 var categorias = []string{"geral", "maus tratos", "abandono presenciado", "animal apareceu na rua", "ajuda animal comunitario", "saude animal", "castracao eletiva", "castracao emergencial", "animais nao domiciliados", "animal desaparecido", "animal para ser adotado", "adocao de animais", "animal grande porte", "animal atropelado", "cuidados animais", "animais silvestres", "equipamentos"}
@@ -169,13 +171,13 @@ func (uc ReclamacaoUseCases) CreateOcorrencia(request models.OcorrenciaRequest) 
 		return 0, apperror.BadRequest("Categoria inválida")
 	}
 
-	existe, _, err := uc.clienteUC.ClienteExiste(request.Telefone)
+	existe, cliente, err := uc.clienteUC.ClienteExiste(request.Telefone)
 	if err != nil {
 		return 0, apperror.NotFound("Erro ao verificar cliente existe")
 	}
 
 	if !existe {
-		cliente := models.Cliente{
+		clienteReq := models.Cliente{
 			Telefone:       request.Telefone,
 			Nome:           request.NomeCliente,
 			Cidade:         request.CidadeCliente,
@@ -183,10 +185,11 @@ func (uc ReclamacaoUseCases) CreateOcorrencia(request models.OcorrenciaRequest) 
 			Bairro:         request.BairroAnimal,
 			DataNascimento: request.DataNascimentoCliente,
 		}
-		_, err := uc.clienteUC.repo.CreateCliente(cliente)
+		_, err := uc.clienteUC.repo.CreateCliente(clienteReq)
 		if err != nil {
 			return 0, apperror.Internal("Erro ao cadastrar novo cliente")
 		}
+		cliente = &clienteReq
 	}
 
 	request.Telefone = normalizeTelefone(request.Telefone)
@@ -196,6 +199,7 @@ func (uc ReclamacaoUseCases) CreateOcorrencia(request models.OcorrenciaRequest) 
 		Categoria:  request.Categoria,
 		Reclamacao: request.SituacaoResumida,
 		Detalhes:   request.DetalhesReclamacao,
+		EhManual:   request.EhManual,
 	}
 	regiao := ""
 	switch data.Categoria {
@@ -212,6 +216,12 @@ func (uc ReclamacaoUseCases) CreateOcorrencia(request models.OcorrenciaRequest) 
 	id, err := uc.repository.CreateOcorrencia(data)
 	if err != nil {
 		return 0, apperror.Internal(err.Error())
+	}
+
+	if !data.EhManual {
+		//gerar o card
+		msg:= uc.GerarMensagemNovaOcorrencia(*cliente, data)
+		config.EnviarMensagem("5515981226411",msg)
 	}
 	return id, nil
 }
@@ -365,4 +375,91 @@ func mergeDetalhes(atual, patch models.DetalhesReclamacao) models.DetalhesReclam
 		atual.ProtocoloDenuncia = patch.ProtocoloDenuncia
 	}
 	return atual
+}
+
+func (uc *ReclamacaoUseCases) GerarMensagemNovaOcorrencia(cliente models.Cliente, ocorrencia models.OcorrenciaData) string {
+	var msg strings.Builder
+
+	addCampo := func(emoji, titulo, valor string) {
+		if strings.TrimSpace(valor) != "" {
+			msg.WriteString(fmt.Sprintf("%s *%s:* %s\n", emoji, titulo, valor))
+		}
+	}
+
+	dataTime, err := time.Parse("2006-01-02", cliente.DataNascimento)
+	if err != nil {
+		fmt.Println("erro ao gerar card nova ocorrencia: ", err)
+		return ""
+	}
+	dataNascimento := dataTime.Format("02/01/2006")
+
+	msg.WriteString("📋 *NOVA OCORRÊNCIA* 📋\n\n")
+
+	// =========================
+	// CLIENTE
+	// =========================
+	msg.WriteString("👤 *DADOS DO CLIENTE*\n")
+
+	addCampo("🪪", "Nome", cliente.Nome)
+	addCampo("📱", "Telefone", cliente.Telefone)
+	addCampo("🎂", "Data de Nascimento", dataNascimento)
+	addCampo("🏙️", "Cidade", cliente.Cidade)
+	addCampo("🏠", "Endereço", cliente.Endereco)
+	addCampo("📍", "Bairro", cliente.Bairro)
+
+	msg.WriteString("\n")
+
+	// =========================
+	// OCORRÊNCIA
+	// =========================
+	msg.WriteString("🚨 *DADOS DA OCORRÊNCIA*\n")
+
+	addCampo("📂", "Categoria", ocorrencia.Categoria)
+	addCampo("📝", "Reclamação", ocorrencia.Reclamacao)
+	addCampo("🗺️", "Região", ocorrencia.Regiao)
+
+	d := ocorrencia.Detalhes
+
+	// Maus-tratos
+	addCampo("📌", "Endereço da Ocorrência", d.EnderecoOcorrencia)
+	addCampo("👨‍👩‍👧", "Conhece o Tutor", d.ConheceTutor)
+	addCampo("🐾", "Condições do Animal", d.CondicoesAnimal)
+	addCampo("🔁", "Frequência dos Maus-tratos", d.FrequenciaMausTratos)
+
+	// Animal
+	addCampo("🐶", "Nome do Animal", d.NomeAnimal)
+	addCampo("🦴", "Espécie", d.EspecieAnimal)
+	addCampo("⏳", "Idade", d.IdadeAnimal)
+	addCampo("⚧️", "Sexo", d.SexoAnimal)
+	addCampo("📍", "Bairro do Animal", d.BairroAnimal)
+	addCampo("🙋", "Responsável", d.NomeResponsavelAnimal)
+	addCampo("☎️", "Telefone do Responsável", d.TelefoneResponsavelAnimal)
+	addCampo("📖", "Histórico do Animal", d.HistoricoAnimal)
+
+	// Saúde
+	addCampo("💳", "Possui CadÚnico", d.TemCadUnico)
+	addCampo("🛟", "Protetor Independente", d.EhProtetorIndependente)
+	addCampo("🏥", "Situação do Animal", d.SituacaoAnimal)
+
+	// Castração
+	addCampo("💕", "Quando Cruzou", d.QuandoCruzou)
+	addCampo("🩺", "Informações de Saúde", d.InfoSaudeAnimal)
+
+	// Denúncia
+	addCampo("📣", "Detalhes da Denúncia", d.DetalhesDenuncia)
+
+	// Silvestres
+	addCampo("⏰", "Tempo no Local", d.TempoAnimalLocal)
+	addCampo("🩹", "Ferimentos", d.FerimentosAnimal)
+	addCampo("🚑", "Providências Tomadas", d.ProvidenciasAnimal)
+
+	// Comuns
+	addCampo("📸", "Mídias", d.MidiasAnimal)
+	addCampo("📑", "Protocolo", d.ProtocoloDenuncia)
+
+	if d.Regiao != "" && d.Regiao != ocorrencia.Regiao {
+		addCampo("🌎", "Região Informada", d.Regiao)
+	}
+
+	return msg.String()
 }

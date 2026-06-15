@@ -131,7 +131,7 @@ func (repo ClienteRepo) GetClienteAtivo(telefone string) (bool, error) {
 
 func (repo ClienteRepo) GetDadosCliente(telefone string) (models.ClienteDadosDTO, error) {
 	const query = `
-		SELECT nomecliente, telefone
+		SELECT nome, telefone
 		FROM cliente
 		WHERE telefone = $1
 	`

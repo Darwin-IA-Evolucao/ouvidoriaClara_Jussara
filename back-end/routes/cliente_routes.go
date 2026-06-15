@@ -23,7 +23,6 @@ func SetupClienteRoutes(router *gin.Engine, clienteController *controllers.Clien
 	router.GET("/clientes-gelo", clienteController.GetClientesGelo)
 	router.GET("/existe-cliente/:telefone", clienteController.ExisteCliente)
 
-	router.GET("/clientes-gelo", clienteController.GetClientesGelo)
 	router.GET("/busca/cliente/:telefoneCliente", clienteController.GetClienteAtivo)
 	router.GET("/busca/dados/:telefoneCliente", clienteController.GetDadosCliente)
 }

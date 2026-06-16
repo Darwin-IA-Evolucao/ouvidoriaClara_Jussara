@@ -24,25 +24,25 @@ func (repo ReclamacaoRepository) CreateReclamacao(data models.RequestData) error
 }
 
 func (repo ReclamacaoRepository) UpdateReclamacao(id, novaReclamacao string) error {
-	const query = `UPDATE reclamacao SET reclamacao = $1 WHERE id = $2`
+	const query = `UPDATE reclamacao SET reclamacao = $1 WHERE idreclamacao = $2`
 	_, err := repo.connection.Exec(query, novaReclamacao, id)
 	return err
 }
 
 func (repo ReclamacaoRepository) UpdateStatus(id, status string) error {
-	const query = `UPDATE reclamacao SET status = $1 WHERE id = $2`
+	const query = `UPDATE reclamacao SET status = $1 WHERE idreclamacao = $2`
 	_, err := repo.connection.Exec(query, status, id)
 	return err
 }
 
 func (repo ReclamacaoRepository) UpdateStatusTipo(id, status, tipo string) error {
-	const query = `UPDATE reclamacao SET status = $1, tipo = $2 WHERE id = $3`
+	const query = `UPDATE reclamacao SET status = $1, tipo = $2 WHERE idreclamacao = $3`
 	_, err := repo.connection.Exec(query, status, tipo, id)
 	return err
 }
 
 func (repo ReclamacaoRepository) GetReclamacaoById(id string) (*models.Inquerito, error) {
-	const query = `SELECT id, reclamacao, nome, telefone, categoria, regiao FROM reclamacao WHERE id = $1`
+	const query = `SELECT idreclamacao, reclamacao, nome, telefone, categoria, regiao FROM reclamacao WHERE idreclamacao = $1`
 	var data models.Inquerito
 	err := repo.connection.Get(&data, query, id)
 	if err != nil {
@@ -53,9 +53,9 @@ func (repo ReclamacaoRepository) GetReclamacaoById(id string) (*models.Inquerito
 
 func (repo ReclamacaoRepository) GetAllReclamacoes() ([]models.Reclamacao, error) {
 	const query = `
-		SELECT r.id, r.nome, r.telefone, r.categoria, r.regiao, r.resolvido, r.data, r.reclamacao, r.status, r.tipo, p.numero AS protocolo
+		SELECT r.idreclamacao, r.nome, r.telefone, r.categoria, r.regiao, r.resolvido, r.data, r.reclamacao, r.status, r.tipo, p.numero AS protocolo
 		FROM reclamacao r
-		LEFT JOIN protocolo p ON r.id = p.idReclamacao
+		LEFT JOIN protocolo p ON r.idreclamacao = p.idReclamacao
 		ORDER BY data DESC;`
 
 	rows, err := repo.connection.Query(query)

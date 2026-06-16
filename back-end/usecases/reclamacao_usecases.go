@@ -5,7 +5,6 @@ import (
 	"back-end/config"
 	"back-end/models"
 	"back-end/repository"
-	"back-end/services"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -77,16 +76,16 @@ func (uc ReclamacaoUseCases) GetAllReclamacoes() ([]models.Reclamacao, error) {
 }
 
 func (uc ReclamacaoUseCases) AprovarInquerito(id string) error {
-	if err := uc.repository.UpdateStatus(id, "aprovado"); err != nil {
+	if err := uc.repository.UpdateStatusTipo(id, "aprovado", "indicacao"); err != nil {
 		return err
 	}
-	data, err := uc.repository.GetReclamacaoById(id)
-	if err != nil {
-		return err
-	}
-	if _, err := services.EnviaInquerito(*data); err != nil {
-		return err
-	}
+	// data, err := uc.repository.GetReclamacaoById(id)
+	// if err != nil {
+	// 	return err
+	// }
+	// if _, err := services.EnviaInquerito(*data); err != nil {
+	// 	return err
+	// }
 	return nil
 }
 
@@ -94,13 +93,13 @@ func (uc ReclamacaoUseCases) AprovarRequerimento(id string) error {
 	if err := uc.repository.UpdateStatusTipo(id, "aprovado", "requerimento"); err != nil {
 		return err
 	}
-	data, err := uc.repository.GetReclamacaoById(id)
-	if err != nil {
-		return err
-	}
-	if _, err := services.EnviaRequerimento(*data); err != nil {
-		return err
-	}
+	// data, err := uc.repository.GetReclamacaoById(id)
+	// if err != nil {
+	// 	return err
+	// }
+	// if _, err := services.EnviaRequerimento(*data); err != nil {
+	// 	return err
+	// }
 	return nil
 }
 
@@ -119,40 +118,40 @@ func (uc ReclamacaoUseCases) AprovarRequerimento(id string) error {
 // }
 
 func (uc ReclamacaoUseCases) AprovarComoAmbos(id string) error {
-	if err := uc.repository.UpdateStatus(id, "aprovado"); err != nil {
+	if err := uc.repository.UpdateStatusTipo(id, "aprovado", "ambos"); err != nil {
 		return err
 	}
-	data, err := uc.repository.GetReclamacaoById(id)
-	if err != nil {
-		return err
-	}
+	// data, err := uc.repository.GetReclamacaoById(id)
+	// if err != nil {
+	// 	return err
+	// }
 
-	if !strings.Contains(data.Reclamacao, "$$") {
-		if _, err := services.EnviaInquerito(*data); err != nil {
-			return err
-		}
-		body, convErr := services.ConvertIndicacao(data.Reclamacao)
-		if convErr != nil {
-			return convErr
-		}
-		data.Reclamacao = body
-		if _, err := services.EnviaRequerimento(*data); err != nil {
-			return err
-		}
-		return nil
-	}
+	// if !strings.Contains(data.Reclamacao, "$$") {
+	// 	if _, err := services.EnviaInquerito(*data); err != nil {
+	// 		return err
+	// 	}
+	// 	body, convErr := services.ConvertIndicacao(data.Reclamacao)
+	// 	if convErr != nil {
+	// 		return convErr
+	// 	}
+	// 	data.Reclamacao = body
+	// 	if _, err := services.EnviaRequerimento(*data); err != nil {
+	// 		return err
+	// 	}
+	// 	return nil
+	// }
 
-	if _, err := services.EnviaRequerimento(*data); err != nil {
-		return err
-	}
-	body, convErr := services.ConvertRequerimento(data.Reclamacao)
-	if convErr != nil {
-		return convErr
-	}
-	data.Reclamacao = body
-	if _, err := services.EnviaInquerito(*data); err != nil {
-		return err
-	}
+	// if _, err := services.EnviaRequerimento(*data); err != nil {
+	// 	return err
+	// }
+	// body, convErr := services.ConvertRequerimento(data.Reclamacao)
+	// if convErr != nil {
+	// 	return convErr
+	// }
+	// data.Reclamacao = body
+	// if _, err := services.EnviaInquerito(*data); err != nil {
+	// 	return err
+	// }
 	return nil
 }
 

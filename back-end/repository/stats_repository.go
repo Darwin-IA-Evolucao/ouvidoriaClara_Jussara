@@ -23,15 +23,6 @@ func (repo StatsRepository) GetPessoas() (int64, int64, error) {
 	return comReclamacao, semReclamacao, err
 }
 
-func (repo StatsRepository) GetAprovados() (int64, int64, error) {
-	const query = `SELECT
-		(SELECT COUNT(*) FROM reclamacao WHERE status = 'aprovado' AND tipo = 'indicação') AS indicacoes_aprovadas,
-		(SELECT COUNT(*) FROM reclamacao WHERE status = 'aprovado' AND tipo = 'requerimento') AS requerimentos_aprovados;`
-	var indAprovadas, reqAprovados int64
-	err := repo.connection.QueryRow(query).Scan(&indAprovadas, &reqAprovados)
-	return indAprovadas, reqAprovados, err
-}
-
 func (repo StatsRepository) GetCountByCategoria() ([]models.StatsCategoria, error) {
 	const query = `SELECT categoria, count(*) AS qtd_categoria FROM reclamacao GROUP BY categoria;`
 	var stats []models.StatsCategoria
@@ -63,9 +54,49 @@ func (repo StatsRepository) GetCountByTipo() ([]models.StatsTipo, error) {
 	return stats, err
 }
 
-func (repo StatsRepository) GetReprovados() (int64, error) {
-	const query = `SELECT COUNT(*) FROM reclamacao WHERE status = 'reprovado';`
-	var reprovados int64
-	err := repo.connection.Get(&reprovados, query)
-	return reprovados, err
+func (repo StatsRepository) GetCountByTipoAndStatus() (models.StatsByTipoAndStatus, error) {
+	const query = `
+		SELECT
+		COUNT(*) FILTER (
+			WHERE tipo = 'indicacao'
+			AND status = 'aprovado'
+		) AS indicacoes_aprovadas,
+
+		COUNT(*) FILTER (
+			WHERE tipo = 'indicacao'
+			AND status = 'Reprovado'
+		) AS indicacoes_reprovadas,
+
+		COUNT(*) FILTER (
+			WHERE tipo = 'indicacao'
+			AND status = 'Em análise'
+		) AS indicacoes_em_analise,
+
+		COUNT(*) FILTER (
+			WHERE tipo = 'indicacao'
+		) AS total_indicacoes,
+
+		COUNT(*) FILTER (
+			WHERE tipo = 'requerimento'
+			AND status = 'Aprovado'
+		) AS requerimentos_aprovados,
+
+		COUNT(*) FILTER (
+			WHERE tipo = 'requerimento'
+			AND status = 'Reprovado'
+		) AS requerimentos_reprovados,
+
+		COUNT(*) FILTER (
+			WHERE tipo = 'requerimento'
+			AND status = 'Em análise'
+		) AS requerimentos_em_analise,
+
+		COUNT(*) FILTER (
+			WHERE tipo = 'requerimento'
+		) AS total_requerimentos
+		FROM reclamacao;
+	`
+	var stats models.StatsByTipoAndStatus
+	err := repo.connection.Get(&stats, query)
+	return stats, err
 }

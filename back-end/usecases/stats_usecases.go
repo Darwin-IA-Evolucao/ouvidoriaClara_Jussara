@@ -19,12 +19,7 @@ func (uc StatsUseCases) GetStats() (*models.Stat, error) {
 		return nil, err
 	}
 	numPessoas := numIndicacoes + numConversas
-
-	indicacoesAprovadas, requerimentosAprovados, err := uc.repository.GetAprovados()
-	if err != nil {
-		return nil, err
-	}
-
+	
 	statsTipo, err := uc.repository.GetCountByTipo()
 	if err != nil {
 		return nil, err
@@ -38,7 +33,7 @@ func (uc StatsUseCases) GetStats() (*models.Stat, error) {
 		return nil, err
 	}
 
-	numReprovados, err := uc.repository.GetReprovados()
+	stats, err := uc.repository.GetCountByTipoAndStatus()
 	if err != nil {
 		return nil, err
 	}
@@ -49,15 +44,12 @@ func (uc StatsUseCases) GetStats() (*models.Stat, error) {
 	}
 
 	stat := models.Stat{
-		IndicacoesAprovadas:    int(indicacoesAprovadas),
-		RequerimentosAprovados: int(requerimentosAprovados),
-		NumPessoas:             int(numPessoas),
-		PercIndicacao:          percIndicacao,
-		NumIndicacoes:          int(numIndicacoes),
-		NumRequerimentos:       int(numReprovados),
-		Regioes:                statsRegiao,
-		Tipos:                  statsTipo,
-		Categorias:             statsCategoria,
+		NumPessoas:           int(numPessoas),
+		PercIndicacao:        percIndicacao,
+		Regioes:              statsRegiao,
+		Tipos:                statsTipo,
+		Categorias:           statsCategoria,
+		StatsByTipoAndStatus: stats,
 	}
 
 	return &stat, nil

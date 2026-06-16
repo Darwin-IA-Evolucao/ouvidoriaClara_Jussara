@@ -109,6 +109,8 @@ func main() {
 
 	routes.SetupClienteRoutes(server, controllers.NewClienteController(clienteUC))
 
+	routes.SetupMidiaRoutes(server, controllers.NewMidiaController(usecases.NewMidiaUseCases(repository.NewMidiaRepository(dbConnection))))
+
 	portBack := os.Getenv("PORT")
 	fmt.Println("Servidor rodando na porta: ", portBack)
 	server.Run(":" + portBack)

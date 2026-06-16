@@ -27,8 +27,8 @@ func (repo StatsRepository) GetAprovados() (int64, int64, error) {
 	const query = `SELECT
 		(SELECT COUNT(*) FROM reclamacao WHERE status = 'aprovado' AND tipo = 'indicação') AS indicacoes_aprovadas,
 		(SELECT COUNT(*) FROM reclamacao WHERE status = 'aprovado' AND tipo = 'requerimento') AS requerimentos_aprovados;`
-	var indAprovadas, reqAprovados, ofAprovados, protocoladas int64
-	err := repo.connection.QueryRow(query).Scan(&indAprovadas, &reqAprovados, &ofAprovados, &protocoladas)
+	var indAprovadas, reqAprovados int64
+	err := repo.connection.QueryRow(query).Scan(&indAprovadas, &reqAprovados)
 	return indAprovadas, reqAprovados, err
 }
 

@@ -14,12 +14,12 @@ func NewStatsUseCases(repo repository.StatsRepository) StatsUseCases {
 }
 
 func (uc StatsUseCases) GetStats() (*models.Stat, error) {
-	numIndicacoes, numConversas, err := uc.repository.GetPessoas()
+	pessoasComReclamacao, numConversas, err := uc.repository.GetPessoas()
 	if err != nil {
 		return nil, err
 	}
-	numPessoas := numIndicacoes + numConversas
-	
+	numPessoas := pessoasComReclamacao + numConversas
+
 	statsTipo, err := uc.repository.GetCountByTipo()
 	if err != nil {
 		return nil, err
@@ -39,13 +39,19 @@ func (uc StatsUseCases) GetStats() (*models.Stat, error) {
 	}
 
 	percIndicacao := 0.0
-	if numPessoas > 0 {
-		percIndicacao = float64(numIndicacoes) / float64(numPessoas) * 100
+	if stats.TotalReclamacoes > 0 {
+		percIndicacao = float64(stats.TotalIndicacoes) / float64(stats.TotalReclamacoes) * 100
 	}
 
+	percRequerimento := 0.0
+	if stats.TotalReclamacoes > 0 {
+		percRequerimento = float64(stats.TotalRequerimentos) / float64(stats.TotalReclamacoes) * 100
+	}
+	
 	stat := models.Stat{
 		NumPessoas:           int(numPessoas),
 		PercIndicacao:        percIndicacao,
+		PercRequerimento:     percRequerimento,
 		Regioes:              statsRegiao,
 		Tipos:                statsTipo,
 		Categorias:           statsCategoria,

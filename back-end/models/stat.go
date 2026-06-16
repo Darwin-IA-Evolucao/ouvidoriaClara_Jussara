@@ -6,12 +6,12 @@ type Regiao struct {
 }
 
 type Stat struct {
-	NumPessoas             int              `json:"numPessoas"`
-	NumReclamacoes         int              `json:"numReclamacoes"`
-	Regioes                []StatsRegiao    `json:"regioes"`
-	Categorias             []StatsCategoria `json:"categorias"`
-	Tipos                  []StatsTipo      `json:"tipos"`
-	PercIndicacao          float64          `json:"percIndicacao"`
+	NumPessoas       int              `json:"numPessoas"` // qtd contatos
+	Regioes          []StatsRegiao    `json:"regioes"` //distribuição por regiao
+	Categorias       []StatsCategoria `json:"categorias"` // distribuição por categoria
+	Tipos            []StatsTipo      `json:"tipos"` // distribuição por tipo 
+	PercIndicacao    float64          `json:"percIndicacao"`
+	PercRequerimento float64          `json:"percRequerimento"`
 	StatsByTipoAndStatus
 }
 
@@ -38,4 +38,6 @@ type StatsByTipoAndStatus struct {
 	RequerimentosReprovados int `json:"requerimentosReprovados" db:"requerimentos_reprovados"`
 	RequerimentosEmAnalise  int `json:"requerimentosEmAnalise" db:"requerimentos_em_analise"`
 	TotalRequerimentos      int `json:"totalRequerimentos" db:"total_requerimentos"`
+
+	TotalReclamacoes int `json:"numReclamacoes" db:"total_reclamacao"`
 }

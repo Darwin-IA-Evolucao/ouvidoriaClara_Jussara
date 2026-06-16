@@ -93,7 +93,9 @@ func (repo StatsRepository) GetCountByTipoAndStatus() (models.StatsByTipoAndStat
 
 		COUNT(*) FILTER (
 			WHERE tipo = 'requerimento'
-		) AS total_requerimentos
+		) AS total_requerimentos,
+
+		COUNT(*) AS total_reclamacao
 		FROM reclamacao;
 	`
 	var stats models.StatsByTipoAndStatus

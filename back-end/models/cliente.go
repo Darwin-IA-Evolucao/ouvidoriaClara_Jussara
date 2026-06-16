@@ -23,7 +23,7 @@ type ClienteGelo struct {
 }
 
 type ClienteDadosDTO struct {
-	Nome     string `db:"nomecliente" json:"nome,omitempty"`
+	Nome     string `db:"nome" json:"nome,omitempty"`
 	Telefone string `db:"telefone" json:"telefone,omitempty"`
 }
 

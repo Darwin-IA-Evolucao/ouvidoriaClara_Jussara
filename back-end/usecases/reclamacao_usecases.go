@@ -248,13 +248,13 @@ func (uc ReclamacaoUseCases) CreateOcorrencia(request models.OcorrenciaRequest) 
 	if !data.EhManual {
 		msg := uc.GerarMensagemNovaOcorrencia(*cliente, data)
 		config.EnviarMensagem("5515981226411", msg)
-		// if data.Detalhes.MidiasAnimal != "" {
-		// 	midias := strings.Split(data.Detalhes.MidiasAnimal, ",")
+		if data.Detalhes.MidiasAnimal != "" {
+			midias := strings.Split(data.Detalhes.MidiasAnimal, ",")
 
-		// 	for _, midia := range midias{
-				
-		// 	}
-		// }
+			for _, midia := range midias {
+				config.EnviarMidia("5515981226411", "", midia)
+			}
+		}
 	}
 
 	if data.Categoria == "geral" {

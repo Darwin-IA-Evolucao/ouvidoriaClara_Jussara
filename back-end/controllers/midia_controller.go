@@ -42,7 +42,7 @@ func (c MidiaController) UploadMidia(ctx *gin.Context) {
 		return
 	}
 
-	imageURL := fmt.Sprintf("%s/uploads/%s", baseUrl, url.PathEscape(uniqueName))
+	imageURL := fmt.Sprintf("%s/%s", baseUrl, url.PathEscape(uniqueName))
 	if err := c.useCase.UploadMidia(imageURL); err != nil {
 		ctx.IndentedJSON(http.StatusInternalServerError, gin.H{"message": "Erro ao salvar o link no banco de dados", "error": err.Error()})
 		return

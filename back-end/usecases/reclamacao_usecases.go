@@ -208,7 +208,7 @@ func (uc ReclamacaoUseCases) CreateOcorrencia(request models.OcorrenciaRequest) 
 			Nome:           request.NomeCliente,
 			Cidade:         request.CidadeCliente,
 			Endereco:       request.EnderecoCliente,
-			Bairro:         request.BairroAnimal,
+			Bairro:         request.BairroCliente,
 			DataNascimento: request.DataNascimentoCliente,
 		}
 		_, err := uc.clienteUC.repo.CreateCliente(clienteReq)
@@ -248,6 +248,13 @@ func (uc ReclamacaoUseCases) CreateOcorrencia(request models.OcorrenciaRequest) 
 	if !data.EhManual {
 		msg := uc.GerarMensagemNovaOcorrencia(*cliente, data)
 		config.EnviarMensagem("5515981226411", msg)
+		// if data.Detalhes.MidiasAnimal != "" {
+		// 	midias := strings.Split(data.Detalhes.MidiasAnimal, ",")
+
+		// 	for _, midia := range midias{
+				
+		// 	}
+		// }
 	}
 
 	if data.Categoria == "geral" {

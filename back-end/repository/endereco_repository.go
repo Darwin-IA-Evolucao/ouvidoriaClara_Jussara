@@ -16,6 +16,14 @@ func NewEnderecoRepository(conn *sqlx.DB) EnderecoRepository {
 	return EnderecoRepository{connection: conn}
 }
 
+func (repo EnderecoRepository) GetAllEnderecos() ([]models.Logradouro, error) {
+	const query = `SELECT * FROM enderecos`
+
+	var enderecos []models.Logradouro
+	err := repo.connection.Select(&enderecos, query)
+	return enderecos, err
+}
+
 func (repo EnderecoRepository) GetRegiaoByLogradouro(logradouro, bairro string) (string, error) {
 	const query = `
 		SELECT regiao FROM enderecos

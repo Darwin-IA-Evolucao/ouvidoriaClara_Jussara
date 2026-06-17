@@ -34,3 +34,12 @@ func (ctrl EnderecoController) CadastrarEnderecos(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Endereço cadastrado com sucesso!"})
 }
+
+func (ctrl EnderecoController) GetAllEnderecos(c *gin.Context){
+	enderecos, err := ctrl.useCase.GetAllEnderecos()
+	if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"enderecos": enderecos})
+}

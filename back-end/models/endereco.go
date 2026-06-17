@@ -7,7 +7,7 @@ type Endereco struct {
 }
 
 type Logradouro struct {
-	Logradouro string `db:"logradouro"`
-	Bairro     string `db:"bairro"`
-	Regiao     string    `db:"regiao"`
+	Logradouro string `db:"logradouro" json:"logradouro"`
+	Bairro     string `db:"bairro" json:"bairro"`
+	Regiao     string `db:"regiao" json:"regiao"`
 }

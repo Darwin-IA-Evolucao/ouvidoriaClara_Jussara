@@ -9,4 +9,5 @@ import (
 func SetupEnderecoRoutes(router *gin.Engine, enderecoController controllers.EnderecoController) {
 	router.GET("/getRegiao", enderecoController.GetRegiao)
 	router.POST("/cadastrarEnderecos", enderecoController.CadastrarEnderecos)
+	router.GET("/enderecos", enderecoController.GetAllEnderecos)
 }

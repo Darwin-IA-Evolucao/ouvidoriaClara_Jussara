@@ -224,3 +224,7 @@ func (uc EnderecoUseCases) CadastrarEnderecos(enderecos []models.Endereco) error
 	}
 	return nil
 }
+
+func (uc EnderecoUseCases) GetAllEnderecos()([]models.Logradouro, error){
+	return uc.repository.GetAllEnderecos()
+}

@@ -260,6 +260,7 @@ func (uc ReclamacaoUseCases) CreateOcorrencia(request models.OcorrenciaRequest) 
 			midias := strings.Split(data.Detalhes.MidiasAnimal, ",")
 
 			for _, midia := range midias {
+				midia = strings.TrimSpace(midia)
 				config.EnviarMidia(telefoneEnvio, "", midia)
 			}
 		}

@@ -64,32 +64,12 @@ func (repo StatsRepository) GetCountByTipoAndStatus() (models.StatsByTipoAndStat
 
 		COUNT(*) FILTER (
 			WHERE tipo = 'indicacao'
-			AND status = 'Reprovado'
-		) AS indicacoes_reprovadas,
-
-		COUNT(*) FILTER (
-			WHERE tipo = 'indicacao'
-			AND status = 'Em análise'
-		) AS indicacoes_em_analise,
-
-		COUNT(*) FILTER (
-			WHERE tipo = 'indicacao'
 		) AS total_indicacoes,
 
 		COUNT(*) FILTER (
 			WHERE tipo = 'requerimento'
 			AND status = 'Aprovado'
 		) AS requerimentos_aprovados,
-
-		COUNT(*) FILTER (
-			WHERE tipo = 'requerimento'
-			AND status = 'Reprovado'
-		) AS requerimentos_reprovados,
-
-		COUNT(*) FILTER (
-			WHERE tipo = 'requerimento'
-			AND status = 'Em análise'
-		) AS requerimentos_em_analise,
 
 		COUNT(*) FILTER (
 			WHERE tipo = 'requerimento'

@@ -11,7 +11,7 @@ import (
 )
 
 func EnviarMidia(telefone, mensagem, link string) error {
-	baseURL := os.Getenv("WEBHOOK_ENVIAR_MENSAGEM")
+	baseURL := os.Getenv("WEBHOOK_ENVIAR_MIDIA")
 	client := &http.Client{
 		Timeout: time.Second * 10,
 	}

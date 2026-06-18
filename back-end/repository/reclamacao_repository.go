@@ -149,7 +149,7 @@ func (repo ReclamacaoRepository) GetAllOcorrencias(telefone string) ([]models.Oc
 
 func (repo ReclamacaoRepository) GetOcorrenciaById(id string) (*models.Ocorrencia, error) {
 	const query = `
-		SELECT idreclamacao, telefone, categoria, reclamacao, tipo, status, detalhes, observacao, data_criacao, data_atualizacao
+		SELECT idreclamacao, telefone, categoria, reclamacao, tipo, status, detalhes, eh_manual, observacao, data_criacao, data_atualizacao
 		FROM reclamacao WHERE idreclamacao = $1`
 	row := repo.connection.QueryRow(query, id)
 	o, err := scanOcorrencia(row)

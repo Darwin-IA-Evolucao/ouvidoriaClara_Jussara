@@ -245,23 +245,26 @@ func (uc ReclamacaoUseCases) CreateOcorrencia(request models.OcorrenciaRequest) 
 		return 0, apperror.Internal(err.Error())
 	}
 
-	if !data.EhManual {
-		msg := uc.GerarMensagemNovaOcorrencia(*cliente, data)
-		config.EnviarMensagem("5515981226411", msg)
-		if data.Detalhes.MidiasAnimal != "" {
-			midias := strings.Split(data.Detalhes.MidiasAnimal, ",")
-
-			for _, midia := range midias {
-				config.EnviarMidia("5515981226411", "", midia)
-			}
-		}
-	}
-
+	telefoneEnvio := os.Getenv("TELEFONE_MAUS_TRATOS")
 	if data.Categoria == "geral" {
+		telefoneEnvio = os.Getenv("TELEFONE_GERAL")
 		msg := uc.GerarMensagemEmail(*cliente, data)
 		destinatario := os.Getenv("EMAIL_DESTINO")
 		config.EnviarEmail(destinatario, "Nova demanda geral", "text/plain", msg)
 	}
+	if !data.EhManual {
+		msg := uc.GerarMensagemNovaOcorrencia(*cliente, data)
+
+		config.EnviarMensagem(telefoneEnvio, msg)
+		if data.Detalhes.MidiasAnimal != "" {
+			midias := strings.Split(data.Detalhes.MidiasAnimal, ",")
+
+			for _, midia := range midias {
+				config.EnviarMidia(telefoneEnvio, "", midia)
+			}
+		}
+	}
+	//aqui limpar atividadecliente
 	return id, nil
 }
 

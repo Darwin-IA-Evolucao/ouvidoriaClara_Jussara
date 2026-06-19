@@ -20,7 +20,7 @@ func GetRelatorioDiario(conn *sqlx.DB) (*Relatorio, error) {
 	const query = `
 	SELECT
 		(SELECT COUNT(*) FROM reclamacao WHERE data_criacao >= now() - INTERVAL '1 day') AS total_interesse,
-		(SELECT COUNT(*) FROM contatos WHERE data_criacao >= now() - INTERVAL '24 hours',
+		(SELECT COUNT(*) FROM contatos WHERE data_criacao >= now() - INTERVAL '24 hours') AS total_contatos,
 		(SELECT COUNT(DISTINCT c.telefone)
 		FROM contatos c
 		WHERE c.data_criacao >= now() - INTERVAL '24 hours'
@@ -106,7 +106,7 @@ FROM contatos c
 LEFT JOIN reclamacao cl
 ON c.telefone = cl.telefone
 WHERE cl.telefone IS NULL
-AND data_criacao > CURRENT_DATE - INTERVAL '24 hours';`
+AND c.data_criacao > CURRENT_DATE - INTERVAL '24 hours';`
 	var relatorio Relatorio
 	err := conn.Get(&relatorio, query)
 	if err != nil {
@@ -163,10 +163,10 @@ func GetRelatorioMensal(conn *sqlx.DB) (*Relatorio, error) {
 	)
 	SELECT 
     (SELECT COUNT(*) FROM reclamacao i, periodo p WHERE data_criacao >= p.inicio_mes_passado AND data_criacao < p.inicio_mes_atual) AS total_interesse,
-    (SELECT COUNT(*) FROM contatos c, periodo p WHERE data_criacao >= p.inicio_mes_passado AND data_criacao < p.inicio_mes_atual AND (c.ehservidorouoficial = true OR c.ehservidorouoficial is null)) AS total_contatos,
+    (SELECT COUNT(*) FROM contatos c, periodo p WHERE data_criacao >= p.inicio_mes_passado AND data_criacao < p.inicio_mes_atual) AS total_contatos,
     (SELECT COUNT(DISTINCT c.telefone) FROM contatos c, periodo p 
         WHERE c.data_criacao >= p.inicio_mes_passado AND c.data_criacao < p.inicio_mes_atual
-        AND (c.ehservidorouoficial = true OR c.ehservidorouoficial is null)
+      
         AND (  
 			EXISTS (
 			    SELECT 1 FROM reclamacao i
@@ -185,7 +185,7 @@ func GetRelatorioMensal(conn *sqlx.DB) (*Relatorio, error) {
         AND i.data_criacao < p.inicio_mes_atual
 		WHERE c.data_criacao >= p.inicio_mes_passado 
         AND c.data_criacao < p.inicio_mes_atual   
-        AND (c.ehservidorouoficial = true OR c.ehservidorouoficial is null)
+ 
 	    AND i.telefone IS NULL) AS total_contatos_reativar,
     (SELECT COUNT(*) FROM cliente cl, periodo p WHERE data_criacao >= p.inicio_mes_passado AND data_criacao < p.inicio_mes_atual) AS total_clientes_novos,
     (SELECT COUNT(DISTINCT cl.telefone)
@@ -216,7 +216,7 @@ func GerarMensagemRelatorioMensal(dados Relatorio) string {
 	hoje += "/" + fmt.Sprint(time.Now().Year())
 
 	msg := "📊 Relatório Mensal Darwin IA 📊\n\n"
-	msg += fmt.Sprintf("Olá ! Aqui é a Laura, sua IA, segue o relatório do mês (%s):\n\n", hoje)
+	msg += fmt.Sprintf("Olá ! Aqui é a Ju, sua IA, segue o relatório do mês (%s):\n\n", hoje)
 	msg += "🔥 Interesses\n"
 	msg += fmt.Sprintf("- Total: %d\n\n", dados.TotalInteresse)
 	msg += "📞 Contatos\n"

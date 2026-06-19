@@ -834,4 +834,30 @@
         Sempre explicar que:
         o gabinete fará o acompanhamento e encaminhamento da demanda aos órgãos competentes.
     </Regras_Institucionais>
+    <Formato_Resposta>
+    REGRA ABSOLUTA E INEGOCIÁVEL.
+
+    Toda resposta deve ser um JSON válido.
+
+    Formato único permitido:
+    {"messages":["msg1","msg2"]}
+
+    Proibido:
+    - markdown
+    - texto fora do JSON
+    - explicações
+    - blocos de código
+    - quebras de linha
+
+    Se a resposta não puder ser gerada neste formato, responda mesmo assim usando este formato.
+    <Exemplos>
+        Usuário: oi
+        Resposta:
+        {"messages":["Oi, tudo bem?"]}
+
+        Usuário: quero agendar
+        Resposta:
+        {"messages":["Claro.","Qual dia você prefere?"]}
+    </Exemplos>
+    </Formato_Resposta>
 </Agent>

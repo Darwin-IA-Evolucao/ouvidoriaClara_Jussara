@@ -379,7 +379,7 @@ func mergeDetalhes(atual, patch models.DetalhesReclamacao) models.DetalhesReclam
 		atual.EnderecoOcorrencia = patch.EnderecoOcorrencia
 	}
 	if patch.Regiao != ""{
-		atual.EnderecoOcorrencia = patch.Regiao
+		atual.Regiao = patch.Regiao
 	}
 	if patch.ConheceTutor != "" {
 		atual.ConheceTutor = patch.ConheceTutor

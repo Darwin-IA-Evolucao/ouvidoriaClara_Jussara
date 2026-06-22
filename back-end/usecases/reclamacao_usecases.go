@@ -246,9 +246,9 @@ func (uc ReclamacaoUseCases) CreateOcorrencia(request models.OcorrenciaRequest) 
 	telefoneEnvio := os.Getenv("TELEFONE_MAUS_TRATOS")
 	if data.Categoria == "geral" {
 		telefoneEnvio = os.Getenv("TELEFONE_GERAL")
-		msg := uc.GerarMensagemEmail(*cliente, data)
-		destinatario := os.Getenv("EMAIL_DESTINO")
-		config.EnviarEmail(destinatario, "Nova demanda geral", "text/plain", msg)
+		//msg := uc.GerarMensagemEmail(*cliente, data)
+		//destinatario := os.Getenv("EMAIL_DESTINO")
+		//config.EnviarEmail(destinatario, "Nova demanda geral", "text/plain", msg)
 	}
 	data.TelefoneAcessor = telefoneEnvio
 	id, err := uc.repository.CreateOcorrencia(data)

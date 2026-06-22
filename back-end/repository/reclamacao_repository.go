@@ -30,13 +30,13 @@ func (repo ReclamacaoRepository) UpdateReclamacao(id, novaReclamacao string) err
 }
 
 func (repo ReclamacaoRepository) UpdateStatus(id, status string) error {
-	const query = `UPDATE reclamacao SET status = $1 WHERE idreclamacao = $2`
+	const query = `UPDATE reclamacao SET status = $1, data_atualizacao = now() WHERE idreclamacao = $2`
 	_, err := repo.connection.Exec(query, status, id)
 	return err
 }
 
 func (repo ReclamacaoRepository) UpdateStatusTipo(id, status, tipo string) error {
-	const query = `UPDATE reclamacao SET status = $1, tipo = $2 WHERE idreclamacao = $3`
+	const query = `UPDATE reclamacao SET status = $1, tipo = $2, data_atualizacao = now() WHERE idreclamacao = $3`
 	_, err := repo.connection.Exec(query, status, tipo, id)
 	return err
 }

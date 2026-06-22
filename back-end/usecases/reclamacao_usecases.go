@@ -234,17 +234,13 @@ func (uc ReclamacaoUseCases) CreateOcorrencia(request models.OcorrenciaRequest) 
 		regiao = uc.enderecoUC.GetRegiao(request.EnderecoOcorrencia)
 	case "animal apareceu na rua", "ajuda animal comunitario", "animal desaparecido", "animal para ser adotado":
 		regiao = uc.enderecoUC.GetRegiaoPorBairro(request.BairroAnimal)
-	// default: // ideia que não sei se pode valer a pena
-	// 	regiao = uc.enderecoUC.GetRegiao(cliente.Endereco)
+		// default: // ideia que não sei se pode valer a pena
+		// 	regiao = uc.enderecoUC.GetRegiao(cliente.Endereco)
 	}
 	data.Detalhes.Regiao = regiao
 
 	if data.Detalhes.TelefoneResponsavelAnimal != "" {
 		data.Detalhes.TelefoneResponsavelAnimal = normalizeTelefone(data.Detalhes.TelefoneResponsavelAnimal)
-	}
-	id, err := uc.repository.CreateOcorrencia(data)
-	if err != nil {
-		return 0, apperror.Internal(err.Error())
 	}
 
 	telefoneEnvio := os.Getenv("TELEFONE_MAUS_TRATOS")
@@ -254,6 +250,12 @@ func (uc ReclamacaoUseCases) CreateOcorrencia(request models.OcorrenciaRequest) 
 		destinatario := os.Getenv("EMAIL_DESTINO")
 		config.EnviarEmail(destinatario, "Nova demanda geral", "text/plain", msg)
 	}
+	data.TelefoneAcessor = telefoneEnvio
+	id, err := uc.repository.CreateOcorrencia(data)
+	if err != nil {
+		return 0, apperror.Internal(err.Error())
+	}
+
 	if !data.EhManual {
 		msg := uc.GerarMensagemNovaOcorrencia(*cliente, data)
 
@@ -268,7 +270,7 @@ func (uc ReclamacaoUseCases) CreateOcorrencia(request models.OcorrenciaRequest) 
 		}
 
 	}
-	
+
 	//aqui limpar atividadecliente
 	return id, nil
 }
@@ -305,11 +307,17 @@ func (uc ReclamacaoUseCases) UpdateOcorrencia(id string, request models.Ocorrenc
 	}
 
 	categoria := atual.Categoria
+	telefoneAcessor := atual.TelefoneAcessor
 	if request.Categoria != "" {
 		if !ehCategoria(request.Categoria) {
 			return apperror.BadRequest("Categoria inválida")
 		}
 		categoria = strings.ToLower(request.Categoria)
+		if categoria == "geral" {
+			telefoneAcessor = os.Getenv("TELEFONE_GERAL")
+		} else {
+			telefoneAcessor = os.Getenv("TELEFONE_MAUS_TRATOS")
+		}
 	}
 
 	situacao := atual.SituacaoResumida
@@ -327,16 +335,22 @@ func (uc ReclamacaoUseCases) UpdateOcorrencia(id string, request models.Ocorrenc
 		mensagemFinal = request.MensagemFinal
 	}
 
+	observacao := atual.Observacao
+	if request.Observacao != ""{
+		observacao = request.Observacao
+	}
+
 	detalhes := atual.Detalhes
 	detalhes = mergeDetalhes(detalhes, request.DetalhesReclamacao)
 
 	data := models.OcorrenciaData{
-		Telefone:      atual.Telefone,
-		Categoria:     categoria,
-		Reclamacao:    situacao,
-		Detalhes:      detalhes,
-		MensagemFinal: mensagemFinal,
-		Observacao:    request.Observacao,
+		Telefone:        atual.Telefone,
+		Categoria:       categoria,
+		Reclamacao:      situacao,
+		Detalhes:        detalhes,
+		MensagemFinal:   mensagemFinal,
+		Observacao:      observacao,
+		TelefoneAcessor: telefoneAcessor,
 	}
 
 	if err := uc.repository.UpdateOcorrencia(id, data, status); err != nil {

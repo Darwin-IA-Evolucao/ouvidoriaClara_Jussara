@@ -47,14 +47,15 @@ type OcorrenciaRequest struct {
 }
 
 type OcorrenciaData struct {
-	Telefone      string             `json:"telefone"`
-	Categoria     string             `json:"categoria"`
-	Reclamacao    string             `json:"reclamacao"`
-	Regiao        string             `json:"regiao"`
-	EhManual      bool               `json:"ehManual"`
-	MensagemFinal string             `json:"mensagemFinal"`
-	Observacao    string             `json:"observacao"`
-	Detalhes      DetalhesReclamacao `json:"detalhes"`
+	Telefone        string             `json:"telefone"`
+	Categoria       string             `json:"categoria"`
+	Reclamacao      string             `json:"reclamacao"`
+	Regiao          string             `json:"regiao"`
+	EhManual        bool               `json:"ehManual"`
+	MensagemFinal   string             `json:"mensagemFinal"`
+	Observacao      string             `json:"observacao"`
+	TelefoneAcessor string             `json:"telefoneAcessor"`
+	Detalhes        DetalhesReclamacao `json:"detalhes"`
 }
 
 type Ocorrencia struct {
@@ -68,6 +69,7 @@ type Ocorrencia struct {
 	EhManual         bool               `json:"ehManual"`
 	MensagemFinal    string             `json:"mensagemFinal"`
 	Observacao       string             `json:"observacao"`
+	TelefoneAcessor string             `json:"telefoneAcessor"`
 	DataCriacao      string             `json:"dataCriacao"`
 	DataAtualizacao  string             `json:"dataAtualizacao"`
 }

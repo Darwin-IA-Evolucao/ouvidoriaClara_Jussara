@@ -58,21 +58,21 @@ func (repo StatsRepository) GetCountByTipoAndStatus() (models.StatsByTipoAndStat
 	const query = `
 		SELECT
 		COUNT(*) FILTER (
-			WHERE tipo = 'indicacao'
-			AND status = 'aprovado'
+			WHERE tipo ILIKE 'indicacao'
+			AND status ILIKE 'aprovado'
 		) AS indicacoes_aprovadas,
 
 		COUNT(*) FILTER (
-			WHERE tipo = 'indicacao'
+			WHERE tipo ILIKE 'indicacao'
 		) AS total_indicacoes,
 
 		COUNT(*) FILTER (
-			WHERE tipo = 'requerimento'
-			AND status = 'Aprovado'
+			WHERE tipo ILIKE 'requerimento'
+			AND status ILIKE 'aprovado'
 		) AS requerimentos_aprovados,
 
 		COUNT(*) FILTER (
-			WHERE tipo = 'requerimento'
+			WHERE tipo ILIKE 'requerimento'
 		) AS total_requerimentos,
 
 		COUNT(*) AS total_reclamacao

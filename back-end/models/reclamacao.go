@@ -43,6 +43,7 @@ type OcorrenciaRequest struct {
 	Categoria             string `json:"categoria"`
 	EhManual              bool   `json:"ehManual"`
 	Observacao            string `json:"observacao"`
+	Regiao string `json:"regiao"`
 	DetalhesReclamacao
 }
 

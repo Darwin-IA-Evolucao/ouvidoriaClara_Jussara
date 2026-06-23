@@ -81,7 +81,7 @@ func GerarMensagemRelatorio(dados Relatorio) string {
 }
 
 func RelatorioDiario(conn *sqlx.DB) {
-	telefone := "5515998223027"
+	telefone := "5515981226411"
 	for {
 		agora := time.Now()
 		proxima := time.Date(agora.Year(), agora.Month(), agora.Day(), 8, 0, 0, 0, agora.Location())
@@ -131,7 +131,7 @@ func GerarMensagemGelando(dados Relatorio) string {
 }
 
 func RelatorioGelando(conn *sqlx.DB) {
-	telefone1 := "5515998223027"
+	telefone1 := "5515981226411"
 	telefone2 := "5515998223027"
 	for {
 		agora := time.Now()
@@ -231,7 +231,7 @@ func GerarMensagemRelatorioMensal(dados Relatorio) string {
 }
 
 func RelatorioMensal(conn *sqlx.DB) {
-	telefone := "5515998223027"
+	telefone := "5515981226411"
 	for {
 		agora := time.Now()
 		proximoMes := agora.Month() + 1

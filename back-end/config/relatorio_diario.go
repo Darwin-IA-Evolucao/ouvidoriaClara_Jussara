@@ -85,6 +85,7 @@ func RelatorioDiario(conn *sqlx.DB) {
 	for {
 		agora := time.Now()
 		proxima := time.Date(agora.Year(), agora.Month(), agora.Day(), 8, 0, 0, 0, agora.Location())
+		fmt.Printf("[RELATORIO DIARIO] Próximo envio programado para: %s\n", proxima.Format("02/01/2006 15:04:05"))
 		if !agora.Before(proxima) {
 			proxima = proxima.Add(24 * time.Hour)
 		}
@@ -136,6 +137,7 @@ func RelatorioGelando(conn *sqlx.DB) {
 	for {
 		agora := time.Now()
 		proxima := time.Date(agora.Year(), agora.Month(), agora.Day(), 8, 0, 0, 0, agora.Location())
+		fmt.Printf("[RELATORIO GELO] Próximo envio programado para: %s\n", proxima.Format("02/01/2006 15:04:05"))
 		if !agora.Before(proxima) {
 			proxima = proxima.Add(24 * time.Hour)
 		}

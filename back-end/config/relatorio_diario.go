@@ -84,7 +84,7 @@ func RelatorioDiario(conn *sqlx.DB) {
 	telefone := "5515981226411"
 	for {
 		agora := time.Now()
-		proxima := time.Date(agora.Year(), agora.Month(), agora.Day(), 8, 0, 0, 0, agora.Location())
+		proxima := time.Date(agora.Year(), agora.Month(), agora.Day(), 18, 0, 0, 0, agora.Location())
 		fmt.Printf("[RELATORIO DIARIO] Próximo envio programado para: %s\n", proxima.Format("02/01/2006 15:04:05"))
 		if !agora.Before(proxima) {
 			proxima = proxima.Add(24 * time.Hour)
@@ -242,7 +242,7 @@ func RelatorioMensal(conn *sqlx.DB) {
 			agora = agora.AddDate(1, 0, 0) // Avança para o próximo ano
 		}
 
-		proxima := time.Date(agora.Year(), proximoMes, 1, 18, 0, 0, 0, agora.Location())
+		proxima := time.Date(agora.Year(), proximoMes, 1, 13, 0, 0, 0, agora.Location())
 		fmt.Printf("[RELATORIO MENSAL] Próximo envio programado para: %s\n", proxima.Format("02/01/2006 15:04:05"))
 		time.Sleep(time.Until(proxima))
 

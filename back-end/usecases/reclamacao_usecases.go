@@ -470,7 +470,7 @@ func (uc *ReclamacaoUseCases) GerarMensagemEmail(cliente models.Cliente, ocorren
 	msg.WriteString("Foi detectado uma nova ocorrência de assuntos gerais, segue os dados:\n\n")
 	msg.WriteString("SOBRE O CLIENTE:\n")
 	addCampo("🪪", "Nome", cliente.Nome)
-	addCampo("📱", "Telefone", cliente.Telefone)
+	addCampo("📱", "Telefone", (cliente.Telefone))
 	addCampo("🎂", "Data de Nascimento", dataNascimento)
 	addCampo("🏙️", "Cidade", cliente.Cidade)
 	addCampo("🏠", "Endereço", cliente.Endereco)
@@ -506,7 +506,7 @@ func (uc *ReclamacaoUseCases) GerarMensagemNovaOcorrencia(cliente models.Cliente
 	msg.WriteString("👤 *DADOS DO CLIENTE*\n")
 
 	addCampo("🪪", "Nome", cliente.Nome)
-	addCampo("📱", "Telefone", cliente.Telefone)
+	addCampo("📱", "Telefone", config.FormatarTelefone(cliente.Telefone))
 	addCampo("🎂", "Data de Nascimento", dataNascimento)
 	addCampo("🏙️", "Cidade", cliente.Cidade)
 	addCampo("🏠", "Endereço", cliente.Endereco)
@@ -538,7 +538,7 @@ func (uc *ReclamacaoUseCases) GerarMensagemNovaOcorrencia(cliente models.Cliente
 	addCampo("⚧️", "Sexo", d.SexoAnimal)
 	addCampo("📍", "Bairro do Animal", d.BairroAnimal)
 	addCampo("🙋", "Responsável", d.NomeResponsavelAnimal)
-	addCampo("☎️", "Telefone do Responsável", d.TelefoneResponsavelAnimal)
+	addCampo("☎️", "Telefone do Responsável", config.FormatarTelefone(d.TelefoneResponsavelAnimal))
 	addCampo("📖", "Histórico do Animal", d.HistoricoAnimal)
 
 	// Saúde

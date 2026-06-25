@@ -5,6 +5,8 @@ import (
 	"back-end/repository"
 	"strings"
 	"unicode"
+
+	"golang.org/x/text/unicode/norm"
 )
 
 type EnderecoUseCases struct {
@@ -50,6 +52,20 @@ func parseEndereco(input string) (logradouro, bairro string) {
 		}
 	}
 	return logradouro, bairro
+}
+func removerAcentos(s string) string {
+	t := norm.NFD.String(s)
+
+	var b strings.Builder
+	for _, r := range t {
+		// Remove marcas diacríticas
+		if r >= '\u0300' && r <= '\u036F' {
+			continue
+		}
+		b.WriteRune(r)
+	}
+
+	return b.String()
 }
 
 func somenteDigitos(s string) bool {
@@ -173,13 +189,14 @@ func encontraMelhorCorrespondencia(lista []models.Logradouro, termo string, limi
 }
 
 func (uc EnderecoUseCases) GetRegiao(input string) string {
+	input = removerAcentos(input)
 	logradouro, bairro := parseEndereco(input)
 
 	// 1) match direto no banco (com bairro quando disponível)
 	if regiao, err := uc.repository.GetRegiaoByLogradouro(logradouro, bairro); err == nil {
 		return regiao
 	}
-	
+
 	// 2) candidatos por palavras-chave (query indexável, poucos registros)
 	palavras := palavrasSignificativas(logradouro)
 	if len(palavras) == 0 {
@@ -205,6 +222,7 @@ func (uc EnderecoUseCases) GetRegiao(input string) string {
 }
 
 func (uc EnderecoUseCases) GetRegiaoPorBairro(bairro string) string {
+	bairro = removerAcentos(bairro)
 	bairro = strings.ToLower(strings.TrimSpace(bairro))
 	if bairro == "" {
 		return "Centro"
@@ -225,6 +243,6 @@ func (uc EnderecoUseCases) CadastrarEnderecos(enderecos []models.Endereco) error
 	return nil
 }
 
-func (uc EnderecoUseCases) GetAllEnderecos()([]models.Logradouro, error){
+func (uc EnderecoUseCases) GetAllEnderecos() ([]models.Logradouro, error) {
 	return uc.repository.GetAllEnderecos()
 }

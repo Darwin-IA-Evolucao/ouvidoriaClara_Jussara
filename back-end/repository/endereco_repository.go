@@ -27,10 +27,14 @@ func (repo EnderecoRepository) GetAllEnderecos() ([]models.Logradouro, error) {
 func (repo EnderecoRepository) GetRegiaoByLogradouro(logradouro, bairro string) (string, error) {
 	const query = `
 		SELECT regiao FROM enderecos
-		WHERE logradouro ILIKE '%' || $1 || '%'
-		  AND ($2 = '' OR bairro ILIKE '%' || $2 || '%')
+		WHERE unaccent(LOWER(logradouro)) ILIKE '%' || unaccent(LOWER($1)) || '%'
+			AND (
+				$2 = '' 
+		  		OR unaccent(LOWER(bairro)) ILIKE '%' || unaccent(LOWER($2)) || '%'
+			)
 		ORDER BY
-			CASE WHEN LOWER(TRIM(logradouro)) = LOWER(TRIM($1)) THEN 0 ELSE 1 END,
+			CASE 
+				WHEN unaccent(LOWER(TRIM(logradouro))) = unaccent(LOWER(TRIM($1))) THEN 0 ELSE 1 END,
 			LENGTH(logradouro) ASC
 		LIMIT 1`
 	var regiao string
@@ -40,9 +44,9 @@ func (repo EnderecoRepository) GetRegiaoByLogradouro(logradouro, bairro string) 
 func (repo EnderecoRepository) GetRegiaoByBairro(bairro string) (string, error) {
 	const query = `
 		SELECT regiao FROM enderecos
-		WHERE bairro ILIKE '%' || $1 || '%'
+		WHERE unaccent(LOWER(bairro)) ILIKE '%' || $unaccent(LOWER($1)) || '%'
 		ORDER BY
-			CASE WHEN LOWER(TRIM(bairro)) = LOWER(TRIM($1)) THEN 0 ELSE 1 END,
+			CASE WHEN unaccent(LOWER(TRIM(bairro))) = unaccent(LOWER(TRIM($1))) THEN 0 ELSE 1 END,
 			LENGTH(bairro) ASC
 		LIMIT 1`
 	var regiao string
@@ -61,7 +65,7 @@ func (repo EnderecoRepository) FindCandidatosPorPalavras(palavras []string, bair
 	conditions := make([]string, 0, len(palavras))
 	args := make([]interface{}, 0, len(palavras)+2)
 	for i, palavra := range palavras {
-		conditions = append(conditions, fmt.Sprintf("logradouro ILIKE $%d", i+1))
+		conditions = append(conditions, fmt.Sprintf("unaccent(LOWER(logradouro)) ILIKE unaccent(LOWER($%d))", i+1))
 		args = append(args, "%"+palavra+"%")
 	}
 
@@ -72,7 +76,7 @@ func (repo EnderecoRepository) FindCandidatosPorPalavras(palavras []string, bair
 
 	argIdx := len(palavras) + 1
 	if bairro != "" {
-		query += fmt.Sprintf(" AND bairro ILIKE $%d", argIdx)
+		query += fmt.Sprintf(" AND unaccent(LOWER(bairro)) ILIKE unaccent(LOWER($%d))", argIdx)
 		args = append(args, "%"+bairro+"%")
 		argIdx++
 	}

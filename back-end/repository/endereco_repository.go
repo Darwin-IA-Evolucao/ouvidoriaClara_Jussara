@@ -26,25 +26,26 @@ func (repo EnderecoRepository) GetAllEnderecos() ([]models.Logradouro, error) {
 
 func (repo EnderecoRepository) GetRegiaoByLogradouro(logradouro, bairro string) (string, error) {
 	const query = `
-		SELECT regiao FROM enderecos
-		WHERE unaccent(LOWER(logradouro)) ILIKE '%' || unaccent(LOWER($1)) || '%'
-			AND (
-				$2 = '' 
-		  		OR unaccent(LOWER(bairro)) ILIKE '%' || unaccent(LOWER($2)) || '%'
-			)
-		ORDER BY
-			CASE 
-				WHEN unaccent(LOWER(TRIM(logradouro))) = unaccent(LOWER(TRIM($1))) THEN 0 ELSE 1 END,
-			LENGTH(logradouro) ASC
-		LIMIT 1`
-	var regiao string
-	err := repo.connection.Get(&regiao, query, logradouro, bairro)
-	return regiao, err
+		SELECT 
+			*,
+			similarity(logradouro, $1) AS score_rua,
+			similarity(bairro, $2) AS score_bairro,
+			(
+				similarity(logradouro, $1) * 0.9 +
+				similarity(bairro, $2) * 0.1
+			) AS score_final
+		FROM enderecos
+		ORDER BY score_final DESC
+		LIMIT 1;
+		`
+	var logradouroScore models.LogradouroScore
+	err := repo.connection.Get(&logradouroScore, query, logradouro, bairro)
+	return logradouroScore.Regiao, err
 }
 func (repo EnderecoRepository) GetRegiaoByBairro(bairro string) (string, error) {
 	const query = `
 		SELECT regiao FROM enderecos
-		WHERE unaccent(LOWER(bairro)) ILIKE '%' || $unaccent(LOWER($1)) || '%'
+		WHERE unaccent(LOWER(bairro)) ILIKE '%' || unaccent(LOWER($1)) || '%'
 		ORDER BY
 			CASE WHEN unaccent(LOWER(TRIM(bairro))) = unaccent(LOWER(TRIM($1))) THEN 0 ELSE 1 END,
 			LENGTH(bairro) ASC

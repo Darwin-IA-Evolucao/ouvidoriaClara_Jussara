@@ -11,3 +11,10 @@ type Logradouro struct {
 	Bairro     string `db:"bairro" json:"bairro"`
 	Regiao     string `db:"regiao" json:"regiao"`
 }
+
+type LogradouroScore struct {
+	Logradouro
+	ScoreBairro float64 `db:"score_bairro" json:"scoreBairro"`
+	ScoreRua    float64 `db:"score_rua" json:"scoreRua"`
+	ScoreFinal  float64 `db:"score_final" json:"scoreFinal"`
+}

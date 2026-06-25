@@ -235,8 +235,10 @@ func (uc ReclamacaoUseCases) CreateOcorrencia(request models.OcorrenciaRequest) 
 	case "animal apareceu na rua", "ajuda animal comunitario", "animal desaparecido", "animal para ser adotado":
 		regiao = uc.enderecoUC.GetRegiaoPorBairro(request.BairroAnimal)
 	default: // ideia que não sei se pode valer a pena
-		if request.Regiao != ""{
+		if request.Regiao != "" {
 			regiao = request.Regiao
+		} else {
+			regiao = uc.enderecoUC.GetRegiao(cliente.Endereco + "," + cliente.Bairro)
 		}
 	}
 	data.Detalhes.Regiao = regiao
@@ -338,7 +340,7 @@ func (uc ReclamacaoUseCases) UpdateOcorrencia(id string, request models.Ocorrenc
 	}
 
 	observacao := atual.Observacao
-	if request.Observacao != ""{
+	if request.Observacao != "" {
 		observacao = request.Observacao
 	}
 
@@ -378,7 +380,7 @@ func mergeDetalhes(atual, patch models.DetalhesReclamacao) models.DetalhesReclam
 	if patch.EnderecoOcorrencia != "" {
 		atual.EnderecoOcorrencia = patch.EnderecoOcorrencia
 	}
-	if patch.Regiao != ""{
+	if patch.Regiao != "" {
 		atual.Regiao = patch.Regiao
 	}
 	if patch.ConheceTutor != "" {

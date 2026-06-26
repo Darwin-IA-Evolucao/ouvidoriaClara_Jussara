@@ -231,15 +231,15 @@ func (uc ReclamacaoUseCases) CreateOcorrencia(request models.OcorrenciaRequest) 
 		Observacao: request.Observacao,
 	}
 	regiao := ""
-	switch data.Categoria {
-	case "maus tratos", "animais nao domiciliados":
-		regiao = uc.enderecoUC.GetRegiao(request.EnderecoOcorrencia)
-	case "animal apareceu na rua", "ajuda animal comunitario", "animal desaparecido", "animal para ser adotado":
-		regiao = uc.enderecoUC.GetRegiaoPorBairro(request.BairroAnimal)
-	default: // ideia que não sei se pode valer a pena
-		if request.Regiao != "" {
-			regiao = request.Regiao
-		} else {
+	if request.Regiao != "" {
+		regiao = request.Regiao
+	} else {
+		switch data.Categoria {
+		case "maus tratos", "animais nao domiciliados":
+			regiao = uc.enderecoUC.GetRegiao(request.EnderecoOcorrencia)
+		case "animal apareceu na rua", "ajuda animal comunitario", "animal desaparecido", "animal para ser adotado":
+			regiao = uc.enderecoUC.GetRegiaoPorBairro(request.BairroAnimal)
+		default: // ideia que não sei se pode valer a pena
 			regiao = uc.enderecoUC.GetRegiao(cliente.Endereco + "," + cliente.Bairro)
 		}
 	}

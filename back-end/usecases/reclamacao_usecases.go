@@ -14,7 +14,9 @@ import (
 	"time"
 )
 
-var categorias = []string{"geral", "maus tratos", "abandono presenciado", "animal apareceu na rua", "ajuda animal comunitario", "saude animal", "castracao eletiva", "castracao emergencial", "animais nao domiciliados", "animal desaparecido", "animal para ser adotado", "adocao de animais", "animal grande porte", "animal atropelado", "cuidados animais", "animais silvestres", "equipamentos"}
+var categorias = []string{"asfalto", "transporte", "saude", "educacao", "seguranca", "zeladoria", "outros",
+
+	"maus tratos", "abandono presenciado", "animal apareceu na rua", "ajuda animal comunitario", "saude animal", "castracao eletiva", "castracao emergencial", "animais nao domiciliados", "animal desaparecido", "animal para ser adotado", "adocao de animais", "animal grande porte", "animal atropelado", "cuidados animais", "animais silvestres", "equipamentos"}
 
 type ReclamacaoUseCases struct {
 	repository repository.ReclamacaoRepository
@@ -246,9 +248,9 @@ func (uc ReclamacaoUseCases) CreateOcorrencia(request models.OcorrenciaRequest) 
 	if data.Detalhes.TelefoneResponsavelAnimal != "" {
 		data.Detalhes.TelefoneResponsavelAnimal = normalizeTelefone(data.Detalhes.TelefoneResponsavelAnimal)
 	}
-
+	categoria := data.Categoria
 	telefoneEnvio := os.Getenv("TELEFONE_MAUS_TRATOS")
-	if data.Categoria == "geral" {
+	if categoria == "asfalto" || categoria == "transporte" || categoria == "saude" || categoria == "educacao" || categoria == "seguranca" || categoria == "zeladoria" || categoria == "outros" {
 		telefoneEnvio = os.Getenv("TELEFONE_GERAL")
 		//msg := uc.GerarMensagemEmail(*cliente, data)
 		//destinatario := os.Getenv("EMAIL_DESTINO")
@@ -317,7 +319,7 @@ func (uc ReclamacaoUseCases) UpdateOcorrencia(id string, request models.Ocorrenc
 			return apperror.BadRequest("Categoria inválida")
 		}
 		categoria = strings.ToLower(request.Categoria)
-		if categoria == "geral" {
+		if categoria == "asfalto" || categoria == "transporte" || categoria == "saude" || categoria == "educacao" || categoria == "seguranca" || categoria == "zeladoria" || categoria == "outros" {
 			telefoneAcessor = os.Getenv("TELEFONE_GERAL")
 		} else {
 			telefoneAcessor = os.Getenv("TELEFONE_MAUS_TRATOS")

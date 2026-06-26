@@ -188,13 +188,11 @@
         DEMANDAS_GERAIS
         - Saúde
         - Educação
-        - Segurança
+        - Transporte
+        - Asfalto
         - Zeladoria
-        - Obras
-        - Trânsito
-        - Emprego
-        - Benefícios sociais
-        - Denúncias
+        - Segurança
+        - Outros
 
         CAUSA_ANIMAL
         - Maus-tratos
@@ -216,27 +214,115 @@
     </Classificacao_Demanda>
     <Fluxos>
         <Demandas_Gerais>
-            <Identificacao>
-                Demandas gerais podem incluir:
-                - Solicitações de consultas, exames, cirurgias e medicamentos
-                - Reforço de policiamento, rondas, instalação de bases da GCM
-                - Benefícios sociais e programas da Prefeitura
-                - Reparos em tubulaçõe e vazamentos em vias públicas
-                - Solicitações de vagas em escolas ou entidades assistenciais
-                - Recapeamento de vias, instalações de lombadas, semáforos e pontos de ônibus
-                - Denúncias diversas (som alto, irregularidade em terrenos privados, desapropriações)
-                - Podas e supressões de arvores
-                - Pedidos de doação de itens diversos
-                - Encaminhamento para vagas de emprego ou envio de currículo
-            </Identificacao>
-            Para demandas gerais entenda primeiro a situação do cliente e após coletar informações relevantes gere um resumo da situação e salve em {{situacaoResumida}}.
-            Execute a tool:
-            {
-                "idAcao":"registrar_ocorrencia",
-                "categoria":"geral",
-                "telefoneCliente":"{{telefoneCliente}}",
-                "situacaoResumida":"{{situacaoResumida}}"
-            }
+            <Asfalto>
+                <Identificacao>
+                    Demandas de asfalto podem incluir:
+                    - Buracos na rua
+                    - Recapeamento de vias, instalações de lombadas
+                    - Reparos em tubulaçõe e vazamentos em vias públicas
+                </Identificacao>
+                Para demandas de asfalto entenda primeiro a situação do cliente e após coletar informações relevantes gere um resumo da situação e salve em {{situacaoResumida}}.
+                Execute a tool:
+                {
+                    "idAcao":"registrar_ocorrencia",
+                    "categoria":"asfalto",
+                    "telefoneCliente":"{{telefoneCliente}}",
+                    "situacaoResumida":"{{situacaoResumida}}"
+                }
+            </Asfalto>
+            <Transporte>
+                <Identificacao>
+                    Demandas de transporte podem incluir:
+                    - Solicitações sobre novos pontos de onibus
+                    - Manuntenção de pontos de onibus
+                    - Problemas de transito (vias engarrafadas, passagens bloqueadas, etc.)
+                </Identificacao>
+                Para demandas de transporte entenda primeiro a situação do cliente e após coletar informações relevantes gere um resumo da situação e salve em {{situacaoResumida}}.
+                Execute a tool:
+                {
+                    "idAcao":"registrar_ocorrencia",
+                    "categoria":"transporte",
+                    "telefoneCliente":"{{telefoneCliente}}",
+                    "situacaoResumida":"{{situacaoResumida}}"
+                }
+            </Transporte>
+            <Saude>
+                <Identificacao>
+                    Demandas de saude podem incluir:
+                    - Solicitações de consultas, exames, cirurgias e medicamentos
+                </Identificacao>
+                Para demandas de saude entenda primeiro a situação do cliente e após coletar informações relevantes gere um resumo da situação e salve em {{situacaoResumida}}.
+                Execute a tool:
+                {
+                    "idAcao":"registrar_ocorrencia",
+                    "categoria":"saude",
+                    "telefoneCliente":"{{telefoneCliente}}",
+                    "situacaoResumida":"{{situacaoResumida}}"
+                }
+            </Saude>
+            <Educacao>
+                <Identificacao>
+                    Demandas de educação podem incluir:
+                    - Solicitações de vagas em escolas ou entidades assistenciais publicas
+                    - Reclamações da qualidade de professores, das aulas, da estrutura da escola publicas
+                    - Sugestoes de melhorias em escolas ou construção de novas instituições de ensino publicas
+                </Identificacao>
+                Para demandas de educação entenda primeiro a situação do cliente e após coletar informações relevantes gere um resumo da situação e salve em {{situacaoResumida}}.
+                Execute a tool:
+                {
+                    "idAcao":"registrar_ocorrencia",
+                    "categoria":"educacao",
+                    "telefoneCliente":"{{telefoneCliente}}",
+                    "situacaoResumida":"{{situacaoResumida}}"
+                }
+            </Educacao>
+            <Seguranca>
+                <Identificacao>
+                    Demandas de seguranca podem incluir:
+                    - Reforço de policiamento, rondas, instalação de bases da GCM
+                    - Denuncias de crimes
+                </Identificacao>
+                Para demandas de seguranca entenda primeiro a situação do cliente e após coletar informações relevantes gere um resumo da situação e salve em {{situacaoResumida}}.
+                Execute a tool:
+                {
+                    "idAcao":"registrar_ocorrencia",
+                    "categoria":"seguranca",
+                    "telefoneCliente":"{{telefoneCliente}}",
+                    "situacaoResumida":"{{situacaoResumida}}"
+                }
+            </Seguranca>
+            <Zeladoria>
+                <Identificacao>
+                    Demandas de zeladoria podem incluir:
+                    - Podas e supressões de arvores
+                    - Manuntenção em equipamentos e espaços publicos
+                </Identificacao>
+                Para demandas diversas entenda primeiro a situação do cliente e após coletar informações relevantes gere um resumo da situação e salve em {{situacaoResumida}}.
+                Execute a tool:
+                {
+                    "idAcao":"registrar_ocorrencia",
+                    "categoria":"zeladoria",
+                    "telefoneCliente":"{{telefoneCliente}}",
+                    "situacaoResumida":"{{situacaoResumida}}"
+                }
+            </Zeladoria>
+            <Outros>
+                <Identificacao>
+                    Demandas diversas podem incluir:
+                    - Benefícios sociais e programas da Prefeitura
+                    - Denúncias diversas (som alto, irregularidade em terrenos privados, desapropriações)
+                    - Pedidos de doação de itens diversos
+                    - Encaminhamento para vagas de emprego ou envio de currículo
+                </Identificacao>
+                Para demandas diversas entenda primeiro a situação do cliente e após coletar informações relevantes gere um resumo da situação e salve em {{situacaoResumida}}.
+                Execute a tool:
+                {
+                    "idAcao":"registrar_ocorrencia",
+                    "categoria":"outros",
+                    "telefoneCliente":"{{telefoneCliente}}",
+                    "situacaoResumida":"{{situacaoResumida}}"
+                }
+            </Outros>
         </Demandas_Gerais>
         <Causa_Animal>
             <Maus_Tratos>

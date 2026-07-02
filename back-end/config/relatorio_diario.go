@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -81,14 +82,14 @@ func GerarMensagemRelatorio(dados Relatorio) string {
 }
 
 func RelatorioDiario(conn *sqlx.DB) {
-	telefone := "5515981450319"
+	telefone := os.Getenv("TELEFONE_GERAL")
 	for {
 		agora := time.Now()
 		proxima := time.Date(agora.Year(), agora.Month(), agora.Day(), 18, 0, 0, 0, agora.Location())
-		fmt.Printf("[RELATORIO DIARIO] Próximo envio programado para: %s\n", proxima.Format("02/01/2006 15:04:05"))
 		if !agora.Before(proxima) {
 			proxima = proxima.Add(24 * time.Hour)
 		}
+		fmt.Printf("[RELATORIO DIARIO] Próximo envio programado para: %s\n", proxima.Format("02/01/2006 15:04:05"))
 		time.Sleep(time.Until(proxima))
 		dados, err := GetRelatorioDiario(conn)
 		if err != nil {
@@ -132,22 +133,22 @@ func GerarMensagemGelando(dados Relatorio) string {
 }
 
 func RelatorioGelando(conn *sqlx.DB) {
-	telefone1 := "5515981450319"
+	telefone := os.Getenv("TELEFONE_GERAL")
 
 	for {
 		agora := time.Now()
 		proxima := time.Date(agora.Year(), agora.Month(), agora.Day(), 8, 0, 0, 0, agora.Location())
-		fmt.Printf("[RELATORIO GELO] Próximo envio programado para: %s\n", proxima.Format("02/01/2006 15:04:05"))
 		if !agora.Before(proxima) {
 			proxima = proxima.Add(24 * time.Hour)
 		}
+		fmt.Printf("[RELATORIO GELO] Próximo envio programado para: %s\n", proxima.Format("02/01/2006 15:04:05"))
 		time.Sleep(time.Until(proxima))
 		dados, err := GetRelatorioGelando(conn)
 		if err != nil {
 			fmt.Println(err.Error())
 			continue
 		}
-		if err := EnviarRelatorio(telefone1, GerarMensagemGelando(*dados)); err != nil {
+		if err := EnviarRelatorio(telefone, GerarMensagemGelando(*dados)); err != nil {
 			fmt.Println(err.Error())
 		}
 		
@@ -231,7 +232,7 @@ func GerarMensagemRelatorioMensal(dados Relatorio) string {
 }
 
 func RelatorioMensal(conn *sqlx.DB) {
-	telefone := "5515981450319"
+	telefone := os.Getenv("TELEFONE_GERAL")
 	for {
 		agora := time.Now()
 		proximoMes := agora.Month() + 1

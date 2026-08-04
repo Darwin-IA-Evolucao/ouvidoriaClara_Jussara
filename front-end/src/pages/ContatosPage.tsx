@@ -5,7 +5,7 @@ import {
   TextField, Chip, Alert, useMediaQuery, useTheme, Select, MenuItem, Autocomplete,
 } from '@mui/material'
 import {
-  Snowflake, Users, FileText,
+  Snowflake, Users, FileText, Megaphone,
 } from 'lucide-react'
 import GlassPanel from '../components/GlassPanel'
 import PageHeader from '../components/PageHeader'
@@ -460,6 +460,14 @@ const ContatosPage: React.FC = () => {
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25, mb: 2, cursor: 'pointer' }} onClick={() => openEdit(c)}>
                   <Typography sx={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'hsl(var(--text-secondary))' }}>Telefone</Typography>
                   <Typography sx={{ color: 'hsl(var(--text-primary))', fontSize: 18, fontWeight: 600, letterSpacing: '0.04em' }}>{formatPhoneDisplay(c.telefone)}</Typography>
+                  {c.campanha && (
+                    <Box sx={{ mt: 0.5, display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                      <Box>
+                        <Typography sx={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'hsl(var(--text-secondary))' }}>Campanha</Typography>
+                        <Typography sx={{ fontSize: 14, fontWeight: 500, color: 'hsl(var(--accent))' }}>{c.campanha}</Typography>
+                      </Box>
+                    </Box>
+                  )}
                   {c.dataCriacao && (
                     <Box sx={{ mt: 0.5 }}>
                       <Typography sx={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'hsl(var(--text-secondary))' }}>Registrado em</Typography>

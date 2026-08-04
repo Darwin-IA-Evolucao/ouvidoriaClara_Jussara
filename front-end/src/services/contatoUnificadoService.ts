@@ -70,6 +70,7 @@ export async function getAllContatosUnificados(): Promise<{ contatos: ContatoUni
       dataCriacao: cliente?.dataCriacao || contato?.data_criacao,
       conversationId: contato?.conversationId ?? null,
       instance: contato?.instance ?? null,
+      campanha: contato?.campanha ?? null,
       leadAtivo: lead.ativo,
       darwinAtivo: darwinStatuses[index] ?? true,
       isGelado,

@@ -27,6 +27,7 @@ export interface Contato {
   ativo: boolean
   instance: string | null
   data_criacao: string
+  campanha?: string | null
 }
 
 export interface Contact {
@@ -72,6 +73,7 @@ export interface ContatoUnificado {
   dataNascimento?: string
   conversationId?: string | null
   instance?: string | null
+  campanha?: string | null
   leadAtivo: boolean
   darwinAtivo: boolean
   isGelado: boolean

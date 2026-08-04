@@ -251,6 +251,9 @@ func (uc ReclamacaoUseCases) CreateOcorrencia(request models.OcorrenciaRequest) 
 			}
 		}
 	}
+	if !strings.Contains(strings.ToLower(cliente.Cidade), "sorocaba") {
+		regiao = "Outros"
+	}
 	data.Detalhes.Regiao = regiao
 
 	if data.Detalhes.TelefoneResponsavelAnimal != "" {

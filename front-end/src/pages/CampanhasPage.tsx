@@ -1,10 +1,13 @@
 import * as React from 'react'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   Box, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, Alert, IconButton, CircularProgress,
 } from '@mui/material'
 import { Plus, Pencil, Trash2, Megaphone, Users } from 'lucide-react'
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
+} from 'recharts'
 import GlassPanel from '../components/GlassPanel'
 import PageHeader from '../components/PageHeader'
 import PageLoader from '../components/PageLoader'
@@ -15,6 +18,26 @@ import {
   getAllCampanhas, createCampanha, updateCampanha, deleteCampanha, getContatosByCampanha,
 } from '../services/campanhaService'
 import type { Campanha, ContatoCampanha } from '../types'
+
+const BAR_COLORS = ['#41669C', '#E89E70', '#66BB80', '#62A1D8', '#E2AF7A', '#5282AE', '#53A16E']
+
+const ChartTooltip: React.FC<{
+  active?: boolean
+  payload?: { value: number; payload: { nome: string } }[]
+}> = ({ active, payload }) => {
+  if (!active || !payload?.length) return null
+  return (
+    <Box sx={{ bgcolor: 'hsl(var(--surface))', border: '1px solid hsl(var(--border))', borderRadius: 2, px: 2, py: 1.5 }}>
+      <Typography sx={{ color: 'hsl(var(--text-secondary))', fontSize: 11, mb: 0.3 }}>
+        {payload[0].payload.nome}
+      </Typography>
+      <Typography sx={{ color: 'hsl(var(--text-primary))', fontWeight: 700, fontSize: 15 }}>
+        {payload[0].value}{' '}
+        <span style={{ color: 'hsl(var(--accent))', fontWeight: 400, fontSize: 12 }}>contatos</span>
+      </Typography>
+    </Box>
+  )
+}
 
 const CampanhasPage: React.FC = () => {
   const [campanhas, setCampanhas] = useState<Campanha[]>([])
@@ -111,6 +134,15 @@ const CampanhasPage: React.FC = () => {
 
   const filtered = campanhas.filter((c) =>
     c.palavraChave.toLowerCase().includes(search.trim().toLowerCase())
+  )
+
+  const chartData = useMemo(
+    () =>
+      campanhas.map((c) => ({
+        nome: c.palavraChave,
+        contatos: c.qtdContatos ?? 0,
+      })),
+    [campanhas]
   )
 
   if (loading) return <PageLoader message="Carregando campanhas..." />
@@ -251,6 +283,49 @@ const CampanhasPage: React.FC = () => {
             </GlassPanel>
           ))}
         </Box>
+      )}
+
+      {campanhas.length > 0 && (
+        <GlassPanel style={{ padding: 20, marginTop: 24 }}>
+          <Typography
+            sx={{
+              fontWeight: 600,
+              fontSize: 14,
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase',
+              color: 'hsl(var(--accent))',
+              mb: 2,
+            }}
+          >
+            Contatos por campanha
+          </Typography>
+          <Box sx={{ width: '100%', height: 300 }}>
+            <ResponsiveContainer>
+              <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 48 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                <XAxis
+                  dataKey="nome"
+                  tick={{ fill: 'hsl(var(--text-secondary))', fontSize: 11 }}
+                  interval={0}
+                  angle={-25}
+                  textAnchor="end"
+                  height={60}
+                />
+                <YAxis
+                  allowDecimals={false}
+                  tick={{ fill: 'hsl(var(--text-secondary))', fontSize: 11 }}
+                  width={36}
+                />
+                <Tooltip content={<ChartTooltip />} cursor={{ fill: 'hsl(var(--primary) / 0.08)' }} />
+                <Bar dataKey="contatos" radius={[6, 6, 0, 0]} maxBarSize={48}>
+                  {chartData.map((_, i) => (
+                    <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </Box>
+        </GlassPanel>
       )}
 
       <Dialog open={openModal} onClose={() => setOpenModal(false)} maxWidth="sm" fullWidth PaperProps={{ sx: dialogSx }}>

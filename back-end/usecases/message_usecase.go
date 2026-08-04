@@ -126,7 +126,10 @@ func (u *MensagemUseCase) AddMensagem(addMensagem *models.AddMensagem) error {
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			campanha := u.buscarCampanhaNaMensagem(addMensagem.Conteudo)
-
+			c := "ju"
+			if campanha == nil {
+				campanha = &c
+			}
 			err := u.repo.CreateContato(&models.Contato{
 				Telefone: addMensagem.Telefone,
 				Nome:     addMensagem.Nome,

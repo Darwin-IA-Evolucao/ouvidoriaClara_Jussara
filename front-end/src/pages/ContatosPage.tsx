@@ -5,7 +5,7 @@ import {
   TextField, Chip, Alert, useMediaQuery, useTheme, Select, MenuItem, Autocomplete,
 } from '@mui/material'
 import {
-  Snowflake, Users, FileText, Megaphone,
+  Snowflake, Users, FileText,
 } from 'lucide-react'
 import GlassPanel from '../components/GlassPanel'
 import PageHeader from '../components/PageHeader'

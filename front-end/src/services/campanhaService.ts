@@ -1,8 +1,12 @@
 import { apiGet, apiPost, apiPut, apiDelete } from '../utils/api'
-import type { Campanha } from '../types'
+import type { Campanha, ContatoCampanha } from '../types'
 
 export async function getAllCampanhas(): Promise<Campanha[]> {
   return apiGet<Campanha[]>('/campanhas')
+}
+
+export async function getContatosByCampanha(id: number): Promise<ContatoCampanha[]> {
+  return apiGet<ContatoCampanha[]>(`/campanhas/${id}/contatos`)
 }
 
 export async function createCampanha(campanha: Pick<Campanha, 'palavraChave'>): Promise<Campanha> {

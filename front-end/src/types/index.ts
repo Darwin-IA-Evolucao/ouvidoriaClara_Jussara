@@ -41,6 +41,12 @@ export interface Contact {
 export interface Campanha {
   id: number
   palavraChave: string
+  qtdContatos?: number
+}
+
+export interface ContatoCampanha {
+  telefone: string
+  nome: string
 }
 
 export interface Lead {

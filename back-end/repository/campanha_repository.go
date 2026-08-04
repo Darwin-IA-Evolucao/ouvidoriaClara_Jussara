@@ -15,7 +15,7 @@ func NewCampanhaRepository(db *sqlx.DB) *CampanhaRepository {
 }
 
 func (r *CampanhaRepository) GetCampanhaByPalavraChave(palavraChave string) (*models.Campanha, error) {
-	const query = `SELECT * FROM campanhas WHERE palavra_chave = $1`
+	const query = `SELECT id, palavra_chave FROM campanhas WHERE palavra_chave = $1`
 	campanha := models.Campanha{}
 	err := r.db.Get(&campanha, query, palavraChave)
 	return &campanha, err
@@ -40,10 +40,29 @@ func (r *CampanhaRepository) DeleteCampanha(id int) error {
 }
 
 func (r *CampanhaRepository) GetAllCampanhas() ([]models.Campanha, error) {
-	const query = `SELECT * FROM campanhas`
+	const query = `
+		SELECT c.id, c.palavra_chave, COUNT(ct.telefone) AS qtd_contatos
+		FROM campanhas c
+		LEFT JOIN contatos ct ON ct.campanha = c.palavra_chave
+		GROUP BY c.id, c.palavra_chave
+		ORDER BY c.id`
 	campanhas := []models.Campanha{}
 	err := r.db.Select(&campanhas, query)
 	return campanhas, err
+}
+
+func (r *CampanhaRepository) GetCampanhaByID(id int) (*models.Campanha, error) {
+	const query = `SELECT id, palavra_chave FROM campanhas WHERE id = $1`
+	campanha := models.Campanha{}
+	err := r.db.Get(&campanha, query, id)
+	return &campanha, err
+}
+
+func (r *CampanhaRepository) GetContatosByCampanha(palavraChave string) ([]models.ContatoCampanha, error) {
+	const query = `SELECT telefone, COALESCE(nome, '') AS nome FROM contatos WHERE campanha = $1 ORDER BY data_criacao DESC`
+	contatos := []models.ContatoCampanha{}
+	err := r.db.Select(&contatos, query, palavraChave)
+	return contatos, err
 }
 
 func (r *CampanhaRepository) ExistsCampanha(palavraChave string) (bool, error) {

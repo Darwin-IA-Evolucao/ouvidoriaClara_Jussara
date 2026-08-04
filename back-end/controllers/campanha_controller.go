@@ -67,6 +67,28 @@ func (ctrl *CampanhaController) GetAllCampanhas(c *gin.Context) {
 	c.JSON(http.StatusOK, campanhas)
 }
 
+func (ctrl *CampanhaController) GetContatosByCampanha(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID inválido"})
+		return
+	}
+	contatos, err := ctrl.uc.GetContatosByCampanha(id)
+	if err != nil {
+		var appError *apperror.AppError
+		if errors.As(err, &appError) {
+			c.JSON(appError.StatusCode, gin.H{"error": appError.Message})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if contatos == nil {
+		contatos = []models.ContatoCampanha{}
+	}
+	c.JSON(http.StatusOK, contatos)
+}
+
 func (ctrl *CampanhaController) DeleteCampanha(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {

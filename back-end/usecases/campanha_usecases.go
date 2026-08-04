@@ -35,6 +35,14 @@ func (uc *CampanhaUseCase) GetAllCampanhas() ([]models.Campanha, error) {
 	return uc.repo.GetAllCampanhas()
 }
 
+func (uc *CampanhaUseCase) GetContatosByCampanha(id int) ([]models.ContatoCampanha, error) {
+	campanha, err := uc.repo.GetCampanhaByID(id)
+	if err != nil {
+		return nil, err
+	}
+	return uc.repo.GetContatosByCampanha(campanha.PalavraChave)
+}
+
 func (uc *CampanhaUseCase) DeleteCampanha(id int) error {
 	return uc.repo.DeleteCampanha(id)
 }

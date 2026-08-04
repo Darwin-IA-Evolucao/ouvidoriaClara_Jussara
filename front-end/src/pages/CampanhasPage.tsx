@@ -2,18 +2,19 @@ import * as React from 'react'
 import { useState, useEffect, useCallback } from 'react'
 import {
   Box, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, Alert, IconButton,
+  TextField, Alert, IconButton, CircularProgress,
 } from '@mui/material'
-import { Plus, Pencil, Trash2, Megaphone } from 'lucide-react'
+import { Plus, Pencil, Trash2, Megaphone, Users } from 'lucide-react'
 import GlassPanel from '../components/GlassPanel'
 import PageHeader from '../components/PageHeader'
 import PageLoader from '../components/PageLoader'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { inputSx, dialogSx } from '../utils/inputSx'
+import { formatPhoneDisplay } from '../utils/phone'
 import {
-  getAllCampanhas, createCampanha, updateCampanha, deleteCampanha,
+  getAllCampanhas, createCampanha, updateCampanha, deleteCampanha, getContatosByCampanha,
 } from '../services/campanhaService'
-import type { Campanha } from '../types'
+import type { Campanha, ContatoCampanha } from '../types'
 
 const CampanhasPage: React.FC = () => {
   const [campanhas, setCampanhas] = useState<Campanha[]>([])
@@ -26,6 +27,9 @@ const CampanhasPage: React.FC = () => {
   const [saving, setSaving] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [toDelete, setToDelete] = useState<Campanha | null>(null)
+  const [selected, setSelected] = useState<Campanha | null>(null)
+  const [contatos, setContatos] = useState<ContatoCampanha[]>([])
+  const [contatosLoading, setContatosLoading] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -48,10 +52,27 @@ const CampanhasPage: React.FC = () => {
     setOpenModal(true)
   }
 
-  const openEdit = (c: Campanha) => {
+  const openEdit = (c: Campanha, e: React.MouseEvent) => {
+    e.stopPropagation()
     setEditing(c)
     setPalavraChave(c.palavraChave)
     setOpenModal(true)
+  }
+
+  const openContatos = async (c: Campanha) => {
+    setSelected(c)
+    setContatos([])
+    setContatosLoading(true)
+    setError(null)
+    try {
+      const data = await getContatosByCampanha(c.id)
+      setContatos(Array.isArray(data) ? data : [])
+    } catch (err: any) {
+      setError(err.message || 'Erro ao carregar contatos da campanha')
+      setSelected(null)
+    } finally {
+      setContatosLoading(false)
+    }
   }
 
   const save = async () => {
@@ -153,8 +174,20 @@ const CampanhasPage: React.FC = () => {
       ) : (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
           {filtered.map((c) => (
-            <GlassPanel key={c.id} style={{ padding: '14px 18px' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+            <GlassPanel
+              key={c.id}
+              style={{ padding: '14px 18px', cursor: 'pointer' }}
+            >
+              <Box
+                onClick={() => openContatos(c)}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 2,
+                  '&:hover': { opacity: 0.92 },
+                }}
+              >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
                   <Box
                     sx={{
@@ -184,15 +217,18 @@ const CampanhasPage: React.FC = () => {
                     >
                       {c.palavraChave}
                     </Typography>
-                    <Typography sx={{ color: 'hsl(var(--text-secondary))', fontSize: 12 }}>
-                      ID {c.id}
-                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.25 }}>
+                      <Users size={12} style={{ color: 'hsl(var(--text-secondary))' }} />
+                      <Typography sx={{ color: 'hsl(var(--text-secondary))', fontSize: 12 }}>
+                        {c.qtdContatos ?? 0} {(c.qtdContatos ?? 0) === 1 ? 'contato' : 'contatos'}
+                      </Typography>
+                    </Box>
                   </Box>
                 </Box>
-                <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }}>
+                <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
                   <IconButton
                     size="small"
-                    onClick={() => openEdit(c)}
+                    onClick={(e) => openEdit(c, e)}
                     sx={{ color: 'hsl(var(--accent))' }}
                     aria-label="Editar"
                   >
@@ -200,7 +236,11 @@ const CampanhasPage: React.FC = () => {
                   </IconButton>
                   <IconButton
                     size="small"
-                    onClick={() => { setToDelete(c); setConfirmOpen(true) }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setToDelete(c)
+                      setConfirmOpen(true)
+                    }}
                     sx={{ color: 'hsl(var(--error))' }}
                     aria-label="Excluir"
                   >
@@ -241,6 +281,58 @@ const CampanhasPage: React.FC = () => {
             sx={{ background: 'hsl(var(--primary))', textTransform: 'none', borderRadius: 2 }}
           >
             Salvar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={!!selected}
+        onClose={() => setSelected(null)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: dialogSx }}
+      >
+        <DialogTitle sx={{ color: 'hsl(var(--accent))', fontWeight: 700 }}>
+          Contatos — {selected?.palavraChave}
+        </DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          {contatosLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress size={28} />
+            </Box>
+          ) : contatos.length === 0 ? (
+            <Typography sx={{ color: 'hsl(var(--text-secondary))', fontSize: 14, py: 2, textAlign: 'center' }}>
+              Nenhum contato nesta campanha
+            </Typography>
+          ) : (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              {contatos.map((ct) => (
+                <Box
+                  key={ct.telefone}
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 0.25,
+                    p: 1.5,
+                    borderRadius: 2,
+                    bgcolor: 'hsl(var(--surface))',
+                    border: '1px solid hsl(var(--border))',
+                  }}
+                >
+                  <Typography sx={{ color: 'hsl(var(--text-primary))', fontWeight: 600, fontSize: 13 }}>
+                    {ct.nome || 'Sem nome'}
+                  </Typography>
+                  <Typography sx={{ color: 'hsl(var(--text-secondary))', fontSize: 12 }}>
+                    {formatPhoneDisplay(ct.telefone) || ct.telefone}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setSelected(null)} sx={{ color: 'hsl(var(--text-secondary))', textTransform: 'none' }}>
+            Fechar
           </Button>
         </DialogActions>
       </Dialog>

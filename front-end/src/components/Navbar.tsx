@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   FileText,
   Phone,
+  Megaphone,
   Moon,
   Sun,
   LogOut,
@@ -18,6 +19,7 @@ import type { Theme } from '../utils/theme'
 const navItems = [
   { to: '/', icon: FileText, label: 'Reclamações' },
   { to: '/contatos', icon: Phone, label: 'Contatos' },
+  { to: '/campanhas', icon: Megaphone, label: 'Campanhas' },
   { to: '/estatisticas', icon: LayoutDashboard, label: 'Estatísticas' },
 ]
 

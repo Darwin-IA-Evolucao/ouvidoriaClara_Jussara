@@ -38,6 +38,11 @@ export interface Contact {
   data_criacao: string
 }
 
+export interface Campanha {
+  id: number
+  palavraChave: string
+}
+
 export interface Lead {
   nome: string
   telefone: string

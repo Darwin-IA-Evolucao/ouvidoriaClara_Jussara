@@ -12,6 +12,7 @@ type Contact struct {
 	Instance       *string        `db:"instance" json:"instance"`
 	Ativo          bool           `db:"ativo" json:"ativo"`
 	DataCriacao    string         `db:"data_criacao" json:"data_criacao"`
+	Campanha       *string        `json:"campanha" db:"campanha"`
 }
 
 type Contato struct {

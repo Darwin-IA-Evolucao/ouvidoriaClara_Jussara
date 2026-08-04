@@ -28,9 +28,31 @@ func (r *CampanhaRepository) CreateCampanha(campanha *models.Campanha) error {
 }
 
 func (r *CampanhaRepository) UpdateCampanha(campanha *models.Campanha) error {
-	const query = `UPDATE campanhas SET palavra_chave = $1 WHERE id = $2`
-	_, err := r.db.Exec(query, campanha.PalavraChave, campanha.ID)
-	return err
+	tx, err := r.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	var antiga string
+	err = tx.Get(&antiga, `SELECT palavra_chave FROM campanhas WHERE id = $1`, campanha.ID)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(`UPDATE campanhas SET palavra_chave = $1 WHERE id = $2`, campanha.PalavraChave, campanha.ID)
+	if err != nil {
+		return err
+	}
+
+	if antiga != campanha.PalavraChave {
+		_, err = tx.Exec(`UPDATE contatos SET campanha = $1 WHERE campanha = $2`, campanha.PalavraChave, antiga)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
 }
 
 func (r *CampanhaRepository) DeleteCampanha(id int) error {

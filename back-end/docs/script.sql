@@ -107,6 +107,12 @@ CREATE TABLE usuarios (
     role TEXT DEFAULT 'user' NOT NULL
 );
 
+CREATE TABLE campanhas (
+    id SERIAL PRIMARY KEY,
+    palavra_chave TEXT NOT NULL UNIQUE 
+);
+
+SELECT EXISTS (SELECT 1 FROM campanhas WHERE palavra_chave = '$1') AS existe;
 
 CREATE INDEX idx_reclamacao_telefone ON reclamacao (telefone);
 CREATE INDEX idx_reclamacao_status ON reclamacao (status);
@@ -115,5 +121,6 @@ CREATE INDEX idx_reclamacao_regiao ON reclamacao (regiao);
 CREATE INDEX idx_enderecos_logradouro ON enderecos (logradouro);
 CREATE INDEX idx_mensagens_telefone ON mensagens (telefone);
 CREATE INDEX idx_conversas_telefone_data ON conversas (telefone, data);
+CREATE INDEX idx_campanhas_palavra_chave ON campanhas (palavra_chave);
 
 INSERT INTO Enderecos (logradouro, bairro, regiao) VALUES ()

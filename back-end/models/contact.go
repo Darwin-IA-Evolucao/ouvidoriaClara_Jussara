@@ -21,6 +21,7 @@ type Contato struct {
 	Ativo          bool      `json:"ativo" db:"ativo"`
 	Instance       *string   `json:"instance" db:"instance"`
 	DataCriacao    time.Time `json:"data_criacao" db:"data_criacao"`
+	Campanha       *string   `json:"campanha" db:"campanha"`
 }
 
 type GetConversationIdResponse struct {

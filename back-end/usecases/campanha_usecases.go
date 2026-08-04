@@ -8,10 +8,10 @@ import (
 )
 
 type CampanhaUseCase struct {
-	repo repository.CampanhaRepository
+	repo *repository.CampanhaRepository
 }
 
-func NewCampanhaUseCase(repo repository.CampanhaRepository) *CampanhaUseCase {
+func NewCampanhaUseCase(repo *repository.CampanhaRepository) *CampanhaUseCase {
 	return &CampanhaUseCase{repo: repo}
 }
 

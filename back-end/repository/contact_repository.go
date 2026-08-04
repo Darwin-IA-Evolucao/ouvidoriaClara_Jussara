@@ -55,8 +55,8 @@ func (r *ContatoRepo) UpdateInstanciaContato(telefone string, instancia string) 
 }
 
 func (r *ContatoRepo) CreateContato(contato *models.Contato) error {
-	const query = `INSERT INTO contatos (telefone, nome, conversation_id, instance) VALUES ($1, $2, $3, $4)`
-	_, err := r.db.Exec(query, contato.Telefone, contato.Nome, contato.ConversationId, contato.Instance)
+	const query = `INSERT INTO contatos (telefone, nome, conversation_id, instance, campanha) VALUES ($1, $2, $3, $4, $5)`
+	_, err := r.db.Exec(query, contato.Telefone, contato.Nome, contato.ConversationId, contato.Instance, contato.Campanha)
 	return err
 }
 

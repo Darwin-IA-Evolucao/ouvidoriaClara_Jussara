@@ -83,3 +83,8 @@ func (r *MensagemRepo) SetAvisado() error {
 	_, err := r.db.Exec(query)
 	return err
 }
+
+// -------- CAMPANHA --------
+func (r *MensagemRepo) GetAllCampanhas() ([]models.Campanha, error) {
+	return NewCampanhaRepository(r.db).GetAllCampanhas()
+}

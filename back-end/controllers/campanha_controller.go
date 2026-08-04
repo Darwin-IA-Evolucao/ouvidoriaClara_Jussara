@@ -12,10 +12,10 @@ import (
 )
 
 type CampanhaController struct {
-	uc usecases.CampanhaUseCase
+	uc *usecases.CampanhaUseCase
 }
 
-func NewCampanhaController(uc usecases.CampanhaUseCase) *CampanhaController {
+func NewCampanhaController(uc *usecases.CampanhaUseCase) *CampanhaController {
 	return &CampanhaController{uc: uc}
 }
 

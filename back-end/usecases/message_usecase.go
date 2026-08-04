@@ -4,6 +4,7 @@ import (
 	"back-end/config"
 	"back-end/models"
 	"back-end/repository"
+	"back-end/utils"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -124,10 +125,13 @@ func (u *MensagemUseCase) AddMensagem(addMensagem *models.AddMensagem) error {
 	contato, err := u.repo.GetContatoByTelefone(addMensagem.Telefone)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			campanha := u.buscarCampanhaNaMensagem(addMensagem.Conteudo)
+
 			err := u.repo.CreateContato(&models.Contato{
 				Telefone: addMensagem.Telefone,
 				Nome:     addMensagem.Nome,
 				Instance: &addMensagem.Instance,
+				Campanha: campanha,
 			})
 			if err != nil {
 				return fmt.Errorf("erro ao criar contato: %w", err)
@@ -205,6 +209,21 @@ func (u *MensagemUseCase) padronizaTelefone(telefone string) string {
 		telefone += "@s.whatsapp.net"
 	}
 	return telefone
+}
+
+func (u *MensagemUseCase) buscarCampanhaNaMensagem(conteudo string) *string {
+	msgLimpa := utils.RemoveAcento(strings.ToLower(strings.TrimSpace(conteudo)))
+	campanhas, err := u.repo.GetAllCampanhas()
+	if err != nil {
+		return nil
+	}
+	for _, c := range campanhas {
+		if c.PalavraChave != "" && strings.Contains(msgLimpa, c.PalavraChave) {
+			palavra := c.PalavraChave
+			return &palavra
+		}
+	}
+	return nil
 }
 
 // addToPending adiciona uma mensagem à fila de pendentes e gerencia o timer

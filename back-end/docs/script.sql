@@ -17,10 +17,16 @@ DROP TABLE IF EXISTS reclamacao CASCADE;
 DROP TABLE IF EXISTS mensagens CASCADE;
 DROP TABLE IF EXISTS conversas CASCADE;
 DROP TABLE IF EXISTS contatos CASCADE;
+DROP TABLE IF EXISTS campanhas CASCADE;
 DROP TABLE IF EXISTS enderecos CASCADE;
 DROP TABLE IF EXISTS usuarios CASCADE;
 DROP TABLE IF EXISTS cliente CASCADE;
 DROP TABLE IF EXISTS atividade_clientes CASCADE;
+
+CREATE TABLE campanhas (
+    id SERIAL PRIMARY KEY,
+    palavra_chave TEXT NOT NULL UNIQUE
+);
 
 CREATE TABLE contatos (
     telefone TEXT PRIMARY KEY,
@@ -28,7 +34,8 @@ CREATE TABLE contatos (
     conversation_id TEXT,
     ativo BOOLEAN DEFAULT true,
     instance TEXT DEFAULT '' NOT NULL,
-    data_criacao DATE DEFAULT CURRENT_DATE NOT NULL
+    data_criacao DATE DEFAULT CURRENT_DATE NOT NULL,
+    campanha TEXT
 );
 
 CREATE TABLE cliente (
@@ -105,11 +112,6 @@ CREATE TABLE usuarios (
     endereco TEXT DEFAULT '' NOT NULL,
     ativo BOOLEAN DEFAULT true NOT NULL,
     role TEXT DEFAULT 'user' NOT NULL
-);
-
-CREATE TABLE campanhas (
-    id SERIAL PRIMARY KEY,
-    palavra_chave TEXT NOT NULL UNIQUE 
 );
 
 SELECT EXISTS (SELECT 1 FROM campanhas WHERE palavra_chave = '$1') AS existe;

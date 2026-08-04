@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import {
   Autocomplete, Box, CircularProgress, IconButton, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Typography, MenuItem, useMediaQuery, useTheme,
 } from '@mui/material'
@@ -58,6 +58,14 @@ const CATEGORIAS = [
   'animais silvestres',
   'equipamentos',
 ]
+
+const REGIOES_FILTRO = ['Zona Norte', 'Zona Oeste', 'Zona Leste', 'Zona Sul', 'Centro', 'Outros'] as const
+
+function normalizeRegiaoFiltro(regiao?: string | null): (typeof REGIOES_FILTRO)[number] {
+  const r = (regiao || '').trim()
+  if ((REGIOES_FILTRO as readonly string[]).includes(r)) return r as (typeof REGIOES_FILTRO)[number]
+  return 'Outros'
+}
 
 const CATEGORY_FIELDS: Record<string, string[]> = {
   geral: ['situacaoResumida'],
@@ -404,6 +412,7 @@ function filterRows(
   ageMin: string,
   ageMax: string,
   categoria: string[],
+  regiao: string,
 ): Ocorrencia[] {
   const s = search.trim().toLowerCase()
   const phoneDigits = s.replace(/\D/g, '')
@@ -432,6 +441,7 @@ function filterRows(
     if (ageMin && age !== null && age < parseInt(ageMin)) return false
     if (ageMax && age !== null && age > parseInt(ageMax)) return false
     if (categoria.length > 0 && !categoria.includes(r.categoria)) return false
+    if (regiao && normalizeRegiaoFiltro(r.detalhes?.regiao) !== regiao) return false
     return true
   })
 }
@@ -623,6 +633,7 @@ const ReclamacoesPage: React.FC = () => {
   const [ageMin, setAgeMin] = useState('')
   const [ageMax, setAgeMax] = useState('')
   const [catFilter, setCatFilter] = useState<string[]>([])
+  const [regiaoFilter, setRegiaoFilter] = useState('')
 
   /* pagination per column */
   const [columnPages, setColumnPages] = useState<Record<string, number>>({})
@@ -635,7 +646,15 @@ const ReclamacoesPage: React.FC = () => {
     return () => clearTimeout(timer)
   }, [searchText])
 
-  const filteredRows = filterRows(rows, clientesMap, debouncedSearch, dateFrom, dateTo, enderecoFilter, bairroFilter, cidadeFilter, ageMin, ageMax, catFilter)
+  const regiaoCounts = useMemo(() => {
+    const counts: Record<string, number> = Object.fromEntries(REGIOES_FILTRO.map((r) => [r, 0]))
+    for (const row of rows) {
+      counts[normalizeRegiaoFiltro(row.detalhes?.regiao)]++
+    }
+    return counts
+  }, [rows])
+
+  const filteredRows = filterRows(rows, clientesMap, debouncedSearch, dateFrom, dateTo, enderecoFilter, bairroFilter, cidadeFilter, ageMin, ageMax, catFilter, regiaoFilter)
     .sort((a, b) => new Date(b.dataAtualizacao).getTime() - new Date(a.dataAtualizacao).getTime())
 
   useEffect(() => {
@@ -1037,6 +1056,48 @@ const ReclamacoesPage: React.FC = () => {
           size="small"
           onClick={() => {
             setCatFilter([])
+            setColumnPages({})
+          }}
+          sx={{ color: 'hsl(var(--text-secondary))', textTransform: 'none', borderRadius: 2 }}
+        >
+          Limpar Filtros
+        </Button>
+      </Box>
+
+      {/* group 3b: região */}
+      <Box
+        sx={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          justifyContent: 'center',
+          gap: 1.5,
+          mb: 2,
+          alignItems: 'center',
+          p: 2,
+          borderRadius: 2,
+          bgcolor: 'hsl(var(--surface-2))',
+          border: '1px solid hsl(var(--border))',
+        }}
+      >
+        <TextField
+          select
+          size="small"
+          label="Região"
+          value={regiaoFilter}
+          onChange={(e) => { setRegiaoFilter(e.target.value); setColumnPages({}) }}
+          sx={{ ...inputSx, minWidth: { xs: 200, sm: 280 } }}
+        >
+          <MenuItem value="">Todas</MenuItem>
+          {REGIOES_FILTRO.map((r) => (
+            <MenuItem key={r} value={r}>
+              {r} ({regiaoCounts[r] ?? 0})
+            </MenuItem>
+          ))}
+        </TextField>
+        <Button
+          size="small"
+          onClick={() => {
+            setRegiaoFilter('')
             setColumnPages({})
           }}
           sx={{ color: 'hsl(var(--text-secondary))', textTransform: 'none', borderRadius: 2 }}

@@ -180,6 +180,11 @@
                 Salve sempre no formato: "Rua Exemplo, 123, Apto 45"
                 Exemplo: "Rua das Flores, 456, Apto 12"
             </Regra_Endereco>
+            <Regra_Cidade>
+                Ao perguntar a cidade, verifique se ela é "Sorocaba"
+                - caso seja, pergunte o bairro e o endereço, salve em {{bairroCliente}} e {{enderecoCliente}} respectivamente e prossiga normalmente o atendimento.
+                - caso não seja, não pergunte o bairro e o endereço, marque {{bairroCliente}} como "N/A" e {{enderecoCliente}} como "N/A" e prossiga normalmente o atendimento.
+            </Regra_Cidade>
         </Regras>
     </Coleta_Dados>
     <Classificacao_Demanda>

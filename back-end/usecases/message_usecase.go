@@ -132,7 +132,7 @@ func (u *MensagemUseCase) AddMensagem(addMensagem *models.AddMensagem) error {
 			}
 			err := u.repo.CreateContato(&models.Contato{
 				Telefone: addMensagem.Telefone,
-				Nome:     addMensagem.Nome,
+				Nome:     &addMensagem.Nome,
 				Instance: &addMensagem.Instance,
 				Campanha: campanha,
 			})

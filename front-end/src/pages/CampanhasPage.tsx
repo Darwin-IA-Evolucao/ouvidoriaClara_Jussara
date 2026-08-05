@@ -243,7 +243,7 @@ const CampanhasPage: React.FC = () => {
             whiteSpace: 'nowrap',
           }}
         >
-          Nova campanha
+          Nova liderança
         </Button>
         <Button
           variant="outlined"

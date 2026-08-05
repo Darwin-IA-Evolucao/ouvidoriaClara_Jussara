@@ -648,13 +648,14 @@ const ReclamacoesPage: React.FC = () => {
 
   const regiaoCounts = useMemo(() => {
     const counts: Record<string, number> = Object.fromEntries(REGIOES_FILTRO.map((r) => [r, 0]))
-    for (const row of rows) {
+    const list = Array.isArray(rows) ? rows : []
+    for (const row of list) {
       counts[normalizeRegiaoFiltro(row.detalhes?.regiao)]++
     }
     return counts
   }, [rows])
 
-  const filteredRows = filterRows(rows, clientesMap, debouncedSearch, dateFrom, dateTo, enderecoFilter, bairroFilter, cidadeFilter, ageMin, ageMax, catFilter, regiaoFilter)
+  const filteredRows = filterRows(Array.isArray(rows) ? rows : [], clientesMap, debouncedSearch, dateFrom, dateTo, enderecoFilter, bairroFilter, cidadeFilter, ageMin, ageMax, catFilter, regiaoFilter)
     .sort((a, b) => new Date(b.dataAtualizacao).getTime() - new Date(a.dataAtualizacao).getTime())
 
   useEffect(() => {
@@ -687,7 +688,7 @@ const ReclamacoesPage: React.FC = () => {
         const map: Record<string, Cliente> = {}
         clientes.forEach((c) => { map[c.telefone] = c })
         setClientesMap(map)
-        setRows(ocorrencias)
+        setRows(Array.isArray(ocorrencias) ? ocorrencias : [])
         /* compute default age range */
         let minAge = Infinity
         let maxAge = -Infinity

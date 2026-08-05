@@ -19,6 +19,7 @@ func SetupClienteRoutes(router *gin.Engine, clienteController *controllers.Clien
 	router.POST("/desligar/:telefone", clienteController.DesligaRobo)
 	router.DELETE("/ligar/:telefone", clienteController.LigaRobo)
 	router.GET("/ligado/:telefone", clienteController.IsRoboLigado)
+	router.GET("/ligados", clienteController.GetStatusLigados)
 	
 	router.GET("/clientes-gelo", clienteController.GetClientesGelo)
 	router.GET("/existe-cliente/:telefone", clienteController.ExisteCliente)

@@ -100,6 +100,10 @@ func (uc ClienteUseCase) GetClienteBloqueadoById(telefoneCliente string) error {
 	return uc.repo.GetClienteBloqueadoById(telefoneCliente)
 }
 
+func (uc ClienteUseCase) GetAllClientesBloqueados() ([]string, error) {
+	return uc.repo.GetAllClientesBloqueados()
+}
+
 func (uc ClienteUseCase) SetClienteBloqueado(idCliente string) error {
 	return  uc.repo.SetClienteBloqueado(idCliente)
 }

@@ -145,6 +145,9 @@ func (repo ReclamacaoRepository) GetAllOcorrencias(telefone string) ([]models.Oc
 		}
 		ocorrencias = append(ocorrencias, o)
 	}
+	if ocorrencias == nil {
+		ocorrencias = []models.Ocorrencia{}
+	}
 	return ocorrencias, rows.Err()
 }
 

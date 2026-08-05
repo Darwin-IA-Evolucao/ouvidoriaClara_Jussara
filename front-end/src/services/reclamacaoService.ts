@@ -27,7 +27,8 @@ export async function colocarComoCriado(id: number): Promise<void> {
 
 export async function getAllOcorrencias(telefone?: string): Promise<Ocorrencia[]> {
   const query = telefone ? `?telefone=${telefone}` : ''
-  return apiGet<Ocorrencia[]>(`/ocorrencias${query}`)
+  const data = await apiGet<Ocorrencia[] | null>(`/ocorrencias${query}`)
+  return Array.isArray(data) ? data : []
 }
 
 export async function getOcorrenciaById(id: number): Promise<Ocorrencia> {

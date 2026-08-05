@@ -159,6 +159,15 @@ func (controller ClienteController) IsRoboLigado(c *gin.Context) {
 	c.String(http.StatusOK, "false") // Robô está desligado
 }
 
+func (controller ClienteController) GetStatusLigados(c *gin.Context) {
+	bloqueados, err := controller.usecase.GetAllClientesBloqueados()
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Erro ao verificar status", "details": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"bloqueados": bloqueados})
+}
+
 func (controller ClienteController) DesligaRobo(c *gin.Context) {
 	telefone := c.Param("telefone")
 	err := controller.usecase.SetClienteBloqueado(telefone)

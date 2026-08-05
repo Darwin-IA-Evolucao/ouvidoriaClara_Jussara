@@ -76,6 +76,19 @@ func (repo ClienteRepo) GetClienteBloqueadoById(telefoneCliente string) error {
 	return nil
 }
 
+func (repo ClienteRepo) GetAllClientesBloqueados() ([]string, error) {
+	const query = `SELECT idcliente FROM clientesbloqueados`
+	var ids []string
+	err := repo.db.Select(&ids, query)
+	if err != nil {
+		return nil, err
+	}
+	if ids == nil {
+		ids = []string{}
+	}
+	return ids, nil
+}
+
 func (repo ClienteRepo) SetClienteBloqueado(idCliente string) error {
 	query := `INSERT INTO clientesbloqueados (idcliente) VALUES ($1) ON CONFLICT DO NOTHING`
 

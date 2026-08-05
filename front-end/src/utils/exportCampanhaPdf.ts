@@ -56,8 +56,8 @@ export function exportCampanhaPdf(titulo: string, contatos: ContatoPdfRow[], com
     headStyles: { fillColor: [65, 102, 156], textColor: 255, fontStyle: 'bold' },
     alternateRowStyles: { fillColor: [245, 247, 250] },
     columnStyles: comCampanha
-      ? { 0: { cellWidth: 12 }, 1: { cellWidth: 45 }, 2: { cellWidth: 55 }, 3: { cellWidth: 45 } }
-      : { 0: { cellWidth: 12 }, 1: { cellWidth: 80 }, 2: { cellWidth: 55 } },
+      ? { 0: { cellWidth: 22 }, 1: { cellWidth: 40 }, 2: { cellWidth: 50 }, 3: { cellWidth: 45 } }
+      : { 0: { cellWidth: 22 }, 1: { cellWidth: 75 }, 2: { cellWidth: 55 } },
   })
 
   const file = `lideranca_${safeFileName(titulo)}_${new Date().toISOString().slice(0, 10)}.pdf`

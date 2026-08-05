@@ -155,6 +155,9 @@ func (ctrl ReclamacaoController) GetAllOcorrencias(c *gin.Context) {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	if list == nil {
+		list = []models.Ocorrencia{}
+	}
 	c.IndentedJSON(http.StatusOK, list)
 }
 

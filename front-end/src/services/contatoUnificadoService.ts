@@ -3,10 +3,11 @@ import { API_BASE_URL } from '../utils/config'
 import type { LeadsResponse, Cliente, Contato, ContatoUnificado } from '../types'
 
 export async function getAllContatosUnificados(): Promise<{ contatos: ContatoUnificado[]; total: number; usados: number; ocupacao: string; limite: number }> {
-  const [leadsRes, clientes, contatos] = await Promise.all([
+  const [leadsRes, clientes, contatos, ligadosRes] = await Promise.all([
     apiGet<LeadsResponse>('/leads'),
     apiGet<Cliente[]>('/clientes').catch(() => [] as Cliente[]),
     apiGet<Contato[]>('/contatos').catch(() => [] as Contato[]),
+    apiGet<{ bloqueados: string[] }>('/ligados').catch(() => ({ bloqueados: [] as string[] })),
   ])
 
   const clientesMap = new Map<string, Cliente>()
@@ -15,12 +16,13 @@ export async function getAllContatosUnificados(): Promise<{ contatos: ContatoUni
   const contatosMap = new Map<string, Contato>()
   contatos.forEach((c) => { contatosMap.set(c.telefone, c) })
 
+  const bloqueadosSet = new Set(ligadosRes.bloqueados || [])
+
   let geloPhones = new Set<string>()
   try {
     const geloRes = await apiGet<Cliente[]>('/clientes-gelo')
     geloRes.forEach((g) => geloPhones.add(g.telefone))
   } catch {
-    // endpoint might not return expected format, try raw fetch
     try {
       const resp = await fetch(`${API_BASE_URL}/clientes-gelo`)
       if (resp.ok) {
@@ -36,26 +38,7 @@ export async function getAllContatosUnificados(): Promise<{ contatos: ContatoUni
 
   const leads = leadsRes.leads || []
 
-  const darwinStatuses = await Promise.all(
-    leads.map(async (lead) => {
-      try {
-        const resp = await fetch(`${API_BASE_URL}/ligado/${lead.telefone}`)
-        if (!resp.ok) return true
-        const raw = (await resp.text()).trim().toLowerCase()
-        if (raw === 'false') return false
-        if (raw === 'true') return true
-        try {
-          const parsed = JSON.parse(raw)
-          if (typeof parsed === 'boolean') return parsed
-        } catch { /* ignore */ }
-        return true
-      } catch {
-        return true
-      }
-    })
-  )
-
-  const contatosUnificados: ContatoUnificado[] = leads.map((lead, index) => {
+  const contatosUnificados: ContatoUnificado[] = leads.map((lead) => {
     const cliente = clientesMap.get(lead.telefone)
     const contato = contatosMap.get(lead.telefone)
     const isGelado = geloPhones.has(lead.telefone)
@@ -72,7 +55,7 @@ export async function getAllContatosUnificados(): Promise<{ contatos: ContatoUni
       instance: contato?.instance ?? null,
       campanha: contato?.campanha ?? null,
       leadAtivo: lead.ativo,
-      darwinAtivo: darwinStatuses[index] ?? true,
+      darwinAtivo: !bloqueadosSet.has(lead.telefone),
       isGelado,
       isCliente: !!cliente,
       hasReclamacao: false,

@@ -19,7 +19,7 @@ import type { Theme } from '../utils/theme'
 const navItems = [
   { to: '/', icon: FileText, label: 'Reclamações' },
   { to: '/contatos', icon: Phone, label: 'Contatos' },
-  { to: '/campanhas', icon: Megaphone, label: 'Campanhas' },
+  { to: '/liderancas', icon: Megaphone, label: 'Lideranças' },
   { to: '/estatisticas', icon: LayoutDashboard, label: 'Estatísticas' },
 ]
 

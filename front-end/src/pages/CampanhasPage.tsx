@@ -4,7 +4,7 @@ import {
   Box, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, Alert, IconButton, CircularProgress,
 } from '@mui/material'
-import { Plus, Pencil, Trash2, Megaphone, Users } from 'lucide-react'
+import { Plus, Pencil, Trash2, Megaphone, Users, FileDown } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts'
@@ -14,6 +14,7 @@ import PageLoader from '../components/PageLoader'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { inputSx, dialogSx } from '../utils/inputSx'
 import { formatPhoneDisplay } from '../utils/phone'
+import { exportCampanhaPdf } from '../utils/exportCampanhaPdf'
 import {
   getAllCampanhas, createCampanha, updateCampanha, deleteCampanha, getContatosByCampanha,
 } from '../services/campanhaService'
@@ -53,6 +54,7 @@ const CampanhasPage: React.FC = () => {
   const [selected, setSelected] = useState<Campanha | null>(null)
   const [contatos, setContatos] = useState<ContatoCampanha[]>([])
   const [contatosLoading, setContatosLoading] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -61,7 +63,7 @@ const CampanhasPage: React.FC = () => {
       const data = await getAllCampanhas()
       setCampanhas(Array.isArray(data) ? data : [])
     } catch (err: any) {
-      setError(err.message || 'Erro ao carregar campanhas')
+      setError(err.message || 'Erro ao carregar lideranças')
     } finally {
       setLoading(false)
     }
@@ -91,7 +93,7 @@ const CampanhasPage: React.FC = () => {
       const data = await getContatosByCampanha(c.id)
       setContatos(Array.isArray(data) ? data : [])
     } catch (err: any) {
-      setError(err.message || 'Erro ao carregar contatos da campanha')
+      setError(err.message || 'Erro ao carregar contatos da liderança')
       setSelected(null)
     } finally {
       setContatosLoading(false)
@@ -112,7 +114,7 @@ const CampanhasPage: React.FC = () => {
       setOpenModal(false)
       await load()
     } catch (err: any) {
-      setError(err.message || 'Erro ao salvar campanha')
+      setError(err.message || 'Erro ao salvar liderança')
     } finally {
       setSaving(false)
     }
@@ -127,8 +129,57 @@ const CampanhasPage: React.FC = () => {
       setToDelete(null)
       await load()
     } catch (err: any) {
-      setError(err.message || 'Erro ao excluir campanha')
+      setError(err.message || 'Erro ao excluir liderança')
       setConfirmOpen(false)
+    }
+  }
+
+  const exportarCampanha = async (c: Campanha, e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    setExporting(true)
+    setError(null)
+    try {
+      const data = await getContatosByCampanha(c.id)
+      const lista = Array.isArray(data) ? data : []
+      if (lista.length === 0) {
+        setError(`Nenhum contato na liderança "${c.palavraChave}"`)
+        return
+      }
+      exportCampanhaPdf(`Liderança: ${c.palavraChave}`, lista.map((ct) => ({
+        nome: ct.nome,
+        telefone: ct.telefone,
+      })))
+    } catch (err: any) {
+      setError(err.message || 'Erro ao exportar liderança')
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const exportarTodos = async () => {
+    setExporting(true)
+    setError(null)
+    try {
+      const resultados = await Promise.all(
+        campanhas.map(async (c) => {
+          const data = await getContatosByCampanha(c.id)
+          return (Array.isArray(data) ? data : []).map((ct) => ({
+            nome: ct.nome,
+            telefone: ct.telefone,
+            campanha: c.palavraChave,
+          }))
+        })
+      )
+      const todos = resultados.flat().sort((a, b) => a.campanha.localeCompare(b.campanha, 'pt-BR'))
+      if (todos.length === 0) {
+        setError('Nenhum contato para exportar')
+        return
+      }
+      exportCampanhaPdf('Todas as lideranças', todos, true)
+    } catch (err: any) {
+      setError(err.message || 'Erro ao exportar contatos')
+    } finally {
+      setExporting(false)
     }
   }
 
@@ -145,11 +196,11 @@ const CampanhasPage: React.FC = () => {
     [campanhas]
   )
 
-  if (loading) return <PageLoader message="Carregando campanhas..." />
+  if (loading) return <PageLoader message="Carregando lideranças..." />
 
   return (
     <Box className="page-root">
-      <PageHeader title="Campanhas" />
+      <PageHeader title="Lideranças" />
 
       {error && (
         <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2 }}>
@@ -194,13 +245,28 @@ const CampanhasPage: React.FC = () => {
         >
           Nova campanha
         </Button>
+        <Button
+          variant="outlined"
+          startIcon={exporting ? <CircularProgress size={14} /> : <FileDown size={16} />}
+          onClick={exportarTodos}
+          disabled={exporting || campanhas.length === 0}
+          sx={{
+            textTransform: 'none',
+            borderRadius: 2,
+            whiteSpace: 'nowrap',
+            borderColor: 'hsl(var(--border))',
+            color: 'hsl(var(--accent))',
+          }}
+        >
+          Exportar todos
+        </Button>
       </Box>
 
       {filtered.length === 0 ? (
         <GlassPanel style={{ padding: 32, textAlign: 'center' }}>
           <Megaphone size={32} style={{ color: 'hsl(var(--text-secondary))', margin: '0 auto 12px' }} />
           <Typography sx={{ color: 'hsl(var(--text-secondary))', fontSize: 14 }}>
-            {search ? 'Nenhuma campanha encontrada' : 'Nenhuma campanha cadastrada'}
+            {search ? 'Nenhuma liderança encontrada' : 'Nenhuma liderança cadastrada'}
           </Typography>
         </GlassPanel>
       ) : (
@@ -260,6 +326,16 @@ const CampanhasPage: React.FC = () => {
                 <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
                   <IconButton
                     size="small"
+                    onClick={(e) => exportarCampanha(c, e)}
+                    disabled={exporting || !(c.qtdContatos ?? 0)}
+                    sx={{ color: 'hsl(var(--accent))' }}
+                    aria-label="Exportar PDF"
+                    title="Exportar PDF"
+                  >
+                    <FileDown size={16} />
+                  </IconButton>
+                  <IconButton
+                    size="small"
                     onClick={(e) => openEdit(c, e)}
                     sx={{ color: 'hsl(var(--accent))' }}
                     aria-label="Editar"
@@ -297,7 +373,7 @@ const CampanhasPage: React.FC = () => {
               mb: 2,
             }}
           >
-            Contatos por campanha
+            Contatos por liderança
           </Typography>
           <Box sx={{ width: '100%', height: 300 }}>
             <ResponsiveContainer>
@@ -330,7 +406,7 @@ const CampanhasPage: React.FC = () => {
 
       <Dialog open={openModal} onClose={() => setOpenModal(false)} maxWidth="sm" fullWidth PaperProps={{ sx: dialogSx }}>
         <DialogTitle sx={{ color: 'hsl(var(--accent))', fontWeight: 700 }}>
-          {editing ? 'Editar campanha' : 'Nova campanha'}
+          {editing ? 'Editar liderança' : 'Nova liderança'}
         </DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
           <TextField
@@ -377,7 +453,7 @@ const CampanhasPage: React.FC = () => {
             </Box>
           ) : contatos.length === 0 ? (
             <Typography sx={{ color: 'hsl(var(--text-secondary))', fontSize: 14, py: 2, textAlign: 'center' }}>
-              Nenhum contato nesta campanha
+              Nenhum contato nesta liderança
             </Typography>
           ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -405,7 +481,15 @@ const CampanhasPage: React.FC = () => {
             </Box>
           )}
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
+        <DialogActions sx={{ px: 3, pb: 2, justifyContent: 'space-between' }}>
+          <Button
+            startIcon={<FileDown size={16} />}
+            onClick={() => selected && exportarCampanha(selected)}
+            disabled={exporting || contatos.length === 0}
+            sx={{ color: 'hsl(var(--accent))', textTransform: 'none' }}
+          >
+            Exportar PDF
+          </Button>
           <Button onClick={() => setSelected(null)} sx={{ color: 'hsl(var(--text-secondary))', textTransform: 'none' }}>
             Fechar
           </Button>
@@ -414,7 +498,7 @@ const CampanhasPage: React.FC = () => {
 
       <ConfirmDialog
         open={confirmOpen}
-        title="Excluir campanha"
+        title="Excluir liderança"
         message={`Confirmar exclusão de "${toDelete?.palavraChave}"?`}
         onConfirm={confirmDelete}
         onCancel={() => { setConfirmOpen(false); setToDelete(null) }}

@@ -84,7 +84,7 @@ function App() {
         <Route path="/" element={<RequireAuth><ReclamacoesPage /></RequireAuth>} />
         <Route path="/estatisticas" element={<RequireAuth><DashboardPage /></RequireAuth>} />
         <Route path="/contatos" element={<RequireAuth><ContatosPage /></RequireAuth>} />
-        <Route path="/campanhas" element={<RequireAuth><CampanhasPage /></RequireAuth>} />
+        <Route path="/liderancas" element={<RequireAuth><CampanhasPage /></RequireAuth>} />
         <Route path="/clientes" element={<Navigate to="/contatos" replace />} />
         <Route path="/leads" element={<Navigate to="/contatos" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -946,6 +946,13 @@
             </Reclamacoes_Equipamentos_Publicos_E_Privados>
         </Causa_Animal>
     </Fluxos>
+    <Regra_Candidatura>
+        Caso o cliente pergunte algo sobre a candidatura da Jussara Fernandes, responda esta exata mensagem:
+        {"messages":["Jussara Fernandes é a pré-candidata a deputada federal pelo partido Republicanos."]}
+
+        É TERMINANTEMENTE PROIBIDO responder qualquer outra coisa sobre a candidatura da Jussara Fernandes.
+        NUNCA RESPONDA QUE ELA É CANDIDATA A DEPUTADA FEDERAL, POIS ELA É PRÉ-CANDIDATA.
+    </Regra_Candidatura>
     <Regras_Institucionais>
         Nunca prometer:
         - resgate de animal

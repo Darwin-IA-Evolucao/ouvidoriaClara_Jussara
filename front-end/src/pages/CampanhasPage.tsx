@@ -2,7 +2,7 @@ import * as React from 'react'
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   Box, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, Alert, IconButton, CircularProgress,
+  TextField, Alert, IconButton, CircularProgress, Menu, MenuItem,
 } from '@mui/material'
 import { Plus, Pencil, Trash2, Megaphone, Users, FileDown } from 'lucide-react'
 import {
@@ -15,10 +15,14 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import { inputSx, dialogSx } from '../utils/inputSx'
 import { formatPhoneDisplay } from '../utils/phone'
 import { exportCampanhaPdf } from '../utils/exportCampanhaPdf'
+import { exportCampanhaXlsx } from '../utils/exportCampanhaXlsx'
 import {
   getAllCampanhas, createCampanha, updateCampanha, deleteCampanha, getContatosByCampanha,
 } from '../services/campanhaService'
 import type { Campanha, ContatoCampanha } from '../types'
+
+type ExportFormat = 'pdf' | 'xlsx'
+type ExportTarget = 'all' | Campanha
 
 const BAR_COLORS = ['#41669C', '#E89E70', '#66BB80', '#62A1D8', '#E2AF7A', '#5282AE', '#53A16E']
 
@@ -55,6 +59,19 @@ const CampanhasPage: React.FC = () => {
   const [contatos, setContatos] = useState<ContatoCampanha[]>([])
   const [contatosLoading, setContatosLoading] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [exportMenuAnchor, setExportMenuAnchor] = useState<null | HTMLElement>(null)
+  const [exportTarget, setExportTarget] = useState<ExportTarget | null>(null)
+
+  const openExportMenu = (e: React.MouseEvent<HTMLElement>, target: ExportTarget) => {
+    e.stopPropagation()
+    setExportMenuAnchor(e.currentTarget)
+    setExportTarget(target)
+  }
+
+  const closeExportMenu = () => {
+    setExportMenuAnchor(null)
+    setExportTarget(null)
+  }
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -134,8 +151,7 @@ const CampanhasPage: React.FC = () => {
     }
   }
 
-  const exportarCampanha = async (c: Campanha, e?: React.MouseEvent) => {
-    e?.stopPropagation()
+  const exportarCampanha = async (c: Campanha, format: ExportFormat) => {
     setExporting(true)
     setError(null)
     try {
@@ -145,10 +161,13 @@ const CampanhasPage: React.FC = () => {
         setError(`Nenhum contato na liderança "${c.palavraChave}"`)
         return
       }
-      exportCampanhaPdf(`Liderança: ${c.palavraChave}`, lista.map((ct) => ({
+      const rows = lista.map((ct) => ({
         nome: ct.nome,
         telefone: ct.telefone,
-      })))
+      }))
+      const titulo = `Liderança: ${c.palavraChave}`
+      if (format === 'xlsx') exportCampanhaXlsx(titulo, rows)
+      else exportCampanhaPdf(titulo, rows)
     } catch (err: any) {
       setError(err.message || 'Erro ao exportar liderança')
     } finally {
@@ -156,7 +175,7 @@ const CampanhasPage: React.FC = () => {
     }
   }
 
-  const exportarTodos = async () => {
+  const exportarTodos = async (format: ExportFormat) => {
     setExporting(true)
     setError(null)
     try {
@@ -175,12 +194,21 @@ const CampanhasPage: React.FC = () => {
         setError('Nenhum contato para exportar')
         return
       }
-      exportCampanhaPdf('Todas as lideranças', todos, true)
+      if (format === 'xlsx') exportCampanhaXlsx('Todas as lideranças', todos, true)
+      else exportCampanhaPdf('Todas as lideranças', todos, true)
     } catch (err: any) {
       setError(err.message || 'Erro ao exportar contatos')
     } finally {
       setExporting(false)
     }
+  }
+
+  const handleExportFormat = async (format: ExportFormat) => {
+    const target = exportTarget
+    closeExportMenu()
+    if (!target) return
+    if (target === 'all') await exportarTodos(format)
+    else await exportarCampanha(target, format)
   }
 
   const filtered = campanhas.filter((c) =>
@@ -196,11 +224,30 @@ const CampanhasPage: React.FC = () => {
     [campanhas]
   )
 
+  const totalContatos = useMemo(
+    () => campanhas.reduce((acc, c) => acc + (c.qtdContatos ?? 0), 0),
+    [campanhas]
+  )
+
   if (loading) return <PageLoader message="Carregando lideranças..." />
 
   return (
     <Box className="page-root">
-      <PageHeader title="Lideranças" />
+      <PageHeader
+        title="Lideranças"
+        action={
+          <Typography
+            sx={{
+              color: 'hsl(var(--text-secondary))',
+              fontSize: 14,
+              fontWeight: 500,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Total de contatos: {totalContatos}
+          </Typography>
+        }
+      />
 
       {error && (
         <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2 }}>
@@ -248,7 +295,7 @@ const CampanhasPage: React.FC = () => {
         <Button
           variant="outlined"
           startIcon={exporting ? <CircularProgress size={14} /> : <FileDown size={16} />}
-          onClick={exportarTodos}
+          onClick={(e) => openExportMenu(e, 'all')}
           disabled={exporting || campanhas.length === 0}
           sx={{
             textTransform: 'none',
@@ -326,11 +373,11 @@ const CampanhasPage: React.FC = () => {
                 <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
                   <IconButton
                     size="small"
-                    onClick={(e) => exportarCampanha(c, e)}
+                    onClick={(e) => openExportMenu(e, c)}
                     disabled={exporting || !(c.qtdContatos ?? 0)}
                     sx={{ color: 'hsl(var(--accent))' }}
-                    aria-label="Exportar PDF"
-                    title="Exportar PDF"
+                    aria-label="Exportar"
+                    title="Exportar"
                   >
                     <FileDown size={16} />
                   </IconButton>
@@ -484,17 +531,48 @@ const CampanhasPage: React.FC = () => {
         <DialogActions sx={{ px: 3, pb: 2, justifyContent: 'space-between' }}>
           <Button
             startIcon={<FileDown size={16} />}
-            onClick={() => selected && exportarCampanha(selected)}
+            onClick={(e) => selected && openExportMenu(e, selected)}
             disabled={exporting || contatos.length === 0}
             sx={{ color: 'hsl(var(--accent))', textTransform: 'none' }}
           >
-            Exportar PDF
+            Exportar
           </Button>
           <Button onClick={() => setSelected(null)} sx={{ color: 'hsl(var(--text-secondary))', textTransform: 'none' }}>
             Fechar
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Menu
+        anchorEl={exportMenuAnchor}
+        open={Boolean(exportMenuAnchor)}
+        onClose={closeExportMenu}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        slotProps={{
+          paper: {
+            sx: {
+              bgcolor: 'hsl(var(--surface))',
+              border: '1px solid hsl(var(--border))',
+              borderRadius: 2,
+              minWidth: 140,
+            },
+          },
+        }}
+      >
+        <MenuItem
+          onClick={() => handleExportFormat('pdf')}
+          sx={{ color: 'hsl(var(--text-primary))', fontSize: 14 }}
+        >
+          PDF
+        </MenuItem>
+        <MenuItem
+          onClick={() => handleExportFormat('xlsx')}
+          sx={{ color: 'hsl(var(--text-primary))', fontSize: 14 }}
+        >
+          XLSX
+        </MenuItem>
+      </Menu>
 
       <ConfirmDialog
         open={confirmOpen}

@@ -11,6 +11,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({ title, action }) => (
     display="flex"
     alignItems="center"
     justifyContent="center"
+    position="relative"
     mb={3}
     pb={1.5}
     sx={{
@@ -29,7 +30,18 @@ const PageHeader: React.FC<PageHeaderProps> = ({ title, action }) => (
     >
       {title}
     </Typography>
-    {action && <Box>{action}</Box>}
+    {action && (
+      <Box
+        sx={{
+          position: 'absolute',
+          right: 0,
+          top: '50%',
+          transform: 'translateY(-50%)',
+        }}
+      >
+        {action}
+      </Box>
+    )}
   </Box>
 )
 

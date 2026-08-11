@@ -4,7 +4,7 @@ import {
   Box, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, Alert, IconButton, CircularProgress, Menu, MenuItem,
 } from '@mui/material'
-import { Plus, Pencil, Trash2, Megaphone, Users, FileDown } from 'lucide-react'
+import { Plus, Pencil, Trash2, Megaphone, Users, FileDown, FileUp } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts'
@@ -19,7 +19,10 @@ import { exportCampanhaXlsx } from '../utils/exportCampanhaXlsx'
 import {
   getAllCampanhas, createCampanha, updateCampanha, deleteCampanha, getContatosByCampanha,
 } from '../services/campanhaService'
-import type { Campanha, ContatoCampanha } from '../types'
+import { importContatos } from '../services/contatoService'
+import type { Campanha, ContatoCampanha, ImportContatosResult } from '../types'
+
+const NOVA_LIDERANCA = '__nova__'
 
 type ExportFormat = 'pdf' | 'xlsx'
 type ExportTarget = 'all' | Campanha
@@ -61,6 +64,13 @@ const CampanhasPage: React.FC = () => {
   const [exporting, setExporting] = useState(false)
   const [exportMenuAnchor, setExportMenuAnchor] = useState<null | HTMLElement>(null)
   const [exportTarget, setExportTarget] = useState<ExportTarget | null>(null)
+  const [importOpen, setImportOpen] = useState(false)
+  const [importLideranca, setImportLideranca] = useState(NOVA_LIDERANCA)
+  const [importPalavra, setImportPalavra] = useState('')
+  const [importFile, setImportFile] = useState<File | null>(null)
+  const [importing, setImporting] = useState(false)
+  const [importResult, setImportResult] = useState<ImportContatosResult | null>(null)
+  const [importError, setImportError] = useState<string | null>(null)
 
   const openExportMenu = (e: React.MouseEvent<HTMLElement>, target: ExportTarget) => {
     e.stopPropagation()
@@ -203,6 +213,56 @@ const CampanhasPage: React.FC = () => {
     }
   }
 
+  const openImport = () => {
+    setImportLideranca(NOVA_LIDERANCA)
+    setImportPalavra('')
+    setImportFile(null)
+    setImportResult(null)
+    setImportError(null)
+    setImportOpen(true)
+  }
+
+  const closeImport = async () => {
+    const shouldReload = !!importResult
+    setImportOpen(false)
+    setImportFile(null)
+    setImportResult(null)
+    if (!shouldReload) return
+    try {
+      const data = await getAllCampanhas()
+      setCampanhas(Array.isArray(data) ? data : [])
+    } catch (err: any) {
+      setError(err.message || 'Erro ao carregar lideranças')
+    }
+  }
+
+  const submitImport = async () => {
+    if (!importFile) {
+      setImportError('Selecione um arquivo csv ou xlsx')
+      return
+    }
+    setImporting(true)
+    setImportError(null)
+    try {
+      let campanha = importLideranca
+      if (importLideranca === NOVA_LIDERANCA) {
+        const valor = importPalavra.trim()
+        if (!valor) {
+          setImportError('Informe a palavra-chave da nova liderança')
+          return
+        }
+        const criada = await createCampanha({ palavraChave: valor })
+        campanha = criada.palavraChave
+      }
+      const result = await importContatos(importFile, campanha)
+      setImportResult(result)
+    } catch (err: any) {
+      setImportError(err.message || 'Erro ao importar lideranças')
+    } finally {
+      setImporting(false)
+    }
+  }
+
   const handleExportFormat = async (format: ExportFormat) => {
     const target = exportTarget
     closeExportMenu()
@@ -258,11 +318,9 @@ const CampanhasPage: React.FC = () => {
       <Box
         sx={{
           display: 'flex',
-          flexWrap: 'wrap',
           gap: 1.5,
           mb: 2,
           alignItems: 'center',
-          justifyContent: 'center',
           p: 2,
           borderRadius: 2,
           bgcolor: 'hsl(var(--surface-2))',
@@ -275,38 +333,54 @@ const CampanhasPage: React.FC = () => {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           variant="filled"
-          sx={{ ...inputSx, minWidth: 220, flex: 1 }}
+          sx={{ ...inputSx, minWidth: 140, flex: 1 }}
           inputProps={{ autoComplete: 'off' }}
         />
-        <Button
-          variant="contained"
-          startIcon={<Plus size={16} />}
-          onClick={openCreate}
-          sx={{
-            background: 'hsl(var(--primary))',
-            textTransform: 'none',
-            borderRadius: 2,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          Nova liderança
-        </Button>
-        <Button
-          variant="outlined"
-          startIcon={exporting ? <CircularProgress size={14} /> : <FileDown size={16} />}
-          onClick={(e) => openExportMenu(e, 'all')}
-          disabled={exporting || campanhas.length === 0}
-          sx={{
-            textTransform: 'none',
-            borderRadius: 2,
-            whiteSpace: 'nowrap',
-            borderColor: 'hsl(var(--border))',
-            color: 'hsl(var(--accent))',
-          }}
-        >
-          Exportar todos
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1.5, flexShrink: 0 }}>
+          <Button
+            variant="contained"
+            startIcon={<Plus size={16} />}
+            onClick={openCreate}
+            sx={{
+              background: 'hsl(var(--primary))',
+              textTransform: 'none',
+              borderRadius: 2,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Nova liderança
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={exporting ? <CircularProgress size={14} /> : <FileDown size={16} />}
+            onClick={(e) => openExportMenu(e, 'all')}
+            disabled={exporting || campanhas.length === 0}
+            sx={{
+              textTransform: 'none',
+              borderRadius: 2,
+              whiteSpace: 'nowrap',
+              borderColor: 'hsl(var(--border))',
+              color: 'hsl(var(--accent))',
+            }}
+          >
+            Exportar lideranças
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<FileUp size={16} />}
+            onClick={openImport}
+            sx={{
+              textTransform: 'none',
+              borderRadius: 2,
+              whiteSpace: 'nowrap',
+              borderColor: 'hsl(var(--border))',
+              color: 'hsl(var(--accent))',
+            }}
+          >
+            Importar lideranças
+          </Button>
+        </Box>
       </Box>
 
       {filtered.length === 0 ? (
@@ -573,6 +647,98 @@ const CampanhasPage: React.FC = () => {
           XLSX
         </MenuItem>
       </Menu>
+
+      <Dialog open={importOpen} onClose={() => { if (!importing) closeImport() }} maxWidth="sm" fullWidth PaperProps={{ sx: dialogSx }}>
+        <DialogTitle sx={{ color: 'hsl(var(--accent))', fontWeight: 700 }}>
+          Importar lideranças
+        </DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+          {importError && (
+            <Alert severity="error" onClose={() => setImportError(null)}>
+              {importError}
+            </Alert>
+          )}
+          {!importResult ? (
+            <>
+              <TextField
+                select
+                size="small"
+                label="Liderança"
+                value={importLideranca}
+                onChange={(e) => setImportLideranca(e.target.value)}
+                variant="filled"
+                sx={inputSx}
+              >
+                <MenuItem value={NOVA_LIDERANCA}>Nova liderança</MenuItem>
+                {campanhas.map((c) => (
+                  <MenuItem key={c.id} value={c.palavraChave}>{c.palavraChave}</MenuItem>
+                ))}
+              </TextField>
+              {importLideranca === NOVA_LIDERANCA && (
+                <TextField
+                  label="Palavra-chave"
+                  value={importPalavra}
+                  onChange={(e) => setImportPalavra(e.target.value)}
+                  variant="filled"
+                  sx={inputSx}
+                  inputProps={{ autoComplete: 'off' }}
+                />
+              )}
+              <Button
+                component="label"
+                variant="outlined"
+                sx={{
+                  textTransform: 'none',
+                  borderRadius: 2,
+                  borderColor: 'hsl(var(--border))',
+                  color: 'hsl(var(--accent))',
+                  justifyContent: 'flex-start',
+                }}
+              >
+                {importFile ? importFile.name : 'Selecionar planilha (csv ou xlsx)'}
+                <input
+                  type="file"
+                  hidden
+                  accept=".csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
+                  onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
+                />
+              </Button>
+            </>
+          ) : (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <Typography sx={{ color: 'hsl(var(--text-primary))', fontSize: 14 }}>
+                Criados: {importResult.criados}
+              </Typography>
+              <Typography sx={{ color: 'hsl(var(--text-primary))', fontSize: 14 }}>
+                Duplicados: {importResult.duplicados.length}
+              </Typography>
+              <Typography sx={{ color: 'hsl(var(--text-primary))', fontSize: 14 }}>
+                Inválidos: {importResult.invalidos.length}
+              </Typography>
+              {[...importResult.invalidos, ...importResult.duplicados].slice(0, 8).map((item, i) => (
+                <Typography key={`${item.linha}-${i}`} sx={{ color: 'hsl(var(--text-secondary))', fontSize: 12 }}>
+                  Linha {item.linha}: {item.telefone || '-'} — {item.motivo}
+                </Typography>
+              ))}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => closeImport()} disabled={importing} sx={{ color: 'hsl(var(--text-secondary))', textTransform: 'none' }}>
+            {importResult ? 'Fechar' : 'Cancelar'}
+          </Button>
+          {!importResult && (
+            <Button
+              onClick={submitImport}
+              disabled={importing}
+              variant="contained"
+              sx={{ background: 'hsl(var(--primary))', textTransform: 'none', borderRadius: 2 }}
+            >
+              {importing ? 'Importando...' : 'Importar'}
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
 
       <ConfirmDialog
         open={confirmOpen}

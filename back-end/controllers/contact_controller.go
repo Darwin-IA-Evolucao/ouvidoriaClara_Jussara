@@ -1,8 +1,10 @@
 package controllers
 
 import (
+	"back-end/apperror"
 	"back-end/models"
 	"back-end/usecases"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -60,4 +62,48 @@ func (ctrl *ContatoController) GetContatoByTelefone(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, contato)
+}
+
+func (ctrl *ContatoController) CreateContato(c *gin.Context) {
+	var request models.CreateContatoRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	err := ctrl.usecase.CreateContato(request.Telefone, request.Nome, request.Campanha)
+	if err != nil {
+		respondContatoErr(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{"message": "contato criado"})
+}
+
+func (ctrl *ContatoController) ImportContatos(c *gin.Context) {
+	campanha := c.PostForm("campanha")
+	header, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "arquivo obrigatorio"})
+		return
+	}
+	file, err := header.Open()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "erro ao abrir arquivo"})
+		return
+	}
+	defer file.Close()
+	result, err := ctrl.usecase.ImportContatos(header.Filename, file, campanha)
+	if err != nil {
+		respondContatoErr(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, result)
+}
+
+func respondContatoErr(c *gin.Context, err error) {
+	var appErr *apperror.AppError
+	if errors.As(err, &appErr) {
+		c.JSON(appErr.StatusCode, gin.H{"error": appErr.Message})
+		return
+	}
+	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 }

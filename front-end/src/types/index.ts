@@ -50,6 +50,18 @@ export interface ContatoCampanha {
   nome: string
 }
 
+export interface ImportLinhaErro {
+  linha: number
+  telefone: string
+  motivo: string
+}
+
+export interface ImportContatosResult {
+  criados: number
+  invalidos: ImportLinhaErro[]
+  duplicados: ImportLinhaErro[]
+}
+
 export interface Lead {
   nome: string
   telefone: string

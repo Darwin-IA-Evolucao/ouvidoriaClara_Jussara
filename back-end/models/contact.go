@@ -34,3 +34,21 @@ type SetConversationIdRequest struct {
 	Telefone       string `json:"telefone" db:"telefone"`
 	ConversationId string `json:"conversationId" db:"conversation_id"`
 }
+
+type CreateContatoRequest struct {
+	Telefone string `json:"telefone"`
+	Nome     string `json:"nome"`
+	Campanha string `json:"campanha"`
+}
+
+type ImportLinhaErro struct {
+	Linha    int    `json:"linha"`
+	Telefone string `json:"telefone"`
+	Motivo   string `json:"motivo"`
+}
+
+type ImportContatosResult struct {
+	Criados    int               `json:"criados"`
+	Invalidos  []ImportLinhaErro `json:"invalidos"`
+	Duplicados []ImportLinhaErro `json:"duplicados"`
+}

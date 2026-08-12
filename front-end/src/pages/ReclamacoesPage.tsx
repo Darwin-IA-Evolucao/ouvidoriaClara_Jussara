@@ -1,10 +1,10 @@
 import * as React from 'react'
 import { useState, useEffect, useRef, useMemo } from 'react'
 import {
-  Autocomplete, Box, CircularProgress, IconButton, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Typography, MenuItem, useMediaQuery, useTheme,
+  Autocomplete, Box, CircularProgress, IconButton, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Typography, MenuItem, useMediaQuery, useTheme, FormControl, InputLabel, Select,
 } from '@mui/material'
 import {
-  CheckCircle, ChevronLeft, ChevronRight, Eye, FileText, Plus, Trash2, X, XCircle, Pencil, Tag, Calendar, Video, Inbox,
+  CheckCircle, ChevronLeft, ChevronRight, Eye, FileText, Plus, Trash2, X, XCircle, Pencil, Tag, Calendar, Video, Inbox, Download,
 } from 'lucide-react'
 import PageHeader from '../components/PageHeader'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -16,8 +16,8 @@ import { getAllClientes, clienteExiste } from '../services/clienteService'
 import { getAllEnderecos } from '../services/enderecoService'
 import { formatPhoneDisplay, normalizeTelefone } from '../utils/phone'
 import { uploadMidia } from '../services/midiaService'
-import { formatDate, formatRelativeTime } from '../utils/date'
-import { categoryDisplayName } from '../utils/categories'
+import { formatDate, toUTCDate } from '../utils/date'
+import { fetchCategorias, formatCategoryName } from '../utils/categories'
 import { statusDisplay } from '../components/StatusChip'
 import KanbanSkeleton from '../components/KanbanSkeleton'
 import type { Ocorrencia, OcorrenciaRequest, Cliente, Logradouro } from '../types'
@@ -32,32 +32,13 @@ interface ColumnDef {
 }
 
 const COLUMNS: ColumnDef[] = [
-  { id: 'pendentes', label: 'Reclamações Pendentes', color: '#A1A9B8', headerBg: 'hsl(var(--text-secondary) / 0.12)' },
+  { id: 'pendentes', label: 'Solicitações Pendentes', color: '#A1A9B8', headerBg: 'hsl(var(--text-secondary) / 0.12)' },
   { id: 'em-analise', label: 'Em Análise', color: '#62A1D8', headerBg: 'hsl(var(--info) / 0.12)' },
   { id: 'aprovar-indicacao', label: 'Aprovar como Indicação', color: '#66BB80', headerBg: 'hsl(var(--success) / 0.12)' },
   { id: 'aprovar-requerimento', label: 'Aprovar como Requerimento', color: '#E89E70', headerBg: 'hsl(var(--accent) / 0.12)' },
   { id: 'reprovar', label: 'Reprovar', color: '#D16670', headerBg: 'hsl(var(--error) / 0.12)' },
 ]
 
-const CATEGORIAS = [
-  'geral',
-  'maus tratos',
-  'abandono presenciado',
-  'animal apareceu na rua',
-  'ajuda animal comunitario',
-  'saude animal',
-  'castracao eletiva',
-  'castracao emergencial',
-  'animais nao domiciliados',
-  'animal desaparecido',
-  'animal para ser adotado',
-  'adocao de animais',
-  'animal grande porte',
-  'animal atropelado',
-  'cuidados animais',
-  'animais silvestres',
-  'equipamentos',
-]
 
 const REGIOES_FILTRO = ['Zona Norte', 'Zona Oeste', 'Zona Leste', 'Zona Sul', 'Centro', 'Outros'] as const
 
@@ -90,6 +71,15 @@ const CATEGORY_FIELDS: Record<string, string[]> = {
 const getActiveFields = (cat: string) => CATEGORY_FIELDS[cat] || CATEGORY_FIELDS['geral']
 const showField = (name: string, cat: string) => getActiveFields(cat).includes(name)
 const showSection = (names: string[], cat: string) => names.some((n) => getActiveFields(cat).includes(n))
+
+const getDetalhesEntries = (detalhes: Record<string, any> | undefined, categoria: string): [string, any][] => {
+  const result = [...Object.entries(detalhes || {})]
+  const expected = CATEGORY_FIELDS[categoria] || []
+  if (expected.includes('conheceTutor') && !('conheceTutor' in (detalhes || {}))) {
+    result.push(['conheceTutor', ''])
+  }
+  return result
+}
 
 const formatTelefoneInput = (value: string): string => {
   const digits = value.replace(/\D/g, '').slice(0, 11)
@@ -242,17 +232,40 @@ const FormFields: React.FC<{
   }, [form.telefoneResponsavelAnimal])
   return (
     <Box key={cat} sx={{ display: 'flex', flexDirection: 'column', gap: 2, animation: 'fadeSlideIn 0.35s ease', '@keyframes fadeSlideIn': { from: { opacity: 0, transform: 'translateX(16px)' }, to: { opacity: 1, transform: 'translateX(0)' } } }}>
-      {showSection(['situacaoResumida', 'enderecoOcorrencia', 'conheceTutor', 'detalhesDenuncia', 'protocoloDenuncia'], cat) && (
+      {showSection(['enderecoOcorrencia', 'conheceTutor', 'detalhesDenuncia', 'protocoloDenuncia'], cat) && (
         <>
           <Typography sx={{ fontSize: 12, color: 'hsl(var(--text-secondary))', textTransform: 'uppercase', letterSpacing: '0.05em', mt: 1, fontWeight: 600 }}>Dados da Ocorrência</Typography>
-          {showField('situacaoResumida', cat) && <TextField label="Situação Resumida" fullWidth multiline rows={3} value={form.situacaoResumida} onChange={(e) => setForm({ ...form, situacaoResumida: e.target.value })} variant="filled" sx={inputSx} inputProps={{ autoComplete: 'off' }} />}
-          {showField('enderecoOcorrencia', cat) && <TextField label="Endereço da Ocorrência" fullWidth value={form.enderecoOcorrencia} onChange={(e) => setForm({ ...form, enderecoOcorrencia: e.target.value })} variant="filled" sx={inputSx} inputProps={{ autoComplete: 'off' }} />}
+          {showField('enderecoOcorrencia', cat) && (
+            <Autocomplete
+              fullWidth
+              freeSolo
+              selectOnFocus
+              clearOnBlur={false}
+              handleHomeEndKeys
+              options={[...new Set(enderecos.map((e) => e.logradouro))].sort()}
+              value={form.enderecoOcorrencia}
+              onInputChange={(_, v) => setForm((prev) => ({ ...prev, enderecoOcorrencia: v ?? '' }))}
+              onChange={(_, v) => setForm((prev) => ({ ...prev, enderecoOcorrencia: v ?? '' }))}
+              renderInput={(params) => <TextField {...params} label="Endereço da Ocorrência" variant="filled" sx={inputSx} />}
+            />
+          )}
           {showField('conheceTutor', cat) && (
-            <TextField select fullWidth label="Conhece o Tutor" variant="filled" value={form.conheceTutor} onChange={(e) => setForm({ ...form, conheceTutor: e.target.value })} sx={inputSx}>
-              <MenuItem value="">Não informado</MenuItem>
-              <MenuItem value="SIM">Sim</MenuItem>
-              <MenuItem value="NAO">Não</MenuItem>
-            </TextField>
+            <FormControl fullWidth variant="filled" sx={inputSx}>
+              <InputLabel shrink>Conhece o Tutor</InputLabel>
+              <Select
+                value={form.conheceTutor || ''}
+                onChange={(e) => setForm((prev) => ({ ...prev, conheceTutor: e.target.value }))}
+                displayEmpty
+                renderValue={(val) => {
+                  if (val === 'SIM') return 'Sim'
+                  if (val === 'NAO') return 'Não'
+                  return 'Não informado'
+                }}
+              >
+                <MenuItem value="SIM">Sim</MenuItem>
+                <MenuItem value="NAO">Não</MenuItem>
+              </Select>
+            </FormControl>
           )}
           {showField('detalhesDenuncia', cat) && <TextField label="Detalhes Denúncia" fullWidth multiline rows={2} value={form.detalhesDenuncia} onChange={(e) => setForm({ ...form, detalhesDenuncia: e.target.value })} variant="filled" sx={inputSx} inputProps={{ autoComplete: 'off' }} />}
           {showField('protocoloDenuncia', cat) && <TextField label="Protocolo Denúncia" fullWidth type="number" value={form.protocoloDenuncia} onChange={(e) => setForm({ ...form, protocoloDenuncia: e.target.value.replace(/\D/g, '') })} variant="filled" sx={inputSx} inputProps={{ autoComplete: 'off' }} />}
@@ -380,7 +393,7 @@ function itemsForColumn(items: Ocorrencia[], colId: string): Ocorrencia[] {
 /* ───────── helpers ───────── */
 
 function getUrgencyLevel(dataAtualizacao: string): 'high' | 'medium' | 'low' {
-  const d = new Date(dataAtualizacao)
+  const d = toUTCDate(dataAtualizacao)
   if (isNaN(d.getTime())) return 'low'
   const now = new Date()
   const diffDays = (now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24)
@@ -391,7 +404,7 @@ function getUrgencyLevel(dataAtualizacao: string): 'high' | 'medium' | 'low' {
 
 function calcAge(birthDate?: string): number | null {
   if (!birthDate) return null
-  const d = new Date(birthDate)
+  const d = toUTCDate(birthDate)
   if (isNaN(d.getTime())) return null
   const today = new Date()
   let age = today.getFullYear() - d.getFullYear()
@@ -424,14 +437,13 @@ function filterRows(
       if (!matchName && !matchPhone) return false
     }
     if (dateFrom) {
-      const dc = new Date(r.dataCriacao)
-      const from = new Date(dateFrom)
+      const dc = toUTCDate(r.dataCriacao)
+      const from = new Date(dateFrom + 'T00:00:00')
       if (dc < from) return false
     }
     if (dateTo) {
-      const dc = new Date(r.dataCriacao)
-      const to = new Date(dateTo)
-      to.setHours(23, 59, 59, 999)
+      const dc = toUTCDate(r.dataCriacao)
+      const to = new Date(dateTo + 'T23:59:59')
       if (dc > to) return false
     }
     if (endereco && !(cliente?.endereco?.toLowerCase().includes(endereco.toLowerCase()) ?? false)) return false
@@ -454,6 +466,7 @@ const ReclamacoesPage: React.FC = () => {
 
   const [rows, setRows] = useState<Ocorrencia[]>([])
   const [loading, setLoading] = useState(true)
+  const [CATEGORIAS, setCategorias] = useState<string[]>([])
   const [draggingId, setDraggingId] = useState<number | null>(null)
   const [dragOverCol, setDragOverCol] = useState<string | null>(null)
   const kanbanRef = useRef<HTMLDivElement>(null)
@@ -568,9 +581,14 @@ const ReclamacoesPage: React.FC = () => {
   /* enderecos */
   const [enderecos, setEnderecos] = useState<Logradouro[]>([])
 
-  /* auto-fill regiao from client address/bairro, or occurrence fields based on categoria */
+  /* categorias from API */
   useEffect(() => {
-    const { categoria, enderecoOcorrencia, bairroAnimal, enderecoCliente, bairroCliente, regiao } = createForm
+    fetchCategorias().then(setCategorias)
+  }, [])
+
+  /* auto-fill regiao from client address/bairro */
+  useEffect(() => {
+    const { enderecoCliente, bairroCliente, enderecoOcorrencia, bairroAnimal, categoria, regiao } = createForm
     const cat = categoria.toLowerCase()
     let newRegiao = ''
     if (cat === 'maus tratos' || cat === 'animais nao domiciliados') {
@@ -595,7 +613,8 @@ const ReclamacoesPage: React.FC = () => {
     if (newRegiao !== regiao) {
       setCreateForm((prev) => ({ ...prev, regiao: newRegiao }))
     }
-  }, [createForm.categoria, createForm.enderecoOcorrencia, createForm.bairroAnimal, createForm.enderecoCliente, createForm.bairroCliente, enderecos])
+  }, [createForm.enderecoCliente, createForm.bairroCliente, createForm.enderecoOcorrencia, createForm.bairroAnimal, createForm.categoria, enderecos])
+
 
   /* auto-fill client data when phone has enough digits */
   const [autoFilledPhone, setAutoFilledPhone] = useState(false)
@@ -681,28 +700,14 @@ const ReclamacoesPage: React.FC = () => {
     }
   }, [anyModalOpen])
 
-  const load = () => {
-    setLoading(true)
+  const load = (silent = false) => {
+    if (!silent) setLoading(true)
     Promise.all([getAllOcorrencias(), getAllClientes()])
       .then(([ocorrencias, clientes]) => {
         const map: Record<string, Cliente> = {}
-        clientes.forEach((c) => { map[c.telefone] = c })
+        ;(clientes || []).forEach((c) => { map[c.telefone] = c })
         setClientesMap(map)
         setRows(Array.isArray(ocorrencias) ? ocorrencias : [])
-        /* compute default age range */
-        let minAge = Infinity
-        let maxAge = -Infinity
-        clientes.forEach((c) => {
-          const age = calcAge(c.dataNascimento)
-          if (age !== null) {
-            if (age < minAge) minAge = age
-            if (age > maxAge) maxAge = age
-          }
-        })
-        if (minAge !== Infinity) {
-          setAgeMin(String(minAge))
-          setAgeMax(String(maxAge))
-        }
         setLoading(false)
       })
       .catch(() => setLoading(false))
@@ -718,6 +723,31 @@ const ReclamacoesPage: React.FC = () => {
 
   const rewriteMidiaUrl = (url: string): string => {
     return url.replace(/^http:\/\/147\.93\.10\.167:3084/, UPLOAD_BASE_URL)
+  }
+
+  const downloadMidia = async (url: string) => {
+    try {
+      const res = await fetch(url, { mode: 'cors' })
+      const blob = await res.blob()
+      const blobUrl = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = blobUrl
+      const filename = url.split('/').pop()?.split('?')[0] || 'midia'
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(blobUrl)
+    } catch (err) {
+      console.error('Erro ao baixar mídia:', err)
+      alert('Erro ao baixar mídia')
+    }
+  }
+
+  const downloadAllMidias = async (urls: string[]) => {
+    for (const url of urls) {
+      await downloadMidia(url)
+    }
   }
 
   useEffect(() => {
@@ -827,6 +857,7 @@ const ReclamacoesPage: React.FC = () => {
     const payload = {
       ...createForm,
       telefone: normalizeTelefone(createForm.telefone),
+      conheceTutor: createForm.conheceTutor,
     }
     await createOcorrencia(payload)
     setCreateOpen(false)
@@ -842,6 +873,7 @@ const ReclamacoesPage: React.FC = () => {
       ehManual: true,
       observacao: '',
       enderecoOcorrencia: '',
+      conheceTutor: 'NAO_INFORMADO',
       especieAnimal: '',
       idadeAnimal: '',
       sexoAnimal: '',
@@ -897,7 +929,7 @@ const ReclamacoesPage: React.FC = () => {
       } else if (targetCol === 'pendentes') {
         await colocarComoCriado(row.id)
       }
-      load()
+      load(true)
     } catch (err: any) {
       console.error('Erro ao mover card:', err)
       alert(err?.response?.data?.message || err?.message || 'Erro ao mover ocorrência')
@@ -921,7 +953,7 @@ const ReclamacoesPage: React.FC = () => {
 
   return (
     <Box className="page-root">
-      <PageHeader title="Reclamações" />
+      <PageHeader title="Solicitações" />
 
       {/* ── filter bars ── */}
       {/* group 1: date range */}
@@ -1047,7 +1079,7 @@ const ReclamacoesPage: React.FC = () => {
           options={CATEGORIAS}
           value={catFilter}
           onChange={(_, v) => { setCatFilter(v); setColumnPages({}) }}
-          getOptionLabel={(opt) => categoryDisplayName[opt] ?? opt}
+          getOptionLabel={(opt) => formatCategoryName(opt)}
           renderInput={(params) => (
             <TextField {...params} label="Categorias" size="small" sx={{ ...inputSx, minWidth: { xs: 160, sm: 400 } }} />
           )}
@@ -1182,7 +1214,7 @@ const ReclamacoesPage: React.FC = () => {
             boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
           }}
         >
-          Nova Reclamação
+          Nova Solicitação
         </Button>
       </Box>
 
@@ -1240,26 +1272,48 @@ const ReclamacoesPage: React.FC = () => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: 1,
                 }}
               >
                 <Typography sx={{ fontWeight: 700, fontSize: 13, color: col.color, letterSpacing: '0.03em', textTransform: 'uppercase' }}>
                   {col.label}
                 </Typography>
-                <Box
-                  sx={{
-                    width: 24,
-                    height: 24,
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    bgcolor: col.color,
-                    color: '#fff',
-                    fontSize: 11,
-                    fontWeight: 800,
-                  }}
-                >
-                  {items.length}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  {(() => {
+                    const totalPages = Math.ceil(items.length / 5)
+                    const page = columnPages[col.id] || 1
+                    if (totalPages <= 1) return null
+                    return (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <IconButton size="small" disabled={page <= 1} onClick={() => setColumnPages({ ...columnPages, [col.id]: page - 1 })} sx={{ color: page <= 1 ? 'hsl(var(--text-secondary) / 0.3)' : 'hsl(var(--text-primary))', width: 22, height: 22 }}>
+                          <ChevronLeft size={14} />
+                        </IconButton>
+                        <Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary))' }}>
+                          {page} / {totalPages}
+                        </Typography>
+                        <IconButton size="small" disabled={page >= totalPages} onClick={() => setColumnPages({ ...columnPages, [col.id]: page + 1 })} sx={{ color: page >= totalPages ? 'hsl(var(--text-secondary) / 0.3)' : 'hsl(var(--text-primary))', width: 22, height: 22 }}>
+                          <ChevronRight size={14} />
+                        </IconButton>
+                      </Box>
+                    )
+                  })()}
+                  <Box
+                    sx={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      bgcolor: col.color,
+                      color: '#fff',
+                      fontSize: 11,
+                      fontWeight: 800,
+                    }}
+                  >
+                    {items.length}
+                  </Box>
                 </Box>
               </Box>
 
@@ -1269,15 +1323,20 @@ const ReclamacoesPage: React.FC = () => {
                   <Box sx={{ p: 4, textAlign: 'center', border: '1px dashed hsl(var(--border))', borderRadius: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
                     <Inbox size={32} style={{ color: 'hsl(var(--text-secondary) / 0.3)', animation: 'empty-pulse 2.5s ease-in-out infinite' }} />
                     <Typography sx={{ color: 'hsl(var(--text-secondary) / 0.5)', fontSize: 13, fontWeight: 500 }}>
-                      {col.id === 'pendentes' && 'Nenhuma reclamação pendente'}
+                      {col.id === 'pendentes' && 'Nenhuma solicitação pendente'}
                       {col.id === 'em-analise' && 'Nada em análise no momento'}
-                      {col.id === 'aprovar-indicacao' && 'Nenhuma indicação aguardando aprovação'}
-                      {col.id === 'aprovar-requerimento' && 'Nenhum requerimento aguardando aprovação'}
-                      {col.id === 'reprovar' && 'Nenhuma reclamação reprovada'}
+                      {col.id === 'aprovar-indicacao' && 'Nenhuma indicação aprovada'}
+                      {col.id === 'aprovar-requerimento' && 'Nenhum requerimento aprovado'}
+                      {col.id === 'reprovar' && 'Nenhuma solicitação reprovada'}
                     </Typography>
+                    {col.id === 'pendentes' && (
+                      <Typography sx={{ color: 'hsl(var(--text-secondary) / 0.3)', fontSize: 11 }}>
+                        Novas solicitações aparecerão aqui
+                      </Typography>
+                    )}
                     {(col.id === 'em-analise' || col.id === 'aprovar-indicacao' || col.id === 'aprovar-requerimento' || col.id === 'reprovar') && (
                       <Typography sx={{ color: 'hsl(var(--text-secondary) / 0.3)', fontSize: 11 }}>
-                        Arraste uma reclamação aqui
+                        Arraste uma solicitação aqui
                       </Typography>
                     )}
                   </Box>
@@ -1319,7 +1378,7 @@ const ReclamacoesPage: React.FC = () => {
                     >
                       {(col.id === 'pendentes' || col.id === 'em-analise') && (() => {
                         const urgency = getUrgencyLevel(row.dataAtualizacao)
-                        const diffDays = Math.floor((Date.now() - new Date(row.dataAtualizacao).getTime()) / (1000 * 60 * 60 * 24))
+                        const diffDays = Math.floor((Date.now() - toUTCDate(row.dataAtualizacao).getTime()) / (1000 * 60 * 60 * 24))
                         const urgencyConfig = {
                           high: { bg: '#62A1D8', text: 'Urgente' },
                           medium: { bg: '#E2AF7A', text: 'Atenção' },
@@ -1327,7 +1386,7 @@ const ReclamacoesPage: React.FC = () => {
                         }[urgency]
                         return (
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8, px: 1.5, py: 0.5, mb: 1, borderRadius: 1, bgcolor: `${urgencyConfig.bg}20`, borderLeft: `3px solid ${urgencyConfig.bg}`, fontSize: 10, fontWeight: 700, color: urgencyConfig.bg, textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0 }}>
-                            {urgencyConfig.text} · {diffDays} {diffDays === 1 ? 'dia' : 'dias'} sem update
+                            {urgencyConfig.text} · {diffDays} {diffDays === 1 ? 'dia' : 'dias'} sem atualização
                           </Box>
                         )
                       })()}
@@ -1348,7 +1407,7 @@ const ReclamacoesPage: React.FC = () => {
                             <IconButton size="small" onClick={() => openEdit(row)} sx={{ color: 'hsl(var(--accent))', bgcolor: 'hsl(var(--accent) / 0.12)', borderRadius: '50%', width: 28, height: 28, '&:hover': { bgcolor: 'hsl(var(--accent) / 0.2)' } }}><Pencil size={14} /></IconButton>
                           </Tooltip>
                           <Tooltip title="Excluir">
-                            <IconButton size="small" onClick={() => doAction(() => deleteOcorrencia(row.id), 'Excluir Reclamação', `Confirmar exclusão #${row.id}?`)} sx={{ color: 'hsl(var(--error))', bgcolor: 'hsl(var(--error) / 0.12)', borderRadius: '50%', width: 28, height: 28, '&:hover': { bgcolor: 'hsl(var(--error) / 0.2)' } }}><Trash2 size={14} /></IconButton>
+                            <IconButton size="small" onClick={() => doAction(() => deleteOcorrencia(row.id), 'Excluir Solicitação', `Confirmar exclusão #${row.id}?`)} sx={{ color: 'hsl(var(--error))', bgcolor: 'hsl(var(--error) / 0.12)', borderRadius: '50%', width: 28, height: 28, '&:hover': { bgcolor: 'hsl(var(--error) / 0.2)' } }}><Trash2 size={14} /></IconButton>
                           </Tooltip>
                         </Box>
                       </Box>
@@ -1381,7 +1440,7 @@ const ReclamacoesPage: React.FC = () => {
                           </Typography>
                         </Box>
                         <Box sx={{ fontSize: 10, fontWeight: 600, color: 'hsl(var(--text-primary))', bgcolor: 'hsl(var(--border))', border: '1px solid hsl(var(--border))', px: 1, py: 0.3, borderRadius: 1, display: 'inline-block' }}>
-                          {categoryDisplayName[row.categoria] ?? row.categoria}
+                          {formatCategoryName(row.categoria)}
                         </Box>
                       </Box>
 
@@ -1409,11 +1468,6 @@ const ReclamacoesPage: React.FC = () => {
                         <Typography sx={{ fontSize: 11, color: 'hsl(var(--text-primary))' }}>
                           {formatDate(row.dataCriacao)}
                         </Typography>
-                        {(col.id === 'pendentes' || col.id === 'em-analise') && (
-                          <Typography sx={{ fontSize: 10, color: 'hsl(var(--text-secondary) / 0.6)', mt: 0.3, fontStyle: 'italic' }}>
-                            Atualizado {formatRelativeTime(row.dataAtualizacao)}
-                          </Typography>
-                        )}
                       </Box>
 
                       </Box>
@@ -1452,34 +1506,34 @@ const ReclamacoesPage: React.FC = () => {
                         )}
                         {isMobile && col.id === 'em-analise' && (
                           <>
+                            <Button size="small" startIcon={<ChevronLeft size={14} />} onClick={() => doAction(() => colocarComoCriado(row.id), 'Enviar para Pendentes', `Confirmar envio #${row.id} para pendentes?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: '#A1A9B8', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--text-secondary) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Pendentes</Button>
                             <Button size="small" startIcon={<CheckCircle size={14} />} onClick={() => doAction(() => aprovarInquerito(row.id), 'Aprovar como Indicação', `Confirmar aprovação #${row.id}?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: '#66BB80', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--success) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Indicação</Button>
                             <Button size="small" startIcon={<FileText size={14} />} onClick={() => doAction(() => aprovarRequerimento(row.id), 'Aprovar como Requerimento', `Confirmar requerimento #${row.id}?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: '#E89E70', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--accent) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Requerimento</Button>
                             <Button size="small" startIcon={<XCircle size={14} />} onClick={() => doAction(() => reprovarInquerito(row.id), 'Reprovar', `Confirmar reprovação #${row.id}?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: 'hsl(var(--error))', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--error) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Reprovar</Button>
-                            <Button size="small" startIcon={<ChevronLeft size={14} />} onClick={() => doAction(() => colocarComoCriado(row.id), 'Enviar para Pendentes', `Confirmar envio #${row.id} para pendentes?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: '#A1A9B8', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--text-secondary) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Pendentes</Button>
                           </>
                         )}
                         {isMobile && col.id === 'aprovar-indicacao' && (
                           <>
+                            <Button size="small" startIcon={<ChevronLeft size={14} />} onClick={() => doAction(() => colocarComoCriado(row.id), 'Enviar para Pendentes', `Confirmar envio #${row.id} para pendentes?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: '#A1A9B8', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--text-secondary) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Pendentes</Button>
                             <Button size="small" startIcon={<Eye size={14} />} onClick={() => doAction(() => colocarEmAnalise(row.id), 'Enviar para Em Análise', `Confirmar envio #${row.id} para análise?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: '#62A1D8', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--info) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Em Análise</Button>
                             <Button size="small" startIcon={<FileText size={14} />} onClick={() => doAction(() => aprovarRequerimento(row.id), 'Aprovar como Requerimento', `Confirmar requerimento #${row.id}?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: '#E89E70', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--accent) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Requerimento</Button>
                             <Button size="small" startIcon={<XCircle size={14} />} onClick={() => doAction(() => reprovarInquerito(row.id), 'Reprovar', `Confirmar reprovação #${row.id}?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: 'hsl(var(--error))', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--error) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Reprovar</Button>
-                            <Button size="small" startIcon={<ChevronLeft size={14} />} onClick={() => doAction(() => colocarComoCriado(row.id), 'Enviar para Pendentes', `Confirmar envio #${row.id} para pendentes?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: '#A1A9B8', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--text-secondary) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Pendentes</Button>
                           </>
                         )}
                         {isMobile && col.id === 'aprovar-requerimento' && (
                           <>
+                            <Button size="small" startIcon={<ChevronLeft size={14} />} onClick={() => doAction(() => colocarComoCriado(row.id), 'Enviar para Pendentes', `Confirmar envio #${row.id} para pendentes?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: '#A1A9B8', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--text-secondary) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Pendentes</Button>
                             <Button size="small" startIcon={<Eye size={14} />} onClick={() => doAction(() => colocarEmAnalise(row.id), 'Enviar para Em Análise', `Confirmar envio #${row.id} para análise?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: '#62A1D8', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--info) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Em Análise</Button>
                             <Button size="small" startIcon={<CheckCircle size={14} />} onClick={() => doAction(() => aprovarInquerito(row.id), 'Aprovar como Indicação', `Confirmar aprovação #${row.id}?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: '#66BB80', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--success) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Indicação</Button>
                             <Button size="small" startIcon={<XCircle size={14} />} onClick={() => doAction(() => reprovarInquerito(row.id), 'Reprovar', `Confirmar reprovação #${row.id}?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: 'hsl(var(--error))', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--error) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Reprovar</Button>
-                            <Button size="small" startIcon={<ChevronLeft size={14} />} onClick={() => doAction(() => colocarComoCriado(row.id), 'Enviar para Pendentes', `Confirmar envio #${row.id} para pendentes?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: '#A1A9B8', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--text-secondary) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Pendentes</Button>
                           </>
                         )}
                         {isMobile && col.id === 'reprovar' && (
                           <>
+                            <Button size="small" startIcon={<ChevronLeft size={14} />} onClick={() => doAction(() => colocarComoCriado(row.id), 'Enviar para Pendentes', `Confirmar envio #${row.id} para pendentes?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: '#A1A9B8', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--text-secondary) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Pendentes</Button>
                             <Button size="small" startIcon={<Eye size={14} />} onClick={() => doAction(() => colocarEmAnalise(row.id), 'Enviar para Em Análise', `Confirmar envio #${row.id} para análise?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: '#62A1D8', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--info) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Em Análise</Button>
                             <Button size="small" startIcon={<CheckCircle size={14} />} onClick={() => doAction(() => aprovarInquerito(row.id), 'Aprovar como Indicação', `Confirmar aprovação #${row.id}?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: '#66BB80', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--success) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Indicação</Button>
                             <Button size="small" startIcon={<FileText size={14} />} onClick={() => doAction(() => aprovarRequerimento(row.id), 'Aprovar como Requerimento', `Confirmar requerimento #${row.id}?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: '#E89E70', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--accent) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Requerimento</Button>
-                            <Button size="small" startIcon={<ChevronLeft size={14} />} onClick={() => doAction(() => colocarComoCriado(row.id), 'Enviar para Pendentes', `Confirmar envio #${row.id} para pendentes?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: '#A1A9B8', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--text-secondary) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Pendentes</Button>
                           </>
                         )}
                       </Box>
@@ -1488,25 +1542,6 @@ const ReclamacoesPage: React.FC = () => {
                 })()}
               </Box>
 
-              {/* pagination */}
-              {(() => {
-                const totalPages = Math.ceil(items.length / 5)
-                const page = columnPages[col.id] || 1
-                if (totalPages <= 1) return null
-                return (
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mt: 1 }}>
-                    <IconButton size="small" disabled={page <= 1} onClick={() => setColumnPages({ ...columnPages, [col.id]: page - 1 })} sx={{ color: page <= 1 ? 'hsl(var(--text-secondary) / 0.3)' : 'hsl(var(--text-primary))' }}>
-                      <ChevronLeft size={16} />
-                    </IconButton>
-                    <Typography sx={{ fontSize: 12, color: 'hsl(var(--text-secondary))' }}>
-                      {page} / {totalPages}
-                    </Typography>
-                    <IconButton size="small" disabled={page >= totalPages} onClick={() => setColumnPages({ ...columnPages, [col.id]: page + 1 })} sx={{ color: page >= totalPages ? 'hsl(var(--text-secondary) / 0.3)' : 'hsl(var(--text-primary))' }}>
-                      <ChevronRight size={16} />
-                    </IconButton>
-                  </Box>
-                )
-              })()}
             </Box>
           )
         })}
@@ -1517,7 +1552,7 @@ const ReclamacoesPage: React.FC = () => {
       <ConfirmDialog open={confirmOpen} title={confirmTitle} message={confirmMessage} onConfirm={() => confirmAction?.()} onCancel={() => setConfirmOpen(false)} />
 
       <Dialog open={editOpen} onClose={() => setEditOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: dialogSx }}>
-        <DialogTitle sx={{ color: 'hsl(var(--accent))', fontWeight: 700 }}>Editar Reclamação #{editRow?.id}</DialogTitle>
+        <DialogTitle sx={{ color: 'hsl(var(--accent))', fontWeight: 700 }}>Editar Solicitação #{editRow?.id}</DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
           <TextField
             select
@@ -1530,7 +1565,7 @@ const ReclamacoesPage: React.FC = () => {
           >
             {CATEGORIAS.map((cat) => (
               <MenuItem key={cat} value={cat}>
-                {categoryDisplayName[cat] ?? cat}
+                {formatCategoryName(cat)}
               </MenuItem>
             ))}
           </TextField>
@@ -1564,7 +1599,7 @@ const ReclamacoesPage: React.FC = () => {
 
       {/* detail dialog */}
       <Dialog open={detailOpen} onClose={() => setDetailOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: dialogSx }}>
-        <DialogTitle sx={{ color: 'hsl(var(--accent))', fontWeight: 700 }}>Reclamação #{detailRow?.id}</DialogTitle>
+        <DialogTitle sx={{ color: 'hsl(var(--accent))', fontWeight: 700 }}>Solicitação #{detailRow?.id}</DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
           {(() => {
             const r = detailRow
@@ -1596,9 +1631,9 @@ const ReclamacoesPage: React.FC = () => {
                     Dados da Ocorrência
                   </Typography>
                   <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
-                    <Box><Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary) / 0.6)' }}>Categoria</Typography><Typography sx={{ fontSize: 13, color: 'hsl(var(--text-primary))' }}>{categoryDisplayName[r.categoria] ?? r.categoria}</Typography></Box>
+                    <Box><Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary) / 0.6)' }}>Categoria</Typography><Typography sx={{ fontSize: 13, color: 'hsl(var(--text-primary))' }}>{formatCategoryName(r.categoria)}</Typography></Box>
                     <Box><Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary) / 0.6)' }}>Status</Typography><Typography sx={{ fontSize: 13, color: 'hsl(var(--text-primary))' }}>{statusDisplay[r.status.toLowerCase()] ?? r.status}</Typography></Box>
-                    <Box><Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary) / 0.6)' }}>Origem</Typography><Typography sx={{ fontSize: 13, color: 'hsl(var(--text-primary))' }}>{r.ehManual ? 'Manual' : 'Chatbot'}</Typography></Box>
+                    <Box><Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary) / 0.6)' }}>Origem</Typography><Typography sx={{ fontSize: 13, color: 'hsl(var(--text-primary))' }}>{r.ehManual ? 'Manual' : 'Agente'}</Typography></Box>
                     <Box><Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary) / 0.6)' }}>Região</Typography><Typography sx={{ fontSize: 13, color: 'hsl(var(--text-primary))' }}>{r.detalhes?.regiao || '-'}</Typography></Box>
                     <Box><Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary) / 0.6)' }}>Data Criação</Typography><Typography sx={{ fontSize: 13, color: 'hsl(var(--text-primary))' }}>{formatDate(r.dataCriacao)}</Typography></Box>
                     <Box><Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary) / 0.6)' }}>Data Atualização</Typography><Typography sx={{ fontSize: 13, color: 'hsl(var(--text-primary))' }}>{formatDate(r.dataAtualizacao)}</Typography></Box>
@@ -1627,9 +1662,20 @@ const ReclamacoesPage: React.FC = () => {
                   <>
                     <Box sx={{ borderTop: '1px solid hsl(var(--border))', my: 0.5 }} />
                     <Box>
-                      <Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary))', textTransform: 'uppercase', letterSpacing: '0.05em', mb: 1, fontWeight: 600 }}>
-                        Mídias
-                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary))', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
+                          Mídias
+                        </Typography>
+                        {(() => {
+                          const allUrls = parseMidiaUrls(r.detalhes.midiasAnimal).map((u) => rewriteMidiaUrl(u))
+                          if (allUrls.length === 0) return null
+                          return (
+                            <Button size="small" startIcon={<Download size={14} />} onClick={() => downloadAllMidias(allUrls)} sx={{ color: 'hsl(var(--accent))', textTransform: 'none', fontSize: 11, borderRadius: 1.5, border: '1px solid hsl(var(--accent) / 0.2)', px: 1.5 }}>
+                              Baixar todas
+                            </Button>
+                          )
+                        })()}
+                      </Box>
                       {(() => {
                         const allUrls = parseMidiaUrls(r.detalhes.midiasAnimal).map((u) => rewriteMidiaUrl(u))
                         const images = allUrls.filter((u) => !u.match(/\.(mp4|webm|mov)$/i))
@@ -1649,9 +1695,12 @@ const ReclamacoesPage: React.FC = () => {
                                   </Box>
                                 )}
                                 {pageImages.map((url, idx) => (
-                                  <Box key={idx} sx={{ width: 120, height: 120, borderRadius: 1, overflow: 'hidden', border: '1px solid hsl(var(--border))', flexShrink: 0, cursor: 'pointer', transition: 'transform 0.2s ease', '&:hover': { transform: 'scale(1.04)' } }}
+                                  <Box key={idx} sx={{ width: 120, height: 120, borderRadius: 1, overflow: 'hidden', border: '1px solid hsl(var(--border))', flexShrink: 0, cursor: 'pointer', transition: 'transform 0.2s ease', '&:hover': { transform: 'scale(1.04)' }, position: 'relative' }}
                                     onClick={() => { setLightboxUrls(allUrls); setLightboxIndex(allUrls.indexOf(url)); setLightboxOpen(true) }}>
                                     <img src={url} alt="midia" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
+                                    <Box sx={{ position: 'absolute', bottom: 2, right: 2, bgcolor: 'rgba(0,0,0,0.6)', borderRadius: '50%', width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', '&:hover': { bgcolor: 'rgba(0,0,0,0.85)' } }} onClick={(e) => { e.stopPropagation(); downloadMidia(url) }}>
+                                      <Download size={12} color="#fff" />
+                                    </Box>
                                   </Box>
                                 ))}
                                 {page < totalPages && (
@@ -1667,6 +1716,9 @@ const ReclamacoesPage: React.FC = () => {
                                   <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'rgba(0,0,0,0.35)' }}>
                                     <Video size={28} color="#fff" />
                                   </Box>
+                                  <Box sx={{ position: 'absolute', bottom: 2, right: 2, bgcolor: 'rgba(0,0,0,0.6)', borderRadius: '50%', width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', '&:hover': { bgcolor: 'rgba(0,0,0,0.85)' } }} onClick={(e) => { e.stopPropagation(); downloadMidia(url) }}>
+                                    <Download size={12} color="#fff" />
+                                  </Box>
                                 </Box>
                               ))}
                             </Box>
@@ -1678,7 +1730,7 @@ const ReclamacoesPage: React.FC = () => {
                 )}
 
                 {/* Detalhes */}
-                {r.detalhes && Object.entries(r.detalhes).filter(([k, v]) => k !== 'midiasAnimal' && v && v !== '').length > 0 && (
+                {getDetalhesEntries(r.detalhes, r.categoria).filter(([k, v]) => k !== 'midiasAnimal' && (k === 'conheceTutor' || (v && v !== ''))).length > 0 && (
                   <>
                     <Box sx={{ borderTop: '1px solid hsl(var(--border))', my: 0.5 }} />
                     <Box>
@@ -1686,7 +1738,7 @@ const ReclamacoesPage: React.FC = () => {
                         Detalhes
                       </Typography>
                       <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
-                        {Object.entries(r.detalhes).filter(([k, v]) => k !== 'midiasAnimal' && k !== 'regiao' && v && v !== '').map(([k, v]) => {
+                        {getDetalhesEntries(r.detalhes, r.categoria).filter(([k, v]) => k !== 'midiasAnimal' && k !== 'regiao' && (k === 'conheceTutor' || (v && v !== ''))).map(([k, v]) => {
                           const detailLabels: Record<string, string> = {
                             enderecoOcorrencia: 'Endereço da Ocorrência',
                             conheceTutor: 'Conhece o Tutor',
@@ -1712,7 +1764,7 @@ const ReclamacoesPage: React.FC = () => {
                             protocoloDenuncia: 'Protocolo da Denúncia',
                           }
                           const valueMap: Record<string, string> = { sim: 'Sim', nao: 'Não', SIM: 'Sim', NAO: 'Não' }
-                          const displayValue = valueMap[String(v)] ?? String(v)
+                          const displayValue = (k === 'conheceTutor' && !v) ? 'Não Informado' : (valueMap[String(v)] ?? String(v))
                           return (
                             <Box key={k}>
                               <Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary) / 0.6)' }}>
@@ -1837,7 +1889,7 @@ const ReclamacoesPage: React.FC = () => {
       </Dialog>
 
       <Dialog open={createOpen} onClose={() => setCreateOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: dialogSx }}>
-        <DialogTitle sx={{ color: 'hsl(var(--accent))', fontWeight: 700 }}>Nova Reclamação Manual</DialogTitle>
+        <DialogTitle sx={{ color: 'hsl(var(--accent))', fontWeight: 700 }}>Nova Solicitação Manual</DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
             <TextField label="Telefone" fullWidth value={createForm.telefone} onChange={(e) => handleTelefoneChange(e.target.value)} variant="filled" sx={inputSx} placeholder="(XX) XXXXX-XXXX" inputProps={{ autoComplete: 'off' }} />
@@ -1889,9 +1941,10 @@ const ReclamacoesPage: React.FC = () => {
           </Box>
           <TextField label="Data de Nascimento" fullWidth type="date" value={createForm.dataNascimentoCliente} onChange={(e) => setCreateForm({ ...createForm, dataNascimentoCliente: e.target.value })} variant="filled" sx={inputSx} InputLabelProps={{ shrink: true }} inputProps={{ autoComplete: 'off' }} />
 
-          <TextField label="Região" fullWidth value={createForm.regiao} onChange={(e) => setCreateForm({ ...createForm, regiao: e.target.value })} variant="filled" sx={inputSx} inputProps={{ autoComplete: 'off' }} />
+          <TextField label="Região" fullWidth value={createForm.regiao} variant="filled" sx={inputSx} InputProps={{ readOnly: true }} helperText={!createForm.regiao ? 'Preenchida automaticamente ao selecionar endereço' : ''} />
 
-          <FormFields form={createForm} setForm={setCreateForm} cat={createForm.categoria} enderecos={enderecos} onImageClick={(urls, idx) => { setLightboxUrls(urls); setLightboxIndex(idx); setLightboxOpen(true) }} onTelefoneLookup={clienteExiste} />
+          <TextField label="Situação Resumida" fullWidth multiline rows={3} value={createForm.situacaoResumida} onChange={(e) => setCreateForm({ ...createForm, situacaoResumida: e.target.value })} variant="filled" sx={inputSx} inputProps={{ autoComplete: 'off' }} />
+
           <TextField
             fullWidth
             multiline
@@ -1902,6 +1955,7 @@ const ReclamacoesPage: React.FC = () => {
             onChange={(e) => setCreateForm({ ...createForm, observacao: e.target.value })}
             sx={inputSx}
           />
+
           <TextField
             select
             fullWidth
@@ -1913,10 +1967,11 @@ const ReclamacoesPage: React.FC = () => {
           >
             {CATEGORIAS.map((cat) => (
               <MenuItem key={cat} value={cat}>
-                {categoryDisplayName[cat] ?? cat}
+                {formatCategoryName(cat)}
               </MenuItem>
             ))}
           </TextField>
+          <FormFields form={createForm} setForm={setCreateForm} cat={createForm.categoria} enderecos={enderecos} onImageClick={(urls, idx) => { setLightboxUrls(urls); setLightboxIndex(idx); setLightboxOpen(true) }} onTelefoneLookup={clienteExiste} />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setCreateOpen(false)} sx={{ color: 'hsl(var(--text-secondary))', textTransform: 'none' }}>Cancelar</Button>

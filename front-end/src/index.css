@@ -144,6 +144,20 @@ body.theme-light ::-webkit-scrollbar-thumb {
   z-index: 1;
 }
 
+/* ── Login logo: white circle in dark mode ────────── */
+.login-logo-circle {
+  background: #ffffff;
+  border-radius: 50%;
+  padding: 12px;
+  box-sizing: content-box;
+}
+
+body.theme-light .login-logo-circle {
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+}
+
 /* Make date input calendar icon white in dark mode */
 ::-webkit-calendar-picker-indicator {
   filter: invert(1);

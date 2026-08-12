@@ -11,17 +11,17 @@ export async function getAllContatosUnificados(): Promise<{ contatos: ContatoUni
   ])
 
   const clientesMap = new Map<string, Cliente>()
-  clientes.forEach((c) => { clientesMap.set(c.telefone, c) })
+  ;(clientes || []).forEach((c) => { clientesMap.set(c.telefone, c) })
 
   const contatosMap = new Map<string, Contato>()
-  contatos.forEach((c) => { contatosMap.set(c.telefone, c) })
+  ;(contatos || []).forEach((c) => { contatosMap.set(c.telefone, c) })
 
   const bloqueadosSet = new Set(ligadosRes.bloqueados || [])
 
   let geloPhones = new Set<string>()
   try {
     const geloRes = await apiGet<Cliente[]>('/clientes-gelo')
-    geloRes.forEach((g) => geloPhones.add(g.telefone))
+    ;(geloRes || []).forEach((g) => geloPhones.add(g.telefone))
   } catch {
     try {
       const resp = await fetch(`${API_BASE_URL}/clientes-gelo`)

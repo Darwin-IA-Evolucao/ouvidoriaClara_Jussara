@@ -708,20 +708,6 @@ const ReclamacoesPage: React.FC = () => {
         ;(clientes || []).forEach((c) => { map[c.telefone] = c })
         setClientesMap(map)
         setRows(Array.isArray(ocorrencias) ? ocorrencias : [])
-        /* compute default age range */
-        let minAge = Infinity
-        let maxAge = -Infinity
-        clientes.forEach((c) => {
-          const age = calcAge(c.dataNascimento)
-          if (age !== null) {
-            if (age < minAge) minAge = age
-            if (age > maxAge) maxAge = age
-          }
-        })
-        if (minAge !== Infinity) {
-          setAgeMin(String(minAge))
-          setAgeMax(String(maxAge))
-        }
         setLoading(false)
       })
       .catch(() => setLoading(false))

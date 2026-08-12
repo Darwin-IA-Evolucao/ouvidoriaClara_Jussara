@@ -99,6 +99,7 @@ func (ctrl *ContatoController) ImportContatos(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
+
 func respondContatoErr(c *gin.Context, err error) {
 	var appErr *apperror.AppError
 	if errors.As(err, &appErr) {

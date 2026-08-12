@@ -83,6 +83,7 @@ export interface Endereco {
 }
 
 export interface Logradouro {
+  id?: number
   logradouro: string
   bairro: string
   regiao: string

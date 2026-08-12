@@ -1,13 +1,26 @@
+export const toUTCDate = (value: string | Date | null | undefined): Date => {
+  if (!value) return new Date(NaN)
+  if (value instanceof Date) return value
+  const str = value.trim()
+  if (str && !str.endsWith('Z') && !str.endsWith('z') && !/[+-]\d{2}:?\d{2}$/.test(str) && !str.includes('T')) {
+    return new Date(str + 'T00:00:00Z')
+  }
+  if (str && str.includes('T') && !str.endsWith('Z') && !str.endsWith('z') && !/[+-]\d{2}:?\d{2}$/.test(str)) {
+    return new Date(str + 'Z')
+  }
+  return new Date(str)
+}
+
 export const formatDate = (value: string | Date | null | undefined): string => {
   if (!value) return ''
-  const d = new Date(value)
+  const d = toUTCDate(value)
   if (isNaN(d.getTime())) return String(value)
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 export const formatRelativeTime = (value: string | Date | null | undefined): string => {
   if (!value) return ''
-  const d = new Date(value)
+  const d = toUTCDate(value)
   if (isNaN(d.getTime())) return ''
   const now = new Date()
   const diffMs = now.getTime() - d.getTime()

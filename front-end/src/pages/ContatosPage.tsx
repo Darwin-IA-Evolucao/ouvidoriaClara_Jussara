@@ -21,7 +21,7 @@ import { formatDate } from '../utils/date'
 import { getDadosCliente } from '../services/clienteService'
 import { getAllOcorrencias } from '../services/reclamacaoService'
 import { getAllEnderecos } from '../services/enderecoService'
-import { categoryDisplayName } from '../utils/categories'
+import { fetchCategorias, formatCategoryName } from '../utils/categories'
 import type { ContatoUnificado, Cliente, Ocorrencia, DetalhesReclamacao, Logradouro } from '../types'
 
 const ITEMS_PER_PAGE = 12
@@ -66,6 +66,7 @@ const ContatosPage: React.FC = () => {
   const [ocFiltroStatus, setOcFiltroStatus] = useState('')
   const [ocFiltroTipo, setOcFiltroTipo] = useState('')
   const [ocFiltroCategoria, setOcFiltroCategoria] = useState('')
+  const [categorias, setCategorias] = useState<string[]>([])
   const [ocFiltroInicio, setOcFiltroInicio] = useState('')
   const [ocFiltroFim, setOcFiltroFim] = useState('')
   const [lightboxImg, setLightboxImg] = useState<string | null>(null)
@@ -78,7 +79,7 @@ const ContatosPage: React.FC = () => {
     try {
       const [data, ocorrencias] = await Promise.all([getAllContatosUnificados(), getAllOcorrencias()])
       const reclamacoesPhones = new Set<string>()
-      ocorrencias.forEach((o) => reclamacoesPhones.add(o.telefone))
+      ;(ocorrencias || []).forEach((o) => reclamacoesPhones.add(o.telefone))
       const contatosWithFlag = data.contatos.map((c) => ({
         ...c,
         hasReclamacao: reclamacoesPhones.has(c.telefone),
@@ -100,6 +101,7 @@ const ContatosPage: React.FC = () => {
   }, [])
 
   useEffect(() => { load() }, [load])
+  useEffect(() => { fetchCategorias().then(setCategorias) }, [])
 
   const filtered = useMemo(() => {
     const start = startDate ? new Date(`${startDate}T00:00:00`) : null
@@ -212,7 +214,7 @@ const ContatosPage: React.FC = () => {
   }
 
   const columnLabels: Record<string, string> = {
-    'pendentes': 'Reclamações Pendentes',
+    'pendentes': 'Solicitações Pendentes',
     'em-analise': 'Em Análise',
     'aprovar-indicacao': 'Aprovado como Indicação',
     'aprovar-requerimento': 'Aprovado como Requerimento',
@@ -380,24 +382,20 @@ const ContatosPage: React.FC = () => {
         </Button>
       </Box>
 
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, minmax(180px, 1fr))' }, gap: 2, mb: 3, p: 2.5, borderRadius: 3, bgcolor: 'hsl(var(--surface-2))', border: '1px solid hsl(var(--border))' }}>
-        <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-          <Button onClick={resetFilters} sx={{ width: 'clamp(140px, 100%, 200px)', textTransform: 'none', fontWeight: 700, borderRadius: 2, py: 1, color: '#fff', background: 'hsl(var(--primary))', border: '1px solid hsl(var(--primary) / 0.35)', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', '&:hover': { background: 'hsl(var(--primary) / 0.85)' } }}>Todos</Button>
-        </Box>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, minmax(180px, 1fr))' }, gap: 2, mb: 3, p: 2.5, borderRadius: 3, bgcolor: 'hsl(var(--surface-2))', border: '1px solid hsl(var(--border))' }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
           <Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary))', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600 }}>Status Darwin</Typography>
           <Button fullWidth variant="outlined" onClick={() => setFilters((p) => ({ ...p, darwin: p.darwin === true ? null : true }))} sx={{ justifyContent: 'flex-start', textTransform: 'none', borderRadius: 2, py: 0.75, fontSize: 13, fontWeight: 600, ...(filters.darwin === true ? { background: 'hsl(var(--primary) / 0.15)', borderColor: 'hsl(var(--primary) / 0.5)', color: 'hsl(var(--accent))', boxShadow: 'none' } : { borderColor: 'hsl(var(--border))', color: 'hsl(var(--text-secondary))' }) }}>Darwin Ativo</Button>
           <Button fullWidth variant="outlined" onClick={() => setFilters((p) => ({ ...p, darwin: p.darwin === false ? null : false }))} sx={{ justifyContent: 'flex-start', textTransform: 'none', borderRadius: 2, py: 0.75, fontSize: 13, fontWeight: 600, ...(filters.darwin === false ? { background: 'hsl(var(--primary) / 0.15)', borderColor: 'hsl(var(--primary) / 0.5)', color: 'hsl(var(--accent))', boxShadow: 'none' } : { borderColor: 'hsl(var(--border))', color: 'hsl(var(--text-secondary))' }) }}>Darwin Inativo</Button>
         </Box>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary))', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600 }}>Status Contato</Typography>
-          <Button fullWidth variant="outlined" onClick={() => setFilters((p) => ({ ...p, contact: p.contact === true ? null : true }))} sx={{ justifyContent: 'flex-start', textTransform: 'none', borderRadius: 2, py: 0.75, fontSize: 13, fontWeight: 600, ...(filters.contact === true ? { background: 'hsl(var(--primary) / 0.15)', borderColor: 'hsl(var(--primary) / 0.5)', color: 'hsl(var(--accent))', boxShadow: 'none' } : { borderColor: 'hsl(var(--border))', color: 'hsl(var(--text-secondary))' }) }}>Contatos Ativos</Button>
-          <Button fullWidth variant="outlined" onClick={() => setFilters((p) => ({ ...p, contact: p.contact === false ? null : false }))} sx={{ justifyContent: 'flex-start', textTransform: 'none', borderRadius: 2, py: 0.75, fontSize: 13, fontWeight: 600, ...(filters.contact === false ? { background: 'hsl(var(--primary) / 0.15)', borderColor: 'hsl(var(--primary) / 0.5)', color: 'hsl(var(--accent))', boxShadow: 'none' } : { borderColor: 'hsl(var(--border))', color: 'hsl(var(--text-secondary))' }) }}>Contatos Inativos</Button>
-        </Box>
+        {/* Status Contato filter hidden */}
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
           <Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary))', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600 }}>Perfil Contato</Typography>
           <Button fullWidth variant="outlined" onClick={() => setFilters((p) => ({ ...p, gelo: p.gelo === true ? null : true }))} sx={{ justifyContent: 'flex-start', textTransform: 'none', borderRadius: 2, py: 0.75, fontSize: 13, fontWeight: 600, ...(filters.gelo === true ? { background: 'hsl(var(--primary) / 0.15)', borderColor: 'hsl(var(--primary) / 0.5)', color: 'hsl(var(--accent))', boxShadow: 'none' } : { borderColor: 'hsl(var(--border))', color: 'hsl(var(--text-secondary))' }) }}>Contatos Gelos</Button>
-          <Button fullWidth variant="outlined" onClick={() => setFilters((p) => ({ ...p, reclamacao: p.reclamacao === true ? null : true }))} sx={{ justifyContent: 'flex-start', textTransform: 'none', borderRadius: 2, py: 0.75, fontSize: 13, fontWeight: 600, ...(filters.reclamacao === true ? { background: 'hsl(var(--primary) / 0.15)', borderColor: 'hsl(var(--primary) / 0.5)', color: 'hsl(var(--accent))', boxShadow: 'none' } : { borderColor: 'hsl(var(--border))', color: 'hsl(var(--text-secondary))' }) }}>Contatos com Reclamações</Button>
+          <Button fullWidth variant="outlined" onClick={() => setFilters((p) => ({ ...p, reclamacao: p.reclamacao === true ? null : true }))} sx={{ justifyContent: 'flex-start', textTransform: 'none', borderRadius: 2, py: 0.75, fontSize: 13, fontWeight: 600, ...(filters.reclamacao === true ? { background: 'hsl(var(--primary) / 0.15)', borderColor: 'hsl(var(--primary) / 0.5)', color: 'hsl(var(--accent))', boxShadow: 'none' } : { borderColor: 'hsl(var(--border))', color: 'hsl(var(--text-secondary))' }) }}>Contatos com Solicitações</Button>
+        </Box>
+        <Box sx={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'center', mt: 1 }}>
+          <Button onClick={resetFilters} sx={{ textTransform: 'none', color: 'hsl(var(--text-secondary))', borderRadius: 2 }}>Limpar Filtros</Button>
         </Box>
       </Box>
 
@@ -588,7 +586,7 @@ const ContatosPage: React.FC = () => {
               sx={{ fontSize: 12, minWidth: 130, ...inputSx }}
             >
               <MenuItem value="">Todas colunas</MenuItem>
-              <MenuItem value="pendentes">Reclamações Pendentes</MenuItem>
+              <MenuItem value="pendentes">Solicitações Pendentes</MenuItem>
               <MenuItem value="em-analise">Em Análise</MenuItem>
               <MenuItem value="aprovar-indicacao">Aprovado como Indicação</MenuItem>
               <MenuItem value="aprovar-requerimento">Aprovado como Requerimento</MenuItem>
@@ -616,8 +614,8 @@ const ContatosPage: React.FC = () => {
               sx={{ fontSize: 12, minWidth: 150, ...inputSx }}
             >
               <MenuItem value="">Todas categorias</MenuItem>
-              {Object.entries(categoryDisplayName).map(([key, label]) => (
-                <MenuItem key={key} value={key}>{label}</MenuItem>
+              {categorias.map((cat) => (
+                <MenuItem key={cat} value={cat}>{formatCategoryName(cat)}</MenuItem>
               ))}
             </Select>
             <TextField type="date" size="small" variant="filled" label="De" InputLabelProps={{ shrink: true }} value={ocFiltroInicio} onChange={(e) => setOcFiltroInicio(e.target.value)} sx={{ ...inputSx, minWidth: 120 }} />
@@ -647,7 +645,7 @@ const ContatosPage: React.FC = () => {
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
                   <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
                     <Box sx={{ fontSize: 11, fontWeight: 600, color: 'hsl(var(--text-primary))', bgcolor: 'hsl(var(--border))', px: 1, py: 0.3, borderRadius: 1 }}>
-                      {categoryDisplayName[o.categoria] ?? o.categoria}
+                      {formatCategoryName(o.categoria)}
                     </Box>
                     {o.tipo && (
                       <Box sx={{ fontSize: 10, fontWeight: 600, color: 'hsl(var(--accent))', bgcolor: 'hsl(var(--accent) / 0.1)', px: 1, py: 0.3, borderRadius: 1, textTransform: 'capitalize' }}>

@@ -10,14 +10,16 @@ import {
   LogOut,
   Menu,
   X,
+  MapPin,
 } from 'lucide-react'
 import { getTheme, toggleTheme } from '../utils/theme'
 import { clearSession } from '../utils/session'
 import type { Theme } from '../utils/theme'
 
 const navItems = [
-  { to: '/', icon: FileText, label: 'Reclamações' },
+  { to: '/', icon: FileText, label: 'Solicitações' },
   { to: '/contatos', icon: Phone, label: 'Contatos' },
+  { to: '/enderecos', icon: MapPin, label: 'Endereços' },
   { to: '/estatisticas', icon: LayoutDashboard, label: 'Estatísticas' },
 ]
 

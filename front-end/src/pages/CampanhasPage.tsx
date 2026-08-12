@@ -251,8 +251,7 @@ const CampanhasPage: React.FC = () => {
           setImportError('Informe a palavra-chave da nova liderança')
           return
         }
-        const criada = await createCampanha({ palavraChave: valor })
-        campanha = criada.palavraChave
+        campanha = valor
       }
       const result = await importContatos(importFile, campanha)
       setImportResult(result)

@@ -15,11 +15,12 @@ import (
 const instanceOuvidoria = "ouvidoria_clara_jussara"
 
 type ContatoUseCase struct {
-	repo repository.ContatoRepo
+	repo         repository.ContatoRepo
+	campanhaRepo *repository.CampanhaRepository
 }
 
-func NewContatoUseCase(repo repository.ContatoRepo) *ContatoUseCase {
-	return &ContatoUseCase{repo: repo}
+func NewContatoUseCase(repo repository.ContatoRepo, campanhaRepo *repository.CampanhaRepository) *ContatoUseCase {
+	return &ContatoUseCase{repo: repo, campanhaRepo: campanhaRepo}
 }
 
 func (u *ContatoUseCase) GetAllContatos() ([]models.Contact, error) {
@@ -76,7 +77,8 @@ func (u *ContatoUseCase) CreateContato(telefone, nome, campanha string) error {
 }
 
 func (u *ContatoUseCase) ImportContatos(filename string, file io.Reader, campanha string) (*models.ImportContatosResult, error) {
-	campanha = strings.TrimSpace(campanha)
+	c := &models.Campanha{PalavraChave: campanha}
+	campanha = c.NormalizePalavraChave()
 	if campanha == "" {
 		return nil, apperror.BadRequest("campanha obrigatoria")
 	}
@@ -119,7 +121,25 @@ func (u *ContatoUseCase) ImportContatos(filename string, file io.Reader, campanh
 		}
 		result.Criados++
 	}
+	if result.Criados > 0 {
+		if err := u.ensureCampanha(campanha); err != nil {
+			return nil, err
+		}
+	}
 	return result, nil
+}
+
+func (u *ContatoUseCase) ensureCampanha(palavraChave string) error {
+	c := &models.Campanha{PalavraChave: palavraChave}
+	c.PalavraChave = c.NormalizePalavraChave()
+	exists, err := u.campanhaRepo.ExistsCampanha(c.PalavraChave)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return nil
+	}
+	return u.campanhaRepo.CreateCampanha(c)
 }
 
 func mapContatoInsertErr(err error) error {

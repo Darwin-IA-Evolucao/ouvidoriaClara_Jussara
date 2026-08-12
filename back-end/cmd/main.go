@@ -102,7 +102,7 @@ func main() {
 	routes.SetupStatsRoutes(server, controllers.NewStatsController(usecases.NewStatsUseCases(repository.NewStatsRepository(dbConnection))))
 
 	routes.SetMessageRoutes(server, controllers.NewMensagemController(usecases.NewMensagemUseCase(*repository.NewMensagemRepo(dbConnection))))
-	routes.SetupContactRoutes(server, *controllers.NewContatoController(usecases.NewContatoUseCase(*repository.NewContatoRepo(dbConnection))))
+	routes.SetupContactRoutes(server, *controllers.NewContatoController(usecases.NewContatoUseCase(*repository.NewContatoRepo(dbConnection), repository.NewCampanhaRepository(dbConnection))))
 
 	routes.SetUsuarioRoutes(server, controllers.NewUsuarioController(usecases.NewUsuarioUseCases(repository.NewUsuarioRepository(dbConnection))))
 	routes.SetupLeadRoutes(server, controllers.NewLeadController(usecases.NewLeadUseCases(repository.NewLeadRepository(dbConnection))))

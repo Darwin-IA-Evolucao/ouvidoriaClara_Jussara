@@ -38,15 +38,26 @@ func ParsePlanilhaContatos(filename string, r io.Reader) ([]PlanilhaLinha, error
 }
 
 func NormalizeTelefone(s string) string {
-	s = strings.TrimSpace(s)
-	replacer := strings.NewReplacer(" ", "", "-", "", "(", "", ")", "", "+", "", "\u00a0", "")
-	s = replacer.Replace(s)
-	if strings.ContainsAny(s, ".eE") {
-		if f, err := strconv.ParseFloat(s, 64); err == nil {
+	s = strings.TrimSpace(strings.ReplaceAll(s, "\u00a0", ""))
+	if strings.ContainsAny(s, "eE") {
+		if f, err := strconv.ParseFloat(s, 64); err == nil && f > 0 {
 			s = strconv.FormatInt(int64(f), 10)
 		}
 	}
-	return s
+	var b strings.Builder
+	for _, r := range s {
+		if r >= '0' && r <= '9' {
+			b.WriteRune(r)
+		}
+	}
+	digits := b.String()
+	if strings.HasPrefix(digits, "0") && (len(digits) == 11 || len(digits) == 12) {
+		digits = digits[1:]
+	}
+	if len(digits) == 10 || len(digits) == 11 {
+		digits = "55" + digits
+	}
+	return digits
 }
 
 func TelefoneValido(s string) bool {

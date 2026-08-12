@@ -29,7 +29,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
   }
 
   if (response.status === 204) {
-    return undefined as T
+    return null as unknown as T
   }
 
   if (contentType.includes('text/plain')) {
@@ -41,6 +41,9 @@ async function handleResponse<T>(response: Response): Promise<T> {
     const body = await response.json()
     if (body && typeof body === 'object' && 'error' in body) {
       throw new ApiError(String(body.error), response.status)
+    }
+    if (body === null || body === undefined) {
+      return (Array.isArray(null) ? [] : null) as unknown as T
     }
     return body as T
   }

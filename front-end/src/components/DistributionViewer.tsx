@@ -1,17 +1,25 @@
 import * as React from 'react'
-import { useState } from 'react'
-import { Box, Typography } from '@mui/material'
+import { useState, useMemo } from 'react'
+import { Box, Typography, Select, MenuItem, FormControl } from '@mui/material'
 import InboxOutlined from '@mui/icons-material/InboxOutlined'
 import {
   PieChart, Pie, Cell, Tooltip as ReTooltip, ResponsiveContainer,
 } from 'recharts'
 import GlassPanel from './GlassPanel'
-import { categoryDisplayName } from '../utils/categories'
-import type { Stat } from '../types'
+import { formatCategoryName } from '../utils/categories'
+import type { Stat, Ocorrencia } from '../types'
+
+const STATUS_COLUMN_LABELS: Record<string, string> = {
+  'criado': 'Solicitações Pendentes',
+  'em análise': 'Em Análise',
+  'aprovado': 'Aprovado',
+  'reprovado': 'Reprovar',
+}
 
 interface DistributionViewerProps {
   stats: Stat
   kanbanData: { name: string; value: number }[]
+  ocorrencias?: Ocorrencia[]
 }
 
 type Tab = 'regiao' | 'categoria' | 'tipo'
@@ -68,20 +76,52 @@ const renderCustomLegend = (items: { name: string; value: number; color: string 
   </Box>
 )
 
-const DistributionViewer: React.FC<DistributionViewerProps> = ({ stats, kanbanData }) => {
+const DistributionViewer: React.FC<DistributionViewerProps> = ({ stats, ocorrencias = [] }) => {
   const [tab, setTab] = useState<Tab>('regiao')
+  const [selectedRegiao, setSelectedRegiao] = useState('')
 
-  const regiaoData = [...stats.regioes]
+  const regiaoData = [...(stats.regioes || [])]
     .sort((a, b) => b.qtdRegiao - a.qtdRegiao)
     .map((r, i) => ({ name: r.regiao, value: r.qtdRegiao, color: PIE_COLORS[i % PIE_COLORS.length] }))
 
-  const categoriaData = [...stats.categorias]
-    .sort((a, b) => b.qtdCategoria - a.qtdCategoria)
-    .map((c) => ({ name: categoryDisplayName[c.categoria] ?? c.categoria, value: c.qtdCategoria }))
+  const regioesDisponiveis = useMemo(() => {
+    const set = new Set<string>()
+    ocorrencias.forEach((o) => {
+      const r = o.detalhes?.regiao
+      if (r) set.add(r)
+    })
+    return Array.from(set).sort()
+  }, [ocorrencias])
 
-  const tipoData: { name: string; value: number }[] = kanbanData
+  const categoriaData = useMemo(() => {
+    const filtered = selectedRegiao
+      ? ocorrencias.filter((o) => o.detalhes?.regiao === selectedRegiao)
+      : ocorrencias
+    const map: Record<string, number> = {}
+    for (const o of filtered) {
+      const cat = o.categoria || 'Sem Categoria'
+      map[cat] = (map[cat] || 0) + 1
+    }
+    return Object.entries(map)
+      .map(([categoria, value]) => ({ name: formatCategoryName(categoria), value, raw: categoria }))
+      .sort((a, b) => b.value - a.value)
+  }, [ocorrencias, selectedRegiao])
 
-  const activeData = tab === 'regiao' ? regiaoData : tab === 'categoria' ? categoriaData : tipoData
+  const statusData = useMemo(() => {
+    const filtered = selectedRegiao
+      ? ocorrencias.filter((o) => o.detalhes?.regiao === selectedRegiao)
+      : ocorrencias
+    const map: Record<string, number> = {}
+    for (const o of filtered) {
+      const st = o.status || 'Sem Status'
+      map[st] = (map[st] || 0) + 1
+    }
+    return Object.entries(map)
+      .map(([status, value]) => ({ name: STATUS_COLUMN_LABELS[status.toLowerCase()] ?? status, value, raw: status }))
+      .sort((a, b) => b.value - a.value)
+  }, [ocorrencias, selectedRegiao])
+
+  const activeData = tab === 'regiao' ? regiaoData : tab === 'categoria' ? categoriaData : statusData
   const hasData = activeData.length > 0 && activeData.some((d) => d.value > 0)
 
   return (
@@ -150,6 +190,47 @@ const DistributionViewer: React.FC<DistributionViewerProps> = ({ stats, kanbanDa
 
           {tab === 'categoria' && (
             <Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, flexWrap: 'wrap' }}>
+                <Typography sx={{ fontSize: 12, color: 'hsl(var(--text-secondary))', fontWeight: 500 }}>
+                  Visualizar total de solicitações por Categoria × Região:
+                </Typography>
+                <FormControl size="small" sx={{ minWidth: 200 }}>
+                  <Select
+                    value={selectedRegiao}
+                    onChange={(e) => setSelectedRegiao(e.target.value)}
+                    displayEmpty
+                    sx={{ fontSize: 12, height: 32, '& .MuiSelect-select': { py: 0.5 } }}
+                  >
+                    <MenuItem value="">Todas as Regiões</MenuItem>
+                    {regioesDisponiveis.map((r) => (
+                      <MenuItem key={r} value={r}>{r}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+
+              <Box sx={{ maxHeight: 220, overflowY: 'auto', mb: 2, pr: 0.5, '&::-webkit-scrollbar': { width: 4 }, '&::-webkit-scrollbar-thumb': { bgcolor: 'hsl(var(--border))', borderRadius: 2 } }}>
+                {categoriaData.map((c, i) => {
+                  const total = categoriaData.reduce((s, x) => s + x.value, 0)
+                  const pct = total > 0 ? (c.value / total) * 100 : 0
+                  const color = PIE_COLORS[i % PIE_COLORS.length]
+                  return (
+                    <Box key={c.raw} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 1.5, py: 1, mb: 0.5, borderRadius: 1.5, bgcolor: 'hsl(var(--surface-2) / 0.5)', border: '1px solid hsl(var(--border) / 0.5)', '&:last-child': { mb: 0 } }}>
+                      <Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary))', fontWeight: 600, minWidth: 18, textAlign: 'right' }}>#{i + 1}</Typography>
+                      <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: color, flexShrink: 0 }} />
+                      <Typography sx={{ fontSize: 12, color: 'hsl(var(--text-primary))', fontWeight: 500, flex: 1 }}>{c.name}</Typography>
+                      <Box sx={{ flex: 2, mx: 1 }}>
+                        <Box sx={{ height: 5, borderRadius: 3, bgcolor: 'hsl(var(--border))', overflow: 'hidden' }}>
+                          <Box sx={{ height: '100%', width: `${pct}%`, bgcolor: color, borderRadius: 3, transition: 'width 0.4s ease' }} />
+                        </Box>
+                      </Box>
+                      <Typography sx={{ fontSize: 13, color: color, fontWeight: 700, minWidth: 28, textAlign: 'right' }}>{c.value}</Typography>
+                      <Typography sx={{ fontSize: 10, color: 'hsl(var(--text-secondary))', minWidth: 36, textAlign: 'right' }}>{pct.toFixed(0)}%</Typography>
+                    </Box>
+                  )
+                })}
+              </Box>
+
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
@@ -169,16 +250,56 @@ const DistributionViewer: React.FC<DistributionViewerProps> = ({ stats, kanbanDa
                   <ReTooltip content={<CustomTooltip />} />
                 </PieChart>
               </ResponsiveContainer>
-              {renderCustomLegend(categoriaData.map((c, i) => ({ ...c, color: PIE_COLORS[i % PIE_COLORS.length] })))}
             </Box>
           )}
 
           {tab === 'tipo' && (
             <Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, flexWrap: 'wrap' }}>
+                <Typography sx={{ fontSize: 12, color: 'hsl(var(--text-secondary))', fontWeight: 500 }}>
+                  Visualizar total de solicitações por Status × Região:
+                </Typography>
+                <FormControl size="small" sx={{ minWidth: 200 }}>
+                  <Select
+                    value={selectedRegiao}
+                    onChange={(e) => setSelectedRegiao(e.target.value)}
+                    displayEmpty
+                    sx={{ fontSize: 12, height: 32, '& .MuiSelect-select': { py: 0.5 } }}
+                  >
+                    <MenuItem value="">Todas as Regiões</MenuItem>
+                    {regioesDisponiveis.map((r) => (
+                      <MenuItem key={r} value={r}>{r}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+
+              <Box sx={{ maxHeight: 220, overflowY: 'auto', mb: 2, pr: 0.5, '&::-webkit-scrollbar': { width: 4 }, '&::-webkit-scrollbar-thumb': { bgcolor: 'hsl(var(--border))', borderRadius: 2 } }}>
+                {statusData.map((s, i) => {
+                  const total = statusData.reduce((sum, x) => sum + x.value, 0)
+                  const pct = total > 0 ? (s.value / total) * 100 : 0
+                  const color = PIE_COLORS[i % PIE_COLORS.length]
+                  return (
+                    <Box key={s.raw} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 1.5, py: 1, mb: 0.5, borderRadius: 1.5, bgcolor: 'hsl(var(--surface-2) / 0.5)', border: '1px solid hsl(var(--border) / 0.5)', '&:last-child': { mb: 0 } }}>
+                      <Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary))', fontWeight: 600, minWidth: 18, textAlign: 'right' }}>#{i + 1}</Typography>
+                      <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: color, flexShrink: 0 }} />
+                      <Typography sx={{ fontSize: 12, color: 'hsl(var(--text-primary))', fontWeight: 500, flex: 1 }}>{s.name}</Typography>
+                      <Box sx={{ flex: 2, mx: 1 }}>
+                        <Box sx={{ height: 5, borderRadius: 3, bgcolor: 'hsl(var(--border))', overflow: 'hidden' }}>
+                          <Box sx={{ height: '100%', width: `${pct}%`, bgcolor: color, borderRadius: 3, transition: 'width 0.4s ease' }} />
+                        </Box>
+                      </Box>
+                      <Typography sx={{ fontSize: 13, color: color, fontWeight: 700, minWidth: 28, textAlign: 'right' }}>{s.value}</Typography>
+                      <Typography sx={{ fontSize: 10, color: 'hsl(var(--text-secondary))', minWidth: 36, textAlign: 'right' }}>{pct.toFixed(0)}%</Typography>
+                    </Box>
+                  )
+                })}
+              </Box>
+
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
-                    data={tipoData}
+                    data={statusData}
                     cx="50%"
                     cy="50%"
                     innerRadius="52%"
@@ -187,14 +308,13 @@ const DistributionViewer: React.FC<DistributionViewerProps> = ({ stats, kanbanDa
                     dataKey="value"
                     stroke="none"
                   >
-                    {tipoData.map((entry, i) => (
+                    {statusData.map((entry, i) => (
                       <Cell key={entry.name} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                     ))}
                   </Pie>
                   <ReTooltip content={<CustomTooltip />} />
                 </PieChart>
               </ResponsiveContainer>
-              {renderCustomLegend(tipoData.map((t, i) => ({ ...t, color: PIE_COLORS[i % PIE_COLORS.length] })))}
             </Box>
           )}
         </>

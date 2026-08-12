@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from '../utils/api'
+import { apiGet, apiPost, apiPut, apiDelete } from '../utils/api'
 import type { Endereco, Logradouro } from '../types'
 
 export async function getRegiao(rua: string, bairro?: string): Promise<Logradouro> {
@@ -15,4 +15,16 @@ export async function getAllEnderecos(): Promise<Logradouro[]> {
 
 export async function cadastrarEnderecos(enderecos: Endereco[]): Promise<void> {
   await apiPost<void>('/cadastrarEnderecos', enderecos)
+}
+
+export async function createEndereco(data: { logradouro: string; bairro: string; regiao: string }): Promise<void> {
+  await apiPost<void>('/cadastrarEnderecos', [{ Logradouro: data.logradouro, Bairro: data.bairro, 'Região': data.regiao }])
+}
+
+export async function updateEndereco(id: number, data: { logradouro: string; bairro: string; regiao: string }): Promise<void> {
+  await apiPut<void>(`/endereco/${id}`, data)
+}
+
+export async function deleteEndereco(id: number): Promise<void> {
+  await apiDelete<void>(`/endereco/${id}`)
 }

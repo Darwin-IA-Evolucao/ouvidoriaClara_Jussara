@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { TextField, CircularProgress, Box } from '@mui/material'
+import { TextField, CircularProgress, Box, useMediaQuery, useTheme } from '@mui/material'
 import { login } from '../services/authService'
 import { setSession, isSessionValid } from '../utils/session'
 import { applyTheme, getTheme } from '../utils/theme'
@@ -23,6 +23,8 @@ const CAPTIONS = [
 const INTERVAL_MS = 5500
 
 const LoginPage: React.FC = () => {
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const navigate = useNavigate()
   const [celular, setCelular] = useState('')
   const [senha, setSenha] = useState('')
@@ -164,31 +166,41 @@ const LoginPage: React.FC = () => {
         alignItems: 'center',
         justifyContent: 'center',
         background: 'hsl(var(--background))',
-        padding: '48px 40px',
+        padding: isMobile ? 0 : '48px 40px',
         position: 'relative',
       }}>
         <div style={{
           width: '100%',
           maxWidth: 540,
           background: 'hsl(var(--surface))',
-          border: '1px solid hsl(var(--border))',
-          borderRadius: 20,
-          padding: '88px 52px',
+          border: isMobile ? 'none' : '1px solid hsl(var(--border))',
+          borderRadius: isMobile ? 0 : 20,
+          padding: isMobile ? '24px 20px' : '88px 52px',
           position: 'relative',
           zIndex: 1,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+          boxShadow: isMobile ? 'none' : '0 8px 32px rgba(0,0,0,0.12)',
+          height: isMobile ? '100vh' : 'auto',
+          display: isMobile ? 'flex' : 'block',
+          flexDirection: isMobile ? 'column' : 'initial',
+          justifyContent: isMobile ? 'center' : 'initial',
         }}>
           {/* Icon */}
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 28 }}>
-            <img
-              src="/logo.png"
-              alt="Logo"
-              style={{
-                width: 96,
-                height: 96,
-                objectFit: 'contain',
-              }}
-            />
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: isMobile ? 16 : 28 }}>
+            <div className="login-logo-circle" style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <img
+                src="/logo.png"
+                alt="Logo"
+                style={{
+                  width: isMobile ? 72 : 96,
+                  height: isMobile ? 72 : 96,
+                  objectFit: 'contain',
+                }}
+              />
+            </div>
           </div>
 
           {/* Headline */}
@@ -206,10 +218,10 @@ const LoginPage: React.FC = () => {
             Bem-vindo de volta
           </p>
           <h2 style={{
-            margin: '0 0 52px',
+            margin: isMobile ? '0 0 28px' : '0 0 52px',
             textAlign: 'center',
             color: 'hsl(var(--text-primary))',
-            fontSize: 28,
+            fontSize: isMobile ? 24 : 28,
             fontWeight: 700,
             fontFamily: 'Inter, sans-serif',
           }}>
@@ -217,7 +229,7 @@ const LoginPage: React.FC = () => {
           </h2>
 
           <form onSubmit={handleSubmit}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 2 : 4 }}>
               <TextField
                 fullWidth
                 label="Login"
@@ -312,7 +324,7 @@ const LoginPage: React.FC = () => {
 
           {/* Footer */}
           <p style={{
-            marginTop: 28,
+            marginTop: isMobile ? 16 : 28,
             textAlign: 'center',
             color: 'hsl(var(--text-secondary) / 0.5)',
             fontSize: 11,

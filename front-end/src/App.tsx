@@ -9,6 +9,7 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage'))
 const ReclamacoesPage = lazy(() => import('./pages/ReclamacoesPage'))
 const ContatosPage = lazy(() => import('./pages/ContatosPage'))
 const CampanhasPage = lazy(() => import('./pages/CampanhasPage'))
+const EnderecosPage = lazy(() => import('./pages/EnderecosPage'))
 import { isSessionValid } from './utils/session'
 import { getTheme } from './utils/theme'
 import type { Theme } from './utils/theme'
@@ -85,6 +86,7 @@ function App() {
         <Route path="/estatisticas" element={<RequireAuth><DashboardPage /></RequireAuth>} />
         <Route path="/contatos" element={<RequireAuth><ContatosPage /></RequireAuth>} />
         <Route path="/liderancas" element={<RequireAuth><CampanhasPage /></RequireAuth>} />
+        <Route path="/enderecos" element={<RequireAuth><EnderecosPage /></RequireAuth>} />
         <Route path="/clientes" element={<Navigate to="/contatos" replace />} />
         <Route path="/leads" element={<Navigate to="/contatos" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />

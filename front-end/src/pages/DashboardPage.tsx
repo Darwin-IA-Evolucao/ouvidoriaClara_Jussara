@@ -1,19 +1,22 @@
 import * as React from 'react'
 import { useState, useEffect, useMemo } from 'react'
 import { Typography, Box, TextField, Button, useMediaQuery, useTheme } from '@mui/material'
-import { FileText, Users, TrendingUp, TrendingDown, BarChart3, Clock } from 'lucide-react'
+import { FileText, Users, TrendingUp, TrendingDown, BarChart3, XCircle } from 'lucide-react'
 import GlassPanel from '../components/GlassPanel'
 import PageHeader from '../components/PageHeader'
 import { inputSx } from '../utils/inputSx'
 import { getStats } from '../services/statsService'
 import { getAllOcorrencias } from '../services/reclamacaoService'
+import { getAllContatos } from '../services/contatoService'
+import { toUTCDate } from '../utils/date'
 import DistributionViewer from '../components/DistributionViewer'
 import PageLoader from '../components/PageLoader'
-import type { Stat, Ocorrencia } from '../types'
+import type { Stat, Ocorrencia, Contato } from '../types'
 
 interface TrendInfo {
   direction: 'up' | 'down' | 'neutral'
   percent: number
+  prevLabel: string
 }
 
 interface StatCardProps {
@@ -59,7 +62,7 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, icon: Icon, color = '
             <TrendingDown size={16} color="#D16670" />
           ) : null}
           <Typography sx={{ fontSize: 11, fontWeight: 600, color: trend.direction === 'up' ? '#66BB80' : trend.direction === 'down' ? '#D16670' : 'hsl(var(--text-secondary))' }}>
-            {trend.direction === 'up' ? '↑' : trend.direction === 'down' ? '↓' : '—'} {Math.abs(trend.percent).toFixed(0)}% vs período anterior
+            {Math.abs(trend.percent).toFixed(0)}% comparado a {trend.prevLabel}
           </Typography>
         </Box>
       )}
@@ -73,31 +76,52 @@ const DashboardPage: React.FC = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const [stats, setStats] = useState<Stat | null>(null)
   const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([])
+  const [contatos, setContatos] = useState<Contato[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
 
   useEffect(() => {
-    Promise.all([getStats(), getAllOcorrencias()])
-      .then(([s, o]) => { setStats(s); setOcorrencias(o) })
+    Promise.all([getStats(), getAllOcorrencias(), getAllContatos()])
+      .then(([s, o, c]) => {
+        setStats(s)
+        setOcorrencias(o || [])
+        setContatos(c || [])
+      })
       .catch(() => setError('Erro ao carregar estatísticas'))
       .finally(() => setLoading(false))
   }, [])
 
-  const filteredOcorrencias = useMemo(() => {
+  const dateRange = useMemo(() => {
     const start = startDate ? new Date(`${startDate}T00:00:00`) : null
     const end = endDate ? new Date(`${endDate}T23:59:59`) : null
-    if (!start && !end) return ocorrencias
+    return { start, end }
+  }, [startDate, endDate])
+
+  const filteredOcorrencias = useMemo(() => {
+    if (!dateRange.start && !dateRange.end) return ocorrencias
     return ocorrencias.filter((o) => {
       if (!o.dataCriacao) return false
-      const d = new Date(o.dataCriacao)
+      const d = toUTCDate(o.dataCriacao)
       if (isNaN(d.getTime())) return false
-      if (start && d < start) return false
-      if (end && d > end) return false
+      if (dateRange.start && d < dateRange.start) return false
+      if (dateRange.end && d > dateRange.end) return false
       return true
     })
-  }, [ocorrencias, startDate, endDate])
+  }, [ocorrencias, dateRange])
+
+  const filteredContatos = useMemo(() => {
+    if (!dateRange.start && !dateRange.end) return contatos
+    return contatos.filter((c) => {
+      if (!c.data_criacao) return false
+      const d = toUTCDate(c.data_criacao)
+      if (isNaN(d.getTime())) return false
+      if (dateRange.start && d < dateRange.start) return false
+      if (dateRange.end && d > dateRange.end) return false
+      return true
+    })
+  }, [contatos, dateRange])
 
   const computedStats = useMemo<Stat | null>(() => {
     if (!stats) return null
@@ -109,7 +133,10 @@ const DashboardPage: React.FC = () => {
     const totalRequerimentos = filteredOcorrencias.filter((o) => o.tipo === 'requerimento').length
     const percIndicacao = totalReclamacoes > 0 ? (totalIndicacoes / totalReclamacoes) * 100 : 0
     const percRequerimento = totalReclamacoes > 0 ? (totalRequerimentos / totalReclamacoes) * 100 : 0
-    const numPessoas = new Set(filteredOcorrencias.map((o) => o.telefone)).size
+    const reclamacoesTelefones = new Set(filteredOcorrencias.map((o) => o.telefone))
+    const contatosTelefones = new Set(filteredContatos.map((c) => c.telefone))
+    const allTelefones = new Set([...reclamacoesTelefones, ...contatosTelefones])
+    const numPessoas = allTelefones.size
 
     const regiaoMap: Record<string, number> = {}
     for (const o of filteredOcorrencias) {
@@ -138,26 +165,11 @@ const DashboardPage: React.FC = () => {
       indicacoesAprovadas: totalIndicacoes,
       requerimentosAprovados: totalRequerimentos,
     }
-  }, [stats, filteredOcorrencias, startDate, endDate])
+  }, [stats, filteredOcorrencias, filteredContatos, startDate, endDate])
 
-  const tempoMedioResolucao = useMemo(() => {
-    const resolvidas = filteredOcorrencias.filter((o) => o.status === 'aprovado' || o.status === 'reprovado')
-    if (resolvidas.length === 0) return null
-    const totalDays = resolvidas.reduce((sum, o) => {
-      const criacao = new Date(o.dataCriacao)
-      const atualizacao = new Date(o.dataAtualizacao)
-      if (isNaN(criacao.getTime()) || isNaN(atualizacao.getTime())) return sum
-      return sum + (atualizacao.getTime() - criacao.getTime()) / (1000 * 60 * 60 * 24)
-    }, 0)
-    const avgDays = totalDays / resolvidas.length
-    if (avgDays < 1) return `${Math.round(avgDays * 24)}h`
-    if (avgDays < 30) return `${avgDays.toFixed(1)} dias`
-    return `${(avgDays / 30).toFixed(1)} meses`
-  }, [filteredOcorrencias])
-
-  const trends = useMemo<{ reclamacoes: TrendInfo | null; indicacoes: TrendInfo | null; requerimentos: TrendInfo | null; pessoas: TrendInfo | null }>(() => {
+  const trends = useMemo<{ reclamacoes: TrendInfo | null; indicacoes: TrendInfo | null; requerimentos: TrendInfo | null; pessoas: TrendInfo | null; reprovadas: TrendInfo | null }>(() => {
     const hasFilter = Boolean(startDate && endDate)
-    if (!hasFilter) return { reclamacoes: null, indicacoes: null, requerimentos: null, pessoas: null }
+    if (!hasFilter) return { reclamacoes: null, indicacoes: null, requerimentos: null, pessoas: null, reprovadas: null }
 
     const start = new Date(`${startDate}T00:00:00`)
     const end = new Date(`${endDate}T23:59:59`)
@@ -167,39 +179,52 @@ const DashboardPage: React.FC = () => {
 
     const prevOcorrencias = ocorrencias.filter((o) => {
       if (!o.dataCriacao) return false
-      const d = new Date(o.dataCriacao)
+      const d = toUTCDate(o.dataCriacao)
       if (isNaN(d.getTime())) return false
       return d >= prevStart && d <= prevEnd
     })
 
+    const prevContatos = contatos.filter((c) => {
+      if (!c.data_criacao) return false
+      const d = toUTCDate(c.data_criacao)
+      if (isNaN(d.getTime())) return false
+      return d >= prevStart && d <= prevEnd
+    })
+
+    const fmtShort = (d: Date) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', timeZone: 'UTC' })
+    const prevLabel = `${fmtShort(prevStart)}–${fmtShort(prevEnd)}`
+
     const calcTrend = (current: number, previous: number): TrendInfo => {
-      if (previous === 0) return { direction: current > 0 ? 'up' : 'neutral', percent: current > 0 ? 100 : 0 }
+      if (previous === 0) return { direction: current > 0 ? 'up' : 'neutral', percent: current > 0 ? 100 : 0, prevLabel }
       const pct = ((current - previous) / previous) * 100
-      if (Math.abs(pct) < 1) return { direction: 'neutral', percent: 0 }
-      return { direction: pct > 0 ? 'up' : 'down', percent: Math.abs(pct) }
+      if (Math.abs(pct) < 1) return { direction: 'neutral', percent: 0, prevLabel }
+      return { direction: pct > 0 ? 'up' : 'down', percent: Math.abs(pct), prevLabel }
     }
 
     const currReclamacoes = filteredOcorrencias.length
     const currIndicacoes = filteredOcorrencias.filter((o) => o.tipo === 'indicacao').length
     const currRequerimentos = filteredOcorrencias.filter((o) => o.tipo === 'requerimento').length
-    const currPessoas = new Set(filteredOcorrencias.map((o) => o.telefone)).size
+    const currPessoas = new Set([...filteredOcorrencias.map((o) => o.telefone), ...filteredContatos.map((c) => c.telefone)]).size
+    const currReprovadas = filteredOcorrencias.filter((o) => o.status.toLowerCase() === 'reprovado').length
 
     const prevReclamacoes = prevOcorrencias.length
     const prevIndicacoes = prevOcorrencias.filter((o) => o.tipo === 'indicacao').length
     const prevRequerimentos = prevOcorrencias.filter((o) => o.tipo === 'requerimento').length
-    const prevPessoas = new Set(prevOcorrencias.map((o) => o.telefone)).size
+    const prevPessoas = new Set([...prevOcorrencias.map((o) => o.telefone), ...prevContatos.map((c) => c.telefone)]).size
+    const prevReprovadas = prevOcorrencias.filter((o) => o.status.toLowerCase() === 'reprovado').length
 
     return {
       reclamacoes: calcTrend(currReclamacoes, prevReclamacoes),
       indicacoes: calcTrend(currIndicacoes, prevIndicacoes),
       requerimentos: calcTrend(currRequerimentos, prevRequerimentos),
       pessoas: calcTrend(currPessoas, prevPessoas),
+      reprovadas: calcTrend(currReprovadas, prevReprovadas),
     }
-  }, [filteredOcorrencias, ocorrencias, startDate, endDate])
+  }, [filteredOcorrencias, filteredContatos, ocorrencias, contatos, startDate, endDate])
 
   const kanbanData = (() => {
     const counts: Record<string, number> = {
-      'Reclamações Pendentes': 0,
+      'Solicitações Pendentes': 0,
       'Em Análise': 0,
       'Aprovados como Indicação': 0,
       'Aprovados como Requerimento': 0,
@@ -207,7 +232,7 @@ const DashboardPage: React.FC = () => {
     }
     for (const o of filteredOcorrencias) {
       const status = o.status.toLowerCase()
-      if (status === 'criado') counts['Reclamações Pendentes']++
+      if (status === 'criado') counts['Solicitações Pendentes']++
       else if (status === 'em análise' || status === 'em analise') counts['Em Análise']++
       else if (status === 'aprovado' && o.tipo === 'indicacao') counts['Aprovados como Indicação']++
       else if (status === 'aprovado' && o.tipo === 'requerimento') counts['Aprovados como Requerimento']++
@@ -277,27 +302,27 @@ const DashboardPage: React.FC = () => {
       <Box sx={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 2.5, alignItems: 'stretch' }}>
         {/* Coluna 1 — Indicações */}
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-          <StatCard sx={{ flex: 1 }} label="Total de Indicações" value={computedStats?.totalIndicacoes ?? 0} icon={BarChart3} color="#66BB80" trend={trends.indicacoes} />
-          <StatCard sx={{ flex: 1 }} label="Taxa de Conversão Indicações" value={`${(computedStats?.percIndicacao ?? 0).toFixed(1)}%`} icon={TrendingUp} color="#66BB80" subtitle="Percentual de reclamações classificadas como indicação em relação ao total de reclamações" />
+          <StatCard sx={{ flex: 1 }} label="Total de Indicações" value={computedStats?.totalIndicacoes ?? 0} icon={BarChart3} color="#66BB80" />
+          <StatCard sx={{ flex: 1 }} label="Taxa de Conversão Indicações" value={`${(computedStats?.percIndicacao ?? 0).toFixed(1)}%`} icon={TrendingUp} color="#66BB80" subtitle="Percentual de solicitações classificadas como indicação em relação ao total de solicitações" />
         </Box>
 
         {/* Coluna 2 — Requerimentos */}
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-          <StatCard sx={{ flex: 1 }} label="Total de Requerimentos" value={computedStats?.totalRequerimentos ?? 0} icon={FileText} color="#E89E70" trend={trends.requerimentos} />
-          <StatCard sx={{ flex: 1 }} label="Taxa de Conversão Requerimentos" value={`${(computedStats?.percRequerimento ?? 0).toFixed(1)}%`} icon={TrendingUp} color="#E89E70" subtitle="Percentual de reclamações classificadas como requerimento em relação ao total de reclamações" />
+          <StatCard sx={{ flex: 1 }} label="Total de Requerimentos" value={computedStats?.totalRequerimentos ?? 0} icon={FileText} color="#E89E70" />
+          <StatCard sx={{ flex: 1 }} label="Taxa de Conversão Requerimentos" value={`${(computedStats?.percRequerimento ?? 0).toFixed(1)}%`} icon={TrendingUp} color="#E89E70" subtitle="Percentual de solicitações classificadas como requerimento em relação ao total de solicitações" />
         </Box>
 
         {/* Coluna 3 — Gerais (3 cards, crescem para igualar altura) */}
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-          <StatCard sx={{ flex: 1 }} label="Total de Reclamações" value={computedStats?.numReclamacoes ?? 0} icon={FileText} color="#41669C" trend={trends.reclamacoes} />
+          <StatCard sx={{ flex: 1 }} label="Total de Solicitações" value={computedStats?.numReclamacoes ?? 0} icon={FileText} color="#41669C" trend={trends.reclamacoes} />
           <StatCard sx={{ flex: 1 }} label="Total de Pessoas Atendidas" value={computedStats?.numPessoas ?? 0} icon={Users} color="#62A1D8" trend={trends.pessoas} />
-          <StatCard sx={{ flex: 1 }} label="Tempo Médio de Resolução" value={tempoMedioResolucao ?? '-'} icon={Clock} color="#A1A9B8" subtitle="Tempo médio entre criação e resolução (aprovação/reprovação)" />
+          <StatCard sx={{ flex: 1 }} label="Total de Solicitações Reprovadas" value={filteredOcorrencias.filter((o) => o.status.toLowerCase() === 'reprovado').length} icon={XCircle} color="#D16670" trend={trends.reprovadas} />
         </Box>
       </Box>
 
       {computedStats && (
         <Box mt={4}>
-          <DistributionViewer stats={computedStats} kanbanData={kanbanData} />
+          <DistributionViewer stats={computedStats} kanbanData={kanbanData} ocorrencias={filteredOcorrencias} />
         </Box>
       )}
     </Box>

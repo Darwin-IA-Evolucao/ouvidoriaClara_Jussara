@@ -89,6 +89,10 @@ func (uc ReclamacaoUseCases) AprovarInquerito(id string, mensagem string) error 
 	if err := uc.repository.UpdateStatusTipo(id, "aprovado", "indicacao"); err != nil {
 		return err
 	}
+	err = uc.repository.UpdateMensagem(id, mensagem)
+	if err != nil {
+		return err
+	}
 	err = config.EnviarMensagem(reclamacao.Telefone, mensagem)
 	if err != nil {
 		return apperror.Internal(fmt.Sprintf("Erro ao enviar mensagem de aprovação de inquerito: %s", err.Error()))
@@ -142,6 +146,10 @@ func (uc ReclamacaoUseCases) AprovarRequerimento(id string, mensagem string) err
 	if err != nil {
 		return err
 	}
+	err = uc.repository.UpdateMensagem(id, mensagem)
+	if err != nil {
+		return err
+	}
 	err = config.EnviarMensagem(reclamacao.Telefone, mensagem)
 	if err != nil {
 		return apperror.Internal(fmt.Sprintf("Erro ao enviar mensagem de aprovação de requerimento: %s", err.Error()))
@@ -175,6 +183,10 @@ func (uc ReclamacaoUseCases) AprovarComoAmbos(id string, mensagem string) error 
 		return err
 	}
 	reclamacao, err := uc.repository.GetReclamacaoById(id)
+	if err != nil {
+		return err
+	}
+	err = uc.repository.UpdateMensagem(id, mensagem)
 	if err != nil {
 		return err
 	}
@@ -221,6 +233,10 @@ func (uc ReclamacaoUseCases) AprovarCausaAnimal(id string, mensagem string) erro
 	if err != nil {
 		return err
 	}
+	err = uc.repository.UpdateMensagem(id, mensagem)
+	if err != nil {
+		return err
+	}
 	err = config.EnviarMensagem(reclamacao.Telefone, mensagem)
 	if err != nil {
 		return apperror.Internal(fmt.Sprintf("Erro ao enviar mensagem de aprovação de causa animal: %s", err.Error()))
@@ -233,6 +249,10 @@ func (uc ReclamacaoUseCases) FinalizarReclamacao(id string, mensagem string) err
 	if err != nil {
 		return err
 	}
+	err = uc.repository.UpdateMensagem(id, mensagem)
+	if err != nil {
+		return err
+	}
 	err = config.EnviarMensagem(reclamacao.Telefone, mensagem)
 	if err != nil {
 		return apperror.Internal(fmt.Sprintf("Erro ao enviar mensagem de finalização de reclamacao: %s", err.Error()))
@@ -241,6 +261,10 @@ func (uc ReclamacaoUseCases) FinalizarReclamacao(id string, mensagem string) err
 }
 func (uc ReclamacaoUseCases) ReprovarInquerito(id string, mensagem string) error {
 	reclamacao, err := uc.repository.GetReclamacaoById(id)
+	if err != nil {
+		return err
+	}
+	err = uc.repository.UpdateMensagem(id, mensagem)
 	if err != nil {
 		return err
 	}

@@ -19,6 +19,7 @@ type Inquerito struct {
 
 type Reclamacao struct {
 	ID          int                `json:"id"`
+	Mensagem    *string            `json:"mensagem"`
 	Nome        string             `json:"nome"`
 	Telefone    string             `json:"telefone"`
 	Categoria   string             `json:"categoria"`
@@ -61,6 +62,7 @@ type OcorrenciaData struct {
 
 type Ocorrencia struct {
 	ID               int                `json:"id"`
+	Mensagem         *string            `json:"mensagem"`
 	Telefone         string             `json:"telefone"`
 	Categoria        string             `json:"categoria"`
 	SituacaoResumida string             `json:"situacaoResumida"`

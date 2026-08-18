@@ -40,6 +40,11 @@ func (repo ReclamacaoRepository) UpdateStatusTipo(id, status, tipo string) error
 	_, err := repo.connection.Exec(query, status, tipo, id)
 	return err
 }
+func (repo ReclamacaoRepository) UpdateMensagem(id, mensagem string) error {
+	const query = `UPDATE reclamacao SET mensagem = $1, data_atualizacao = now() WHERE idreclamacao = $2`
+	_, err := repo.connection.Exec(query, mensagem, id)
+	return err
+}
 
 func (repo ReclamacaoRepository) GetReclamacaoById(id string) (*models.Ocorrencia, error) {
 	const query = `SELECT * FROM reclamacao WHERE idreclamacao = $1`

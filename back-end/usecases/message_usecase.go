@@ -19,10 +19,11 @@ import (
 const debounceTimeout = 15 * time.Second // tempo de espera para agrupar mensagens
 
 type pendingMessage struct {
-	mensagens []string
-	timer     *time.Timer
-	contato   *models.Contato
-	instance  string
+	mensagens        []string
+	timer            *time.Timer
+	contato          *models.Contato
+	instance         string
+	somenteHistorico bool
 }
 
 type MensagemUseCase struct {
@@ -152,15 +153,20 @@ func (u *MensagemUseCase) AddMensagem(addMensagem *models.AddMensagem) error {
 	// if contato.Ativo == false {
 	// 	return fmt.Errorf("contato bloqueado")
 	// }
+	bloqueado := false
 	err = u.repo.GetClienteBloqueadoById(contato.Telefone)
 	if err != nil {
 		if err != sql.ErrNoRows {
 			return err
 		}
 	} else {
-		return fmt.Errorf("contato bloqueado")
+		bloqueado = true
 	}
-
+	// contato bloqueado: apenas registra o histórico, sem acionar a IA
+	if bloqueado {
+		u.addToPending(addMensagem.Telefone, addMensagem.Conteudo, contato, addMensagem.Instance, true)
+		return nil
+	}
 	countContatos, err := u.repo.GetCountContatos()
 	if err != nil {
 		return fmt.Errorf("erro ao contar contatos: %w", err)
@@ -200,7 +206,7 @@ func (u *MensagemUseCase) AddMensagem(addMensagem *models.AddMensagem) error {
 	}
 
 	// adicionar mensagem ao debounce
-	u.addToPending(addMensagem.Telefone, addMensagem.Conteudo, contato, addMensagem.Instance)
+	u.addToPending(addMensagem.Telefone, addMensagem.Conteudo, contato, addMensagem.Instance, false)
 
 	return nil
 }
@@ -230,20 +236,22 @@ func (u *MensagemUseCase) buscarCampanhaNaMensagem(conteudo string) *string {
 }
 
 // addToPending adiciona uma mensagem à fila de pendentes e gerencia o timer
-func (u *MensagemUseCase) addToPending(telefone, conteudo string, contato *models.Contato, instance string) {
+func (u *MensagemUseCase) addToPending(telefone, conteudo string, contato *models.Contato, instance string, somenteHistorico bool) {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 
 	if p, exists := u.pending[telefone]; exists {
 		// já existe mensagem pendente, adiciona e reseta o timer
 		p.mensagens = append(p.mensagens, conteudo)
+		p.somenteHistorico = somenteHistorico
 		p.timer.Reset(debounceTimeout)
 	} else {
 		// primeira mensagem, cria novo registro pendente
 		p := &pendingMessage{
-			mensagens: []string{conteudo},
-			contato:   contato,
-			instance:  instance,
+			mensagens:        []string{conteudo},
+			contato:          contato,
+			instance:         instance,
+			somenteHistorico: somenteHistorico,
 		}
 		p.timer = time.AfterFunc(debounceTimeout, func() {
 			u.processPending(telefone)
@@ -274,6 +282,13 @@ func (u *MensagemUseCase) processPending(telefone string) {
 
 	// concatena todas as mensagens
 	conteudoFinal := strings.Join(p.mensagens, " ")
+
+	if p.somenteHistorico {
+		if err := u.SalvarMensagemCliente(telefone, conteudoFinal); err != nil {
+			fmt.Println("Erro ao salvar historico cliente: ", err)
+		}
+		return
+	}
 
 	// criar a mensagem
 	mensagem := models.Mensagem{

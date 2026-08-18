@@ -81,9 +81,17 @@ func (uc ReclamacaoUseCases) GetAllReclamacoes() ([]models.Reclamacao, error) {
 	return uc.repository.GetAllReclamacoes()
 }
 
-func (uc ReclamacaoUseCases) AprovarInquerito(id string) error {
+func (uc ReclamacaoUseCases) AprovarInquerito(id string, mensagem string) error {
+	reclamacao, err := uc.repository.GetReclamacaoById(id)
+	if err != nil {
+		return err
+	}
 	if err := uc.repository.UpdateStatusTipo(id, "aprovado", "indicacao"); err != nil {
 		return err
+	}
+	err = config.EnviarMensagem(reclamacao.Telefone, mensagem)
+	if err != nil {
+		return apperror.Internal(fmt.Sprintf("Erro ao enviar mensagem de aprovação de inquerito: %s", err.Error()))
 	}
 	// data, err := uc.repository.GetReclamacaoById(id)
 	// if err != nil {
@@ -94,9 +102,14 @@ func (uc ReclamacaoUseCases) AprovarInquerito(id string) error {
 	// }
 	return nil
 }
-func (uc ReclamacaoUseCases) ColocarEmAnalise(id string) error {
+func (uc ReclamacaoUseCases) ColocarEmAnalise(id, data string) error {
 	if err := uc.repository.UpdateStatusTipo(id, "em análise", ""); err != nil {
 		return err
+	}
+	if data != "" {
+		if err := uc.repository.CreateAviso(id, data); err != nil {
+			return err
+		}
 	}
 	// data, err := uc.repository.GetReclamacaoById(id)
 	// if err != nil {
@@ -121,9 +134,17 @@ func (uc ReclamacaoUseCases) ColocarComoCriado(id string) error {
 	return nil
 }
 
-func (uc ReclamacaoUseCases) AprovarRequerimento(id string) error {
+func (uc ReclamacaoUseCases) AprovarRequerimento(id string, mensagem string) error {
 	if err := uc.repository.UpdateStatusTipo(id, "aprovado", "requerimento"); err != nil {
 		return err
+	}
+	reclamacao, err := uc.repository.GetReclamacaoById(id)
+	if err != nil {
+		return err
+	}
+	err = config.EnviarMensagem(reclamacao.Telefone, mensagem)
+	if err != nil {
+		return apperror.Internal(fmt.Sprintf("Erro ao enviar mensagem de aprovação de requerimento: %s", err.Error()))
 	}
 	// data, err := uc.repository.GetReclamacaoById(id)
 	// if err != nil {
@@ -149,9 +170,17 @@ func (uc ReclamacaoUseCases) AprovarRequerimento(id string) error {
 // 	return nil
 // }
 
-func (uc ReclamacaoUseCases) AprovarComoAmbos(id string) error {
+func (uc ReclamacaoUseCases) AprovarComoAmbos(id string, mensagem string) error {
 	if err := uc.repository.UpdateStatusTipo(id, "aprovado", "ambos"); err != nil {
 		return err
+	}
+	reclamacao, err := uc.repository.GetReclamacaoById(id)
+	if err != nil {
+		return err
+	}
+	err = config.EnviarMensagem(reclamacao.Telefone, mensagem)
+	if err != nil {
+		return apperror.Internal(fmt.Sprintf("Erro ao enviar mensagem de aprovação de requerimento: %s", err.Error()))
 	}
 	// data, err := uc.repository.GetReclamacaoById(id)
 	// if err != nil {
@@ -187,7 +216,38 @@ func (uc ReclamacaoUseCases) AprovarComoAmbos(id string) error {
 	return nil
 }
 
-func (uc ReclamacaoUseCases) ReprovarInquerito(id string) error {
+func (uc ReclamacaoUseCases) AprovarCausaAnimal(id string, mensagem string) error {
+	reclamacao, err := uc.repository.GetReclamacaoById(id)
+	if err != nil {
+		return err
+	}
+	err = config.EnviarMensagem(reclamacao.Telefone, mensagem)
+	if err != nil {
+		return apperror.Internal(fmt.Sprintf("Erro ao enviar mensagem de aprovação de causa animal: %s", err.Error()))
+	}
+	return uc.repository.UpdateStatusTipo(id, "aprovado", "causa animal")
+}
+
+func (uc ReclamacaoUseCases) FinalizarReclamacao(id string, mensagem string) error {
+	reclamacao, err := uc.repository.GetReclamacaoById(id)
+	if err != nil {
+		return err
+	}
+	err = config.EnviarMensagem(reclamacao.Telefone, mensagem)
+	if err != nil {
+		return apperror.Internal(fmt.Sprintf("Erro ao enviar mensagem de finalização de reclamacao: %s", err.Error()))
+	}
+	return uc.repository.UpdateStatusTipo(id, "finalizado", "")
+}
+func (uc ReclamacaoUseCases) ReprovarInquerito(id string, mensagem string) error {
+	reclamacao, err := uc.repository.GetReclamacaoById(id)
+	if err != nil {
+		return err
+	}
+	err = config.EnviarMensagem(reclamacao.Telefone, mensagem)
+	if err != nil {
+		return apperror.Internal(fmt.Sprintf("Erro ao enviar mensagem de reprovação de inquerito: %s", err.Error()))
+	}
 	return uc.repository.UpdateStatus(id, "reprovado")
 }
 

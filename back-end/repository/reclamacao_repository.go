@@ -201,3 +201,10 @@ func (repo ReclamacaoRepository) DeleteOcorrencia(id string) error {
 	}
 	return nil
 }
+
+// --------------------------------------------------------------------------------------- Aviso
+func (repo ReclamacaoRepository) CreateAviso(idReclamacao string, data string) error {
+	const query = `INSERT INTO aviso (id_reclamacao, data) VALUES ($1, $2)`
+	_, err := repo.connection.Exec(query, idReclamacao, data)
+	return err
+}

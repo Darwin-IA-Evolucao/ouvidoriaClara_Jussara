@@ -43,7 +43,7 @@ type OcorrenciaRequest struct {
 	Categoria             string `json:"categoria"`
 	EhManual              bool   `json:"ehManual"`
 	Observacao            string `json:"observacao"`
-	Regiao string `json:"regiao"`
+	Regiao                string `json:"regiao"`
 	DetalhesReclamacao
 }
 
@@ -70,7 +70,7 @@ type Ocorrencia struct {
 	EhManual         bool               `json:"ehManual"`
 	MensagemFinal    string             `json:"mensagemFinal"`
 	Observacao       string             `json:"observacao"`
-	TelefoneAcessor string             `json:"telefoneAcessor"`
+	TelefoneAcessor  string             `json:"telefoneAcessor"`
 	DataCriacao      string             `json:"dataCriacao"`
 	DataAtualizacao  string             `json:"dataAtualizacao"`
 }
@@ -129,4 +129,11 @@ type DetalhesReclamacao struct {
 	ProtocoloDenuncia string `json:"protocoloDenuncia,omitempty"`
 
 	Regiao string `json:"regiao,omitempty"`
+}
+
+type Aviso struct {
+	Id           int    `json:"id" db:"id"`
+	IdReclamacao int    `json:"idReclamacao" db:"id_reclamacao"`
+	Data         string `json:"data" db:"data"`
+	Avisado      bool   `json:"avisado" db:"avisado"`
 }

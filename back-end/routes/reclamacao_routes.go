@@ -13,6 +13,8 @@ func SetupReclamacaoRoutes(router *gin.Engine, reclamacaoController controllers.
 	router.POST("/analise/:id", reclamacaoController.ColocarEmAnalise)
 	router.POST("/criado/:id", reclamacaoController.ColocarComoCriado)
 	router.POST("/aprovar/requerimento/:id", reclamacaoController.AprovarRequerimento)
+	router.POST("/aprovar/causa-animal/:id", reclamacaoController.AprovarCausaAnimal)
+	router.POST("/finalizar/:id", reclamacaoController.FinalizarReclamacao)
 	// router.POST("/aprovar/oficio/:id", reclamacaoController.AprovarOficio)
 	// router.POST("/indicreq/:id", reclamacaoController.AprovarComoAmbos)
 	router.POST("/reprovar/:id", reclamacaoController.ReprovarInquerito)

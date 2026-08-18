@@ -136,6 +136,18 @@ CREATE TABLE historico_chat (
 CREATE INDEX idx_historico_chat_telefone_criado
     ON historico_chat (telefone, criado_em);
 
+CREATE TABLE aviso (
+    id SERIAL PRIMARY KEY,
+    id_reclamacao INTEGER NOT NULL,
+    data TIMESTAMP NOT NULL,
+    avisado BOOLEAN DEFAULT false NOT NULL,
+    CONSTRAINT fk_aviso FOREIGN KEY (id_reclamacao) REFERENCES reclamacao (idreclamacao) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_aviso_id_reclamacao ON aviso (id_reclamacao);
+CREATE INDEX idx_aviso_data ON aviso (data);
+CREATE INDEX idx_aviso_avisado ON aviso (avisado);
+
 CREATE INDEX idx_reclamacao_telefone ON reclamacao (telefone);
 CREATE INDEX idx_reclamacao_status ON reclamacao (status);
 CREATE INDEX idx_reclamacao_tipo ON reclamacao (tipo);

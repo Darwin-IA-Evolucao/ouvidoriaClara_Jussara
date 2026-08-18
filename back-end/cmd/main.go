@@ -93,6 +93,7 @@ func main() {
 	go config.RelatorioMensal(dbConnection)
 	go config.CheckInativos10Min(dbConnection)
 	go config.CheckInativos1Day(dbConnection)
+	go config.EnviarLembreteNoHorario(dbConnection)
 
 	enderecoUC := usecases.NewEnderecoUseCases(repository.NewEnderecoRepository(dbConnection))
 	clienteUC := usecases.NewClienteUseCase(repository.NewClienteRepo(dbConnection))

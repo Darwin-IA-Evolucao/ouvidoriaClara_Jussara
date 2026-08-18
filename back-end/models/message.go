@@ -55,3 +55,47 @@ type AvisoPlanoAtigido struct {
 	TelefoneLeo     string    `json:"telefoneLeo" db:"telefone_leo"`
 	Data            time.Time `json:"data" db:"data"`
 }
+
+type HistoricoChat struct {
+	ID        int       `json:"id" db:"id"`
+	Telefone  string    `json:"telefone" db:"telefone"`
+	Remetente string    `json:"remetente" db:"remetente"`
+	Conteudo  string    `json:"conteudo" db:"conteudo"`
+	Tipo      string    `json:"tipo" db:"tipo"`
+	LinkMidia string    `json:"linkMidia" db:"link_midia"`
+	CriadoEm  time.Time `json:"criadoEm" db:"criado_em"`
+}
+
+type AddMensagemIA struct {
+	Telefone string `json:"telefone"`
+	Conteudo string `json:"conteudo"`
+}
+
+type AddMensagemAgente struct {
+	Telefone string `json:"telefone"`
+	Conteudo string `json:"conteudo"`
+}
+
+type MensagemHistorico struct {
+	ID        int       `json:"id" db:"id"`
+	Remetente string    `json:"remetente" db:"remetente"`
+	Conteudo  string    `json:"conteudo" db:"conteudo"`
+	Tipo      string    `json:"tipo" db:"tipo"`
+	LinkMidia string    `json:"linkMidia" db:"link_midia"`
+	CriadoEm  time.Time `json:"criadoEm" db:"criado_em"`
+}
+
+type HistoricoChatResponse struct {
+	Telefone  string              `json:"telefone"`
+	Nome      string              `json:"nome"`
+	Mensagens []MensagemHistorico `json:"mensagens"`
+}
+
+type ConversaResumo struct {
+	Telefone        string    `json:"telefone" db:"telefone"`
+	Nome            string    `json:"nome" db:"nome"`
+	UltimaMensagem  string    `json:"ultimaMensagem" db:"ultima_mensagem"`
+	RemetenteUltima string    `json:"remetenteUltima" db:"remetente_ultima"`
+	TipoUltima      string    `json:"tipoUltima" db:"tipo_ultima"`
+	CriadoEm        time.Time `json:"criadoEm" db:"criado_em"`
+}

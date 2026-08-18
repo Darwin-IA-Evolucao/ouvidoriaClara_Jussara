@@ -10,4 +10,9 @@ func SetMessageRoutes(router *gin.Engine, messageController *controllers.Mensage
 	router.POST("/addMessage", messageController.AddMensagem)
 	router.GET("/getMessages/:telefone", messageController.GetMessagesByTelefone)
 	router.DELETE("/clearMessages/:telefone", messageController.ClearMessagesByTelefone)
+	router.POST("/chat/mensagem-ia", messageController.AddMensagemIA)
+	router.POST("/chat/midia", messageController.UploadMidiaChat)
+	router.POST("/chat/mensagem-agente", messageController.AddMensagemAgente)
+	router.GET("/chat", messageController.ListConversas)
+	router.GET("/chat/:telefone", messageController.GetHistoricoChat)
 }

@@ -287,10 +287,125 @@ func (u *MensagemUseCase) processPending(telefone string) {
 		fmt.Println("Erro ao criar mensagem: ", err)
 		return
 	}
+	if err := u.SalvarMensagemCliente(telefone, conteudoFinal); err != nil {
+		fmt.Println("Erro ao salvar historico cliente: ", err)
+	}
 	err = u.Responder(telefone)
 	if err != nil {
 		fmt.Println("Erro ao responder: ", err)
 		return
 	}
 
+}
+
+var localizacaoBrasil = func() *time.Location {
+	loc, err := time.LoadLocation("America/Sao_Paulo")
+	if err != nil {
+		return time.FixedZone("-03", -3*60*60)
+	}
+	return loc
+}()
+
+func comHorarioLocal(t time.Time) time.Time {
+	return time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), localizacaoBrasil)
+}
+
+func (u *MensagemUseCase) SalvarMensagemCliente(telefone, conteudo string) error {
+	return u.repo.CreateHistoricoChat(&models.HistoricoChat{
+		Telefone:  telefone,
+		Remetente: "cliente",
+		Conteudo:  strings.TrimSpace(conteudo),
+		Tipo:      "texto",
+	})
+}
+
+func (u *MensagemUseCase) SalvarMensagemIA(telefone, conteudo string) error {
+	return u.repo.CreateHistoricoChat(&models.HistoricoChat{
+		Telefone:  telefone,
+		Remetente: "ia",
+		Conteudo:  strings.TrimSpace(conteudo),
+		Tipo:      "texto",
+	})
+}
+
+// EnviarMensagemAgente desliga a IA, envia a mensagem do atendente humano e registra no histórico
+func (u *MensagemUseCase) EnviarMensagemAgente(telefone, conteudo string) (*models.HistoricoChat, error) {
+	conteudo = strings.TrimSpace(conteudo)
+	if conteudo == "" {
+		return nil, fmt.Errorf("conteudo vazio")
+	}
+
+	if err := u.repo.SetClienteBloqueado(telefone); err != nil {
+		return nil, fmt.Errorf("erro ao desligar a IA: %w", err)
+	}
+
+	if err := config.EnviarMensagem(u.padronizaTelefone(telefone), conteudo); err != nil {
+		return nil, fmt.Errorf("erro ao enviar mensagem: %w", err)
+	}
+
+	historico := &models.HistoricoChat{
+		Telefone:  telefone,
+		Remetente: "agente",
+		Conteudo:  conteudo,
+		Tipo:      "texto",
+	}
+	if err := u.repo.CreateHistoricoChat(historico); err != nil {
+		return nil, err
+	}
+	historico.CriadoEm = comHorarioLocal(historico.CriadoEm)
+	return historico, nil
+}
+
+func (u *MensagemUseCase) SalvarMidiaChat(telefone, remetente, tipo, linkMidia, conteudo string) (*models.HistoricoChat, error) {
+	historico := &models.HistoricoChat{
+		Telefone:  telefone,
+		Remetente: remetente,
+		Conteudo:  strings.TrimSpace(conteudo),
+		Tipo:      tipo,
+		LinkMidia: linkMidia,
+	}
+	if err := u.repo.CreateHistoricoChat(historico); err != nil {
+		return nil, err
+	}
+	historico.CriadoEm = comHorarioLocal(historico.CriadoEm)
+	return historico, nil
+}
+
+func (u *MensagemUseCase) GetHistoricoChat(telefone string) (*models.HistoricoChatResponse, error) {
+	historico, err := u.repo.GetHistoricoByTelefone(telefone)
+	if err != nil {
+		return nil, err
+	}
+	nome := ""
+	contato, err := u.repo.GetContatoByTelefone(telefone)
+	if err == nil && contato != nil {
+		nome = *contato.Nome
+	}
+	mensagens := make([]models.MensagemHistorico, 0, len(historico))
+	for _, h := range historico {
+		mensagens = append(mensagens, models.MensagemHistorico{
+			ID:        h.ID,
+			Remetente: h.Remetente,
+			Conteudo:  h.Conteudo,
+			Tipo:      h.Tipo,
+			LinkMidia: h.LinkMidia,
+			CriadoEm:  comHorarioLocal(h.CriadoEm),
+		})
+	}
+	return &models.HistoricoChatResponse{
+		Telefone:  telefone,
+		Nome:      nome,
+		Mensagens: mensagens,
+	}, nil
+}
+
+func (u *MensagemUseCase) ListConversas() ([]models.ConversaResumo, error) {
+	conversas, err := u.repo.ListConversas()
+	if err != nil {
+		return nil, err
+	}
+	for i := range conversas {
+		conversas[i].CriadoEm = comHorarioLocal(conversas[i].CriadoEm)
+	}
+	return conversas, nil
 }

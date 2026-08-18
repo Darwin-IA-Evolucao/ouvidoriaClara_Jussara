@@ -114,6 +114,15 @@ CREATE TABLE usuarios (
     role TEXT DEFAULT 'user' NOT NULL
 );
 
+CREATE TABLE aviso_plano_atingido(
+    avisado BOOLEAN DEFAULT false NOT NULL,
+    telefone_ricardo TEXT NOT NULL,
+    telefone_leo TEXT NOT NULL,
+    data TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+INSERT INTO aviso_plano_atingido (avisado, telefone_ricardo, telefone_leo) VALUES (false, '5515981709429', '5515981514907');
+
 SELECT EXISTS (SELECT 1 FROM campanhas WHERE palavra_chave = '$1') AS existe;
 
 CREATE INDEX idx_reclamacao_telefone ON reclamacao (telefone);

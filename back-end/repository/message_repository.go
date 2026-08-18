@@ -88,3 +88,42 @@ func (r *MensagemRepo) SetAvisado() error {
 func (r *MensagemRepo) GetAllCampanhas() ([]models.Campanha, error) {
 	return NewCampanhaRepository(r.db).GetAllCampanhas()
 }
+
+// -------- HISTORICO CHAT --------
+func (r *MensagemRepo) CreateHistoricoChat(h *models.HistoricoChat) error {
+	const query = `INSERT INTO historico_chat (telefone, remetente, conteudo, tipo, link_midia) VALUES ($1, $2, $3, $4, $5) RETURNING id, criado_em`
+	return r.db.QueryRow(query, h.Telefone, h.Remetente, h.Conteudo, h.Tipo, h.LinkMidia).Scan(&h.ID, &h.CriadoEm)
+}
+
+func (r *MensagemRepo) GetHistoricoByTelefone(telefone string) ([]models.HistoricoChat, error) {
+	const query = `SELECT id, telefone, remetente, conteudo, tipo, link_midia, criado_em FROM historico_chat WHERE telefone = $1 ORDER BY criado_em ASC`
+	var historico []models.HistoricoChat
+	err := r.db.Select(&historico, query, telefone)
+	return historico, err
+}
+
+func (r *MensagemRepo) SetClienteBloqueado(telefone string) error {
+	const query = `INSERT INTO clientesbloqueados (idcliente) VALUES ($1) ON CONFLICT DO NOTHING`
+	_, err := r.db.Exec(query, telefone)
+	return err
+}
+
+func (r *MensagemRepo) ListConversas() ([]models.ConversaResumo, error) {
+	const query = `
+		SELECT * FROM (
+			SELECT DISTINCT ON (h.telefone)
+				h.telefone,
+				COALESCE(c.nome, '') AS nome,
+				h.conteudo AS ultima_mensagem,
+				h.remetente AS remetente_ultima,
+				h.tipo AS tipo_ultima,
+				h.criado_em
+			FROM historico_chat h
+			LEFT JOIN contatos c ON c.telefone = h.telefone
+			ORDER BY h.telefone, h.criado_em DESC
+		) AS conversas
+		ORDER BY criado_em DESC`
+	var conversas []models.ConversaResumo
+	err := r.db.Select(&conversas, query)
+	return conversas, err
+}

@@ -3,7 +3,13 @@ package controllers
 import (
 	"back-end/models"
 	"back-end/usecases"
+	"fmt"
 	"net/http"
+	"net/url"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -48,4 +54,101 @@ func (ctrl *MensagemController) ClearMessagesByTelefone(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Mensagens apagadas com sucesso"})
+}
+
+func (ctrl *MensagemController) AddMensagemIA(c *gin.Context) {
+	var body models.AddMensagemIA
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Erro ao receber request em AddMensagemIA: " + err.Error()})
+		return
+	}
+	err := ctrl.usecase.SalvarMensagemIA(body.Telefone, body.Conteudo)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao salvar mensagem IA: " + err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Mensagem IA salva com sucesso"})
+}
+
+func (ctrl *MensagemController) AddMensagemAgente(c *gin.Context) {
+	var body models.AddMensagemAgente
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Erro ao receber request em AddMensagemAgente: " + err.Error()})
+		return
+	}
+	historico, err := ctrl.usecase.EnviarMensagemAgente(body.Telefone, body.Conteudo)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": "Erro ao enviar mensagem do agente: " + err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, historico)
+}
+
+func (ctrl *MensagemController) GetHistoricoChat(c *gin.Context) {
+	telefone := c.Param("telefone")
+	historico, err := ctrl.usecase.GetHistoricoChat(telefone)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao buscar historico: " + err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, historico)
+}
+
+func (ctrl *MensagemController) UploadMidiaChat(c *gin.Context) {
+	telefone := c.PostForm("telefone")
+	if telefone == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Telefone não informado"})
+		return
+	}
+
+	remetente := c.PostForm("remetente")
+	if remetente == "" {
+		remetente = "cliente"
+	}
+
+	file, err := c.FormFile("midia")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Erro ao receber o arquivo: " + err.Error()})
+		return
+	}
+
+	tipo := tipoMidiaPorExtensao(file.Filename)
+	if tipo == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Tipo de arquivo não suportado"})
+		return
+	}
+
+	uniqueName := fmt.Sprintf("%v_%s", time.Now().Unix(), file.Filename)
+	filePath := filepath.Join("/var/www/html/clientes", os.Getenv("UPLOAD_DIR"), uniqueName)
+	if err := c.SaveUploadedFile(file, filePath); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao salvar o arquivo: " + err.Error()})
+		return
+	}
+
+	linkMidia := fmt.Sprintf("%s/%s", os.Getenv("BASE_URL_UPLOAD"), url.PathEscape(uniqueName))
+	historico, err := ctrl.usecase.SalvarMidiaChat(telefone, remetente, tipo, linkMidia, c.PostForm("conteudo"))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao salvar midia no historico: " + err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, historico)
+}
+
+func tipoMidiaPorExtensao(nomeArquivo string) string {
+	switch strings.ToLower(filepath.Ext(nomeArquivo)) {
+	case ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp":
+		return "imagem"
+	case ".ogg", ".oga", ".opus", ".mp3", ".m4a", ".wav", ".aac", ".amr":
+		return "audio"
+	}
+	return ""
+}
+
+func (ctrl *MensagemController) ListConversas(c *gin.Context) {
+	conversas, err := ctrl.usecase.ListConversas()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao listar conversas: " + err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, conversas)
 }

@@ -125,6 +125,17 @@ INSERT INTO aviso_plano_atingido (avisado, telefone_ricardo, telefone_leo) VALUE
 
 SELECT EXISTS (SELECT 1 FROM campanhas WHERE palavra_chave = '$1') AS existe;
 
+CREATE TABLE historico_chat (
+    id SERIAL PRIMARY KEY,
+    telefone VARCHAR(64) NOT NULL,
+    remetente VARCHAR(20) NOT NULL CHECK (remetente IN ('cliente', 'ia')),
+    conteudo TEXT NOT NULL,
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE INDEX idx_historico_chat_telefone_criado
+    ON historico_chat (telefone, criado_em);
+
 CREATE INDEX idx_reclamacao_telefone ON reclamacao (telefone);
 CREATE INDEX idx_reclamacao_status ON reclamacao (status);
 CREATE INDEX idx_reclamacao_tipo ON reclamacao (tipo);

@@ -2,10 +2,10 @@ import * as React from 'react'
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import {
   Box, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, Chip, Alert, useMediaQuery, useTheme, Select, MenuItem, Autocomplete,
+  TextField, Chip, Alert, useMediaQuery, useTheme, Select, MenuItem, Autocomplete, Collapse,
 } from '@mui/material'
 import {
-  Snowflake, Users, FileText,
+  Snowflake, Users, FileText, ChevronDown,
 } from 'lucide-react'
 import GlassPanel from '../components/GlassPanel'
 import PageHeader from '../components/PageHeader'
@@ -67,6 +67,7 @@ const ContatosPage: React.FC = () => {
   const [ocFiltroTipo, setOcFiltroTipo] = useState('')
   const [ocFiltroCategoria, setOcFiltroCategoria] = useState('')
   const [categorias, setCategorias] = useState<string[]>([])
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false)
   const [ocFiltroInicio, setOcFiltroInicio] = useState('')
   const [ocFiltroFim, setOcFiltroFim] = useState('')
   const [lightboxImg, setLightboxImg] = useState<string | null>(null)
@@ -126,6 +127,11 @@ const ContatosPage: React.FC = () => {
         if (end && d > end) return false
       }
       return true
+    })
+    .sort((a, b) => {
+      const da = a.dataCriacao ? new Date(a.dataCriacao).getTime() : 0
+      const db = b.dataCriacao ? new Date(b.dataCriacao).getTime() : 0
+      return db - da
     })
   }, [contatos, search, filters, startDate, endDate])
 
@@ -306,97 +312,170 @@ const ContatosPage: React.FC = () => {
     <Box className="page-root">
       <PageHeader title="Contatos" />
 
-      {/* filter: date range */}
+      {/* ── filtros (container único colapsável) ── */}
       <Box
         sx={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          justifyContent: 'center',
-          gap: 1.5,
           mb: 2,
-          alignItems: 'center',
-          p: 2,
           borderRadius: 2,
           bgcolor: 'hsl(var(--surface-2))',
           border: '1px solid hsl(var(--border))',
+          overflow: 'hidden',
         }}
       >
-        <TextField
-          type="date"
-          size="small"
-          label="De"
-          InputLabelProps={{ shrink: true }}
-          inputProps={{ style: { textAlign: isMobile ? 'center' : 'left' } }}
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-          sx={{ ...inputSx, minWidth: 150 }}
-        />
-        <TextField
-          type="date"
-          size="small"
-          label="Até"
-          InputLabelProps={{ shrink: true }}
-          inputProps={{ style: { textAlign: isMobile ? 'center' : 'left' } }}
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-          sx={{ ...inputSx, minWidth: 150 }}
-        />
-        <Button
-          size="small"
-          onClick={() => { setStartDate(''); setEndDate('') }}
-          sx={{ color: 'hsl(var(--text-secondary))', textTransform: 'none', borderRadius: 2, width: isMobile ? '100%' : undefined }}
+        {/* Cabeçalho clicável */}
+        <Box
+          onClick={() => setFiltrosAbertos((v) => !v)}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 1,
+            p: 1.5,
+            cursor: 'pointer',
+            userSelect: 'none',
+            '&:hover': { bgcolor: 'hsl(var(--surface))' },
+          }}
         >
-          Limpar Filtros
-        </Button>
-      </Box>
+          <Typography sx={{ fontSize: 14, fontWeight: 600, color: 'hsl(var(--text-primary))' }}>
+            Filtros
+          </Typography>
+          <ChevronDown
+            size={20}
+            color="hsl(var(--text-secondary))"
+            style={{
+              transition: 'transform 0.2s ease',
+              transform: filtrosAbertos ? 'rotate(180deg)' : 'rotate(0deg)',
+            }}
+          />
+        </Box>
 
-      {/* filter: search by name or phone */}
-      <Box
-        sx={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          justifyContent: 'center',
-          gap: 1.5,
-          mb: 2,
-          alignItems: 'center',
-          p: 2,
-          borderRadius: 2,
-          bgcolor: 'hsl(var(--surface-2))',
-          border: '1px solid hsl(var(--border))',
-        }}
-      >
-        <TextField
-          label="Buscar nome ou telefone"
-          size="small"
-          inputProps={{ style: { textAlign: isMobile ? 'center' : 'left' } }}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          sx={{ ...inputSx, minWidth: 220 }}
-        />
-        <Button
-          size="small"
-          onClick={() => setSearch('')}
-          sx={{ color: 'hsl(var(--text-secondary))', textTransform: 'none', borderRadius: 2, width: isMobile ? '100%' : undefined }}
-        >
-          Limpar Filtros
-        </Button>
-      </Box>
+        {/* Conteúdo dos filtros */}
+        <Collapse in={filtrosAbertos} timeout="auto" unmountOnExit>
+          <Box sx={{ borderTop: '1px solid hsl(var(--border))', p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {/* filter: date range */}
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', md: '1fr auto 1fr' },
+                gap: 1.5,
+                alignItems: 'center',
+              }}
+            >
+              <Box sx={{ display: { xs: 'none', md: 'block' } }} />
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  justifyContent: 'center',
+                  gap: 1.5,
+                  alignItems: 'center',
+                }}
+              >
+                <TextField
+                  type="date"
+                  size="small"
+                  label="De"
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ style: { textAlign: isMobile ? 'center' : 'left' } }}
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  sx={{ ...inputSx, minWidth: 150 }}
+                />
+                <TextField
+                  type="date"
+                  size="small"
+                  label="Até"
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ style: { textAlign: isMobile ? 'center' : 'left' } }}
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  sx={{ ...inputSx, minWidth: 150 }}
+                />
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: { xs: 'center', md: 'flex-start' }, alignItems: 'center' }}>
+                <Button
+                  size="small"
+                  onClick={() => { setStartDate(''); setEndDate('') }}
+                  sx={{ color: 'hsl(var(--text-secondary))', textTransform: 'none', borderRadius: 2, width: isMobile ? '100%' : undefined }}
+                >
+                  Limpar Filtros
+                </Button>
+              </Box>
+            </Box>
 
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, minmax(180px, 1fr))' }, gap: 2, mb: 3, p: 2.5, borderRadius: 3, bgcolor: 'hsl(var(--surface-2))', border: '1px solid hsl(var(--border))' }}>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary))', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600 }}>Status Darwin</Typography>
-          <Button fullWidth variant="outlined" onClick={() => setFilters((p) => ({ ...p, darwin: p.darwin === true ? null : true }))} sx={{ justifyContent: 'flex-start', textTransform: 'none', borderRadius: 2, py: 0.75, fontSize: 13, fontWeight: 600, ...(filters.darwin === true ? { background: 'hsl(var(--primary) / 0.15)', borderColor: 'hsl(var(--primary) / 0.5)', color: 'hsl(var(--accent))', boxShadow: 'none' } : { borderColor: 'hsl(var(--border))', color: 'hsl(var(--text-secondary))' }) }}>Darwin Ativo</Button>
-          <Button fullWidth variant="outlined" onClick={() => setFilters((p) => ({ ...p, darwin: p.darwin === false ? null : false }))} sx={{ justifyContent: 'flex-start', textTransform: 'none', borderRadius: 2, py: 0.75, fontSize: 13, fontWeight: 600, ...(filters.darwin === false ? { background: 'hsl(var(--primary) / 0.15)', borderColor: 'hsl(var(--primary) / 0.5)', color: 'hsl(var(--accent))', boxShadow: 'none' } : { borderColor: 'hsl(var(--border))', color: 'hsl(var(--text-secondary))' }) }}>Darwin Inativo</Button>
-        </Box>
-        {/* Status Contato filter hidden */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary))', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600 }}>Perfil Contato</Typography>
-          <Button fullWidth variant="outlined" onClick={() => setFilters((p) => ({ ...p, gelo: p.gelo === true ? null : true }))} sx={{ justifyContent: 'flex-start', textTransform: 'none', borderRadius: 2, py: 0.75, fontSize: 13, fontWeight: 600, ...(filters.gelo === true ? { background: 'hsl(var(--primary) / 0.15)', borderColor: 'hsl(var(--primary) / 0.5)', color: 'hsl(var(--accent))', boxShadow: 'none' } : { borderColor: 'hsl(var(--border))', color: 'hsl(var(--text-secondary))' }) }}>Contatos Gelos</Button>
-          <Button fullWidth variant="outlined" onClick={() => setFilters((p) => ({ ...p, reclamacao: p.reclamacao === true ? null : true }))} sx={{ justifyContent: 'flex-start', textTransform: 'none', borderRadius: 2, py: 0.75, fontSize: 13, fontWeight: 600, ...(filters.reclamacao === true ? { background: 'hsl(var(--primary) / 0.15)', borderColor: 'hsl(var(--primary) / 0.5)', color: 'hsl(var(--accent))', boxShadow: 'none' } : { borderColor: 'hsl(var(--border))', color: 'hsl(var(--text-secondary))' }) }}>Contatos com Solicitações</Button>
-        </Box>
-        <Box sx={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'center', mt: 1 }}>
-          <Button onClick={resetFilters} sx={{ textTransform: 'none', color: 'hsl(var(--text-secondary))', borderRadius: 2 }}>Limpar Filtros</Button>
-        </Box>
+            {/* filter: search by name or phone */}
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', md: '1fr auto 1fr' },
+                gap: 1.5,
+                alignItems: 'center',
+              }}
+            >
+              <Box sx={{ display: { xs: 'none', md: 'block' } }} />
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  justifyContent: 'center',
+                  gap: 1.5,
+                  alignItems: 'center',
+                }}
+              >
+                <TextField
+                  label="Buscar nome ou telefone"
+                  size="small"
+                  inputProps={{ style: { textAlign: isMobile ? 'center' : 'left' } }}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  sx={{ ...inputSx, minWidth: 220 }}
+                />
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: { xs: 'center', md: 'flex-start' }, alignItems: 'center' }}>
+                <Button
+                  size="small"
+                  onClick={() => setSearch('')}
+                  sx={{ color: 'hsl(var(--text-secondary))', textTransform: 'none', borderRadius: 2, width: isMobile ? '100%' : undefined }}
+                >
+                  Limpar Filtros
+                </Button>
+              </Box>
+            </Box>
+
+            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+              <Box sx={{ position: 'relative', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 2 }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, width: { xs: '100%', sm: 240 } }}>
+                  <Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary))', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600, textAlign: 'center' }}>Status Darwin</Typography>
+                  <Button fullWidth variant="outlined" onClick={() => setFilters((p) => ({ ...p, darwin: p.darwin === true ? null : true }))} sx={{ justifyContent: 'flex-start', textTransform: 'none', borderRadius: 2, py: 0.75, fontSize: 13, fontWeight: 600, ...(filters.darwin === true ? { background: 'hsl(var(--primary) / 0.15)', borderColor: 'hsl(var(--primary) / 0.5)', color: 'hsl(var(--accent))', boxShadow: 'none' } : { borderColor: 'hsl(var(--border))', color: 'hsl(var(--text-secondary))' }) }}>Darwin Ativo</Button>
+                  <Button fullWidth variant="outlined" onClick={() => setFilters((p) => ({ ...p, darwin: p.darwin === false ? null : false }))} sx={{ justifyContent: 'flex-start', textTransform: 'none', borderRadius: 2, py: 0.75, fontSize: 13, fontWeight: 600, ...(filters.darwin === false ? { background: 'hsl(var(--primary) / 0.15)', borderColor: 'hsl(var(--primary) / 0.5)', color: 'hsl(var(--accent))', boxShadow: 'none' } : { borderColor: 'hsl(var(--border))', color: 'hsl(var(--text-secondary))' }) }}>Darwin Inativo</Button>
+                </Box>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, width: { xs: '100%', sm: 240 } }}>
+                  <Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary))', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600, textAlign: 'center' }}>Perfil Contato</Typography>
+                  <Button fullWidth variant="outlined" onClick={() => setFilters((p) => ({ ...p, gelo: p.gelo === true ? null : true }))} sx={{ justifyContent: 'flex-start', textTransform: 'none', borderRadius: 2, py: 0.75, fontSize: 13, fontWeight: 600, ...(filters.gelo === true ? { background: 'hsl(var(--primary) / 0.15)', borderColor: 'hsl(var(--primary) / 0.5)', color: 'hsl(var(--accent))', boxShadow: 'none' } : { borderColor: 'hsl(var(--border))', color: 'hsl(var(--text-secondary))' }) }}>Contatos Gelos</Button>
+                  <Button fullWidth variant="outlined" onClick={() => setFilters((p) => ({ ...p, reclamacao: p.reclamacao === true ? null : true }))} sx={{ justifyContent: 'flex-start', textTransform: 'none', borderRadius: 2, py: 0.75, fontSize: 13, fontWeight: 600, ...(filters.reclamacao === true ? { background: 'hsl(var(--primary) / 0.15)', borderColor: 'hsl(var(--primary) / 0.5)', color: 'hsl(var(--accent))', boxShadow: 'none' } : { borderColor: 'hsl(var(--border))', color: 'hsl(var(--text-secondary))' }) }}>Contatos com Solicitações</Button>
+                </Box>
+                <Button
+                  onClick={resetFilters}
+                  sx={{
+                    textTransform: 'none',
+                    color: 'hsl(var(--text-secondary))',
+                    borderRadius: 2,
+                    whiteSpace: 'nowrap',
+                    width: { xs: '100%', md: 'auto' },
+                    position: { md: 'absolute' },
+                    left: { md: '100%' },
+                    top: { md: '50%' },
+                    transform: { md: 'translateY(-50%)' },
+                    mt: { md: 1.5 },
+                    ml: { md: 2 },
+                  }}
+                >
+                  Limpar Filtros
+                </Button>
+              </Box>
+            </Box>
+          </Box>
+        </Collapse>
       </Box>
 
       {error && (

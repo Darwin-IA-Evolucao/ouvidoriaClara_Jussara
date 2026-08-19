@@ -1,16 +1,17 @@
 import * as React from 'react'
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react'
 import {
-  Autocomplete, Box, CircularProgress, IconButton, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Typography, MenuItem, useMediaQuery, useTheme, FormControl, InputLabel, Select,
+  Autocomplete, Box, CircularProgress, IconButton, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Typography, MenuItem, useMediaQuery, useTheme, FormControl, InputLabel, Select, Collapse,
 } from '@mui/material'
 import {
-  CheckCircle, ChevronLeft, ChevronRight, Eye, FileText, Plus, Trash2, X, XCircle, Pencil, Tag, Calendar, Video, Inbox, Download,
+  CheckCircle, ChevronDown, ChevronLeft, ChevronRight, FileText, Plus, Trash2, X, Pencil, Tag, Calendar, Video, Inbox, Download,
+  User, ClipboardList, ListChecks, MessageCircle, FileCheck, StickyNote,
 } from 'lucide-react'
 import PageHeader from '../components/PageHeader'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { inputSx, dialogSx } from '../utils/inputSx'
 import {
-  getAllOcorrencias, createOcorrencia, deleteOcorrencia, aprovarInquerito, aprovarRequerimento, reprovarInquerito, updateOcorrencia, colocarEmAnalise, colocarComoCriado,
+  getAllOcorrencias, createOcorrencia, deleteOcorrencia, aprovarInquerito, aprovarRequerimento, aprovarCausaAnimal, reprovarInquerito, finalizarReclamacao, updateOcorrencia, colocarEmAnalise, colocarComoCriado,
 } from '../services/reclamacaoService'
 import { getAllClientes, clienteExiste } from '../services/clienteService'
 import { getAllEnderecos } from '../services/enderecoService'
@@ -32,13 +33,66 @@ interface ColumnDef {
 }
 
 const COLUMNS: ColumnDef[] = [
-  { id: 'pendentes', label: 'Solicitações Pendentes', color: '#A1A9B8', headerBg: 'hsl(var(--text-secondary) / 0.12)' },
+  { id: 'sem-tratativa', label: 'Sem Tratativa', color: '#A1A9B8', headerBg: 'hsl(var(--text-secondary) / 0.12)' },
   { id: 'em-analise', label: 'Em Análise', color: '#62A1D8', headerBg: 'hsl(var(--info) / 0.12)' },
-  { id: 'aprovar-indicacao', label: 'Aprovar como Indicação', color: '#66BB80', headerBg: 'hsl(var(--success) / 0.12)' },
   { id: 'aprovar-requerimento', label: 'Aprovar como Requerimento', color: '#E89E70', headerBg: 'hsl(var(--accent) / 0.12)' },
-  { id: 'reprovar', label: 'Reprovar', color: '#D16670', headerBg: 'hsl(var(--error) / 0.12)' },
+  { id: 'aprovar-indicacao', label: 'Aprovar como Indicação', color: '#66BB80', headerBg: 'hsl(var(--success) / 0.12)' },
+  { id: 'aprovar-causa-animal', label: 'Aprovar como Causa Animal', color: '#B98CE8', headerBg: 'hsl(var(--primary) / 0.12)' },
+  { id: 'desqualificar', label: 'Desqualificar', color: '#D16670', headerBg: 'hsl(var(--error) / 0.12)' },
+  { id: 'finalizado', label: 'Finalizado', color: '#5B8FE0', headerBg: 'hsl(var(--info) / 0.12)' },
 ]
 
+/* ── helpers visuais do modal de detalhes ── */
+const DetailSectionHeader: React.FC<{ icon: React.ElementType; label: string; colorVar?: string }> = ({ icon: Icon, label, colorVar = 'accent' }) => (
+  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.3 }}>
+    <Box sx={{ width: 24, height: 24, borderRadius: '7px', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: `hsl(var(--${colorVar}) / 0.15)`, flexShrink: 0 }}>
+      <Icon size={13} color={`hsl(var(--${colorVar}))`} />
+    </Box>
+    <Typography sx={{ fontSize: 11.5, color: `hsl(var(--${colorVar}))`, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700, whiteSpace: 'nowrap' }}>
+      {label}
+    </Typography>
+    <Box sx={{ flex: 1, height: '1px', bgcolor: 'hsl(var(--border))', ml: 0.5 }} />
+  </Box>
+)
+
+const DetailField: React.FC<{ label: string; value: React.ReactNode; span?: boolean }> = ({ label, value, span }) => (
+  <Box
+    sx={{
+      gridColumn: span ? '1 / -1' : undefined,
+      bgcolor: 'hsl(var(--surface-2) / 0.6)',
+      border: '1px solid hsl(var(--border) / 0.6)',
+      borderRadius: 1.5,
+      px: 1.4,
+      py: 0.9,
+    }}
+  >
+    <Typography sx={{ fontSize: 10.5, color: 'hsl(var(--text-secondary))', mb: 0.3 }}>{label}</Typography>
+    <Typography sx={{ fontSize: 13, color: 'hsl(var(--text-primary))', fontWeight: 500, wordBreak: 'break-word' }}>{value ?? '-'}</Typography>
+  </Box>
+)
+
+const DetailMessageBox: React.FC<{ icon: React.ElementType; label: string; value: React.ReactNode; colorVar: string; italic?: boolean }> = ({ icon: Icon, label, value, colorVar, italic }) => (
+  <Box
+    sx={{
+      bgcolor: `hsl(var(--${colorVar}) / 0.08)`,
+      border: `1px solid hsl(var(--${colorVar}) / 0.25)`,
+      borderLeft: `3px solid hsl(var(--${colorVar}))`,
+      borderRadius: 1.5,
+      px: 1.6,
+      py: 1.2,
+    }}
+  >
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7, mb: 0.5 }}>
+      <Icon size={12} color={`hsl(var(--${colorVar}))`} />
+      <Typography sx={{ fontSize: 10.5, color: `hsl(var(--${colorVar}))`, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>
+        {label}
+      </Typography>
+    </Box>
+    <Typography sx={{ fontSize: 13, color: 'hsl(var(--text-primary))', lineHeight: 1.5, whiteSpace: 'pre-wrap', fontStyle: italic ? 'italic' : 'normal' }}>
+      {value}
+    </Typography>
+  </Box>
+)
 
 const REGIOES_FILTRO = ['Zona Norte', 'Zona Oeste', 'Zona Leste', 'Zona Sul', 'Centro', 'Outros'] as const
 
@@ -376,14 +430,16 @@ const FormFields: React.FC<{
 /* ───────── helpers ───────── */
 
 function getColumnId(r: Ocorrencia): string {
-  if (r.status === 'reprovado') return 'reprovar'
+  if (r.status === 'reprovado') return 'desqualificar'
+  if (r.status === 'finalizado') return 'finalizado'
   if (r.status === 'aprovado') {
-    if (r.tipo === 'indicacao') return 'aprovar-indicacao'
     if (r.tipo === 'requerimento') return 'aprovar-requerimento'
+    if (r.tipo === 'causa animal') return 'aprovar-causa-animal'
+    if (r.tipo === 'indicacao') return 'aprovar-indicacao'
     return 'aprovar-indicacao'
   }
   if (r.status === 'em análise') return 'em-analise'
-  return 'pendentes'
+  return 'sem-tratativa'
 }
 
 function itemsForColumn(items: Ocorrencia[], colId: string): Ocorrencia[] {
@@ -470,6 +526,8 @@ const ReclamacoesPage: React.FC = () => {
   const [draggingId, setDraggingId] = useState<number | null>(null)
   const [dragOverCol, setDragOverCol] = useState<string | null>(null)
   const kanbanRef = useRef<HTMLDivElement>(null)
+  const topScrollRef = useRef<HTMLDivElement>(null)
+  const headersRef = useRef<HTMLDivElement>(null)
   const autoScrollRef = useRef<number | null>(null)
 
   const stopAutoScroll = () => {
@@ -491,14 +549,14 @@ const ReclamacoesPage: React.FC = () => {
     }
     if (clientX < rect.left + edge) {
       const step = () => {
-        container.scrollLeft -= speed
+        window.scrollBy(-speed, 0)
         autoScrollRef.current = requestAnimationFrame(step)
       }
       stopAutoScroll()
       autoScrollRef.current = requestAnimationFrame(step)
     } else if (clientX > rect.right - edge) {
       const step = () => {
-        container.scrollLeft += speed
+        window.scrollBy(speed, 0)
         autoScrollRef.current = requestAnimationFrame(step)
       }
       stopAutoScroll()
@@ -529,6 +587,15 @@ const ReclamacoesPage: React.FC = () => {
   const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null)
   const [confirmTitle, setConfirmTitle] = useState('')
   const [confirmMessage, setConfirmMessage] = useState('')
+
+  /* action dialog (mensagem ao mover de coluna) */
+  const [actionDialogOpen, setActionDialogOpen] = useState(false)
+  const [actionDialogTitle, setActionDialogTitle] = useState('')
+  const [actionDialogMensagem, setActionDialogMensagem] = useState('')
+  const [actionDialogData, setActionDialogData] = useState('')
+  const [actionDialogRequiresDate, setActionDialogRequiresDate] = useState(false)
+  const [actionDialogSubmitting, setActionDialogSubmitting] = useState(false)
+  const [actionDialogConfirm, setActionDialogConfirm] = useState<((mensagem: string, data: string) => Promise<void>) | null>(null)
 
   /* detail modal */
   const [detailOpen, setDetailOpen] = useState(false)
@@ -653,6 +720,7 @@ const ReclamacoesPage: React.FC = () => {
   const [ageMax, setAgeMax] = useState('')
   const [catFilter, setCatFilter] = useState<string[]>([])
   const [regiaoFilter, setRegiaoFilter] = useState('')
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false)
 
   /* pagination per column */
   const [columnPages, setColumnPages] = useState<Record<string, number>>({})
@@ -681,8 +749,106 @@ const ReclamacoesPage: React.FC = () => {
     load()
   }, [])
 
+  /* sync scroll horizontal do kanban → headers sticky via transform */
+  useEffect(() => {
+    if (isMobile) return
+    const kanban = kanbanRef.current
+    const headers = headersRef.current
+    if (!kanban || !headers) return
+    const onScroll = () => {
+      headers.style.transform = `translateX(${-kanban.scrollLeft}px)`
+    }
+    onScroll()
+    kanban.addEventListener('scroll', onScroll, { passive: true })
+    return () => kanban.removeEventListener('scroll', onScroll)
+  }, [loading, isMobile, filteredRows])
+
+  /* sync scroll horizontal: topo ↔ kanban */
+  useEffect(() => {
+    const top = topScrollRef.current
+    const kanban = kanbanRef.current
+    if (!top || !kanban || isMobile) return
+
+    let syncing = false
+    const syncFromTop = () => {
+      if (syncing) return
+      syncing = true
+      kanban.scrollLeft = top.scrollLeft
+      syncing = false
+    }
+    const syncFromKanban = () => {
+      if (syncing) return
+      syncing = true
+      top.scrollLeft = kanban.scrollLeft
+      syncing = false
+    }
+    top.addEventListener('scroll', syncFromTop)
+    kanban.addEventListener('scroll', syncFromKanban)
+    return () => {
+      top.removeEventListener('scroll', syncFromTop)
+      kanban.removeEventListener('scroll', syncFromKanban)
+    }
+  }, [loading, isMobile])
+
+  /* equalizar altura dos cards: todos os cards da mesma linha (mesmo índice na página) ficam com a altura do maior */
+  useLayoutEffect(() => {
+    if (loading) return
+    const container = kanbanRef.current
+    if (!container) return
+
+    const cards = container.querySelectorAll<HTMLElement>('[data-card-row]')
+    if (cards.length === 0) return
+
+    /* agrupar por índice de linha */
+    const rowGroups: Record<number, HTMLElement[]> = {}
+    cards.forEach((card) => {
+      const rowIdx = parseInt(card.getAttribute('data-card-row') || '0', 10)
+      if (!rowGroups[rowIdx]) rowGroups[rowIdx] = []
+      rowGroups[rowIdx].push(card)
+    })
+
+    /* para cada linha: resetar altura, medir natural, aplicar o máximo a todos */
+    Object.values(rowGroups).forEach((group) => {
+      group.forEach((el) => { el.style.height = 'auto' })
+      let maxHeight = 360
+      group.forEach((el) => {
+        const h = el.scrollHeight
+        if (h > maxHeight) maxHeight = h
+      })
+      group.forEach((el) => { el.style.height = `${maxHeight}px` })
+    })
+  }, [filteredRows, columnPages, loading, rows])
+
+  /* re-equalizar alturas ao redimensionar a janela */
+  useEffect(() => {
+    if (loading) return
+    const handleResize = () => {
+      const container = kanbanRef.current
+      if (!container) return
+      const cards = container.querySelectorAll<HTMLElement>('[data-card-row]')
+      if (cards.length === 0) return
+      const rowGroups: Record<number, HTMLElement[]> = {}
+      cards.forEach((card) => {
+        const rowIdx = parseInt(card.getAttribute('data-card-row') || '0', 10)
+        if (!rowGroups[rowIdx]) rowGroups[rowIdx] = []
+        rowGroups[rowIdx].push(card)
+      })
+      Object.values(rowGroups).forEach((group) => {
+        group.forEach((el) => { el.style.height = 'auto' })
+        let maxHeight = 360
+        group.forEach((el) => {
+          const h = el.scrollHeight
+          if (h > maxHeight) maxHeight = h
+        })
+        group.forEach((el) => { el.style.height = `${maxHeight}px` })
+      })
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [loading])
+
   /* browser back button closes modals on mobile */
-  const anyModalOpen = detailOpen || createOpen || editOpen || confirmOpen || lightboxOpen
+  const anyModalOpen = detailOpen || createOpen || editOpen || confirmOpen || lightboxOpen || actionDialogOpen
   useEffect(() => {
     if (anyModalOpen) {
       window.history.pushState({ modalOpen: true }, '')
@@ -692,6 +858,7 @@ const ReclamacoesPage: React.FC = () => {
         setEditOpen(false)
         setConfirmOpen(false)
         setLightboxOpen(false)
+        setActionDialogOpen(false)
       }
       window.addEventListener('popstate', handlePopState)
       return () => {
@@ -771,6 +938,33 @@ const ReclamacoesPage: React.FC = () => {
     setConfirmTitle(title)
     setConfirmMessage(msg)
     setConfirmOpen(true)
+  }
+
+  /* abrir dialog de mensagem para mover de coluna */
+  const openActionDialog = (title: string, requiresDate: boolean, onConfirm: (mensagem: string, data: string) => Promise<void>) => {
+    setActionDialogTitle(title)
+    setActionDialogRequiresDate(requiresDate)
+    setActionDialogMensagem('')
+    setActionDialogData('')
+    setActionDialogConfirm(() => onConfirm)
+    setActionDialogOpen(true)
+  }
+
+  const handleActionDialogConfirm = async () => {
+    if (!actionDialogConfirm) return
+    if (!actionDialogMensagem.trim()) return
+    if (actionDialogRequiresDate && !actionDialogData) return
+    setActionDialogSubmitting(true)
+    try {
+      await actionDialogConfirm(actionDialogMensagem.trim(), actionDialogData)
+      setActionDialogOpen(false)
+      load()
+    } catch (err: any) {
+      console.error('Erro ao mover card:', err)
+      alert(err?.response?.data?.message || err?.message || 'Erro ao mover ocorrência')
+    } finally {
+      setActionDialogSubmitting(false)
+    }
   }
 
   const openEdit = (row: Ocorrencia) => {
@@ -917,33 +1111,100 @@ const ReclamacoesPage: React.FC = () => {
     const sourceCol = getColumnId(row)
     if (sourceCol === targetCol) return
 
-    try {
-      if (targetCol === 'aprovar-indicacao') {
-        await aprovarInquerito(row.id)
-      } else if (targetCol === 'aprovar-requerimento') {
-        await aprovarRequerimento(row.id)
-      } else if (targetCol === 'reprovar') {
-        await reprovarInquerito(row.id)
-      } else if (targetCol === 'em-analise') {
-        await colocarEmAnalise(row.id)
-      } else if (targetCol === 'pendentes') {
-        await colocarComoCriado(row.id)
-      }
-      load(true)
-    } catch (err: any) {
-      console.error('Erro ao mover card:', err)
-      alert(err?.response?.data?.message || err?.message || 'Erro ao mover ocorrência')
-    }
     setDraggingId(null)
     setDragOverCol(null)
+
+    /* Sem tratativa: direto, sem mensagem */
+    if (targetCol === 'sem-tratativa') {
+      try {
+        await colocarComoCriado(row.id)
+        load(true)
+      } catch (err: any) {
+        console.error('Erro ao mover card:', err)
+        alert(err?.response?.data?.message || err?.message || 'Erro ao mover ocorrência')
+      }
+      return
+    }
+
+    /* Demais colunas: abrir dialog de mensagem */
+    const colDef = COLUMNS.find((c) => c.id === targetCol)
+    const title = `Mover para ${colDef?.label ?? targetCol}`
+
+    if (targetCol === 'em-analise') {
+      openActionDialog(title, true, async (_mensagem, data) => {
+        await colocarEmAnalise(row.id, data)
+      })
+    } else if (targetCol === 'aprovar-indicacao') {
+      openActionDialog(title, false, async (mensagem) => {
+        await aprovarInquerito(row.id, mensagem)
+      })
+    } else if (targetCol === 'aprovar-requerimento') {
+      openActionDialog(title, false, async (mensagem) => {
+        await aprovarRequerimento(row.id, mensagem)
+      })
+    } else if (targetCol === 'aprovar-causa-animal') {
+      openActionDialog(title, false, async (mensagem) => {
+        await aprovarCausaAnimal(row.id, mensagem)
+      })
+    } else if (targetCol === 'desqualificar') {
+      openActionDialog(title, false, async (mensagem) => {
+        await reprovarInquerito(row.id, mensagem)
+      })
+    } else if (targetCol === 'finalizado') {
+      openActionDialog(title, false, async (mensagem) => {
+        await finalizarReclamacao(row.id, mensagem)
+      })
+    }
+  }
+
+  /* mover card via Select mobile (mesma lógica do handleDrop) */
+  const handleMobileMove = (row: Ocorrencia, targetCol: string) => {
+    const sourceCol = getColumnId(row)
+    if (sourceCol === targetCol) return
+
+    if (targetCol === 'sem-tratativa') {
+      doAction(() => colocarComoCriado(row.id), 'Enviar para Sem Tratativa', `Confirmar envio #${row.id} para Sem Tratativa?`)
+      return
+    }
+
+    const colDef = COLUMNS.find((c) => c.id === targetCol)
+    const title = `Mover para ${colDef?.label ?? targetCol}`
+
+    if (targetCol === 'em-analise') {
+      openActionDialog(title, true, async (_mensagem, data) => {
+        await colocarEmAnalise(row.id, data)
+      })
+    } else if (targetCol === 'aprovar-indicacao') {
+      openActionDialog(title, false, async (mensagem) => {
+        await aprovarInquerito(row.id, mensagem)
+      })
+    } else if (targetCol === 'aprovar-requerimento') {
+      openActionDialog(title, false, async (mensagem) => {
+        await aprovarRequerimento(row.id, mensagem)
+      })
+    } else if (targetCol === 'aprovar-causa-animal') {
+      openActionDialog(title, false, async (mensagem) => {
+        await aprovarCausaAnimal(row.id, mensagem)
+      })
+    } else if (targetCol === 'desqualificar') {
+      openActionDialog(title, false, async (mensagem) => {
+        await reprovarInquerito(row.id, mensagem)
+      })
+    } else if (targetCol === 'finalizado') {
+      openActionDialog(title, false, async (mensagem) => {
+        await finalizarReclamacao(row.id, mensagem)
+      })
+    }
   }
 
   const cardBorderLeft: Record<string, string> = {
-    pendentes: '#A1A9B8',
+    'sem-tratativa': '#A1A9B8',
     'em-analise': '#62A1D8',
-    'aprovar-indicacao': '#66BB80',
     'aprovar-requerimento': '#E89E70',
-    reprovar: '#D16670',
+    'aprovar-indicacao': '#66BB80',
+    'aprovar-causa-animal': '#B98CE8',
+    'desqualificar': '#D16670',
+    'finalizado': '#5B8FE0',
   }
 
   const handleTelefoneChange = (value: string) => {
@@ -951,291 +1212,436 @@ const ReclamacoesPage: React.FC = () => {
     setCreateForm({ ...createForm, telefone: formatted })
   }
 
+  const renderColumnHeader = (col: typeof COLUMNS[number], items: Ocorrencia[]) => (
+    <Box
+      sx={{
+        p: 1.5,
+        borderRadius: 2,
+        background: `linear-gradient(${col.headerBg}, ${col.headerBg}), hsl(var(--surface))`,
+        borderTop: `3px solid ${col.color}`,
+        border: '1px solid hsl(var(--border))',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 0.5,
+      }}
+    >
+      {/* linha 1: título + ícone de quantidade */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Typography sx={{ fontWeight: 700, fontSize: 13, color: col.color, letterSpacing: '0.03em', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: '1 1 auto', minWidth: 0 }}>
+          {col.label}
+        </Typography>
+        <Box
+          sx={{
+            width: 24,
+            height: 24,
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            bgcolor: col.color,
+            color: '#fff',
+            fontSize: 11,
+            fontWeight: 800,
+            flexShrink: 0,
+          }}
+        >
+          {items.length}
+        </Box>
+      </Box>
+      {/* linha 2: paginação centralizada (sempre reservada para igualar alturas) */}
+      {(() => {
+        const totalPages = Math.ceil(items.length / 5)
+        const page = columnPages[col.id] || 1
+        const hasPagination = totalPages > 1
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, justifyContent: 'center', visibility: hasPagination ? 'visible' : 'hidden' }}>
+            <IconButton size="small" disabled={page <= 1} onClick={() => setColumnPages({ ...columnPages, [col.id]: page - 1 })} sx={{ color: page <= 1 ? 'hsl(var(--text-secondary) / 0.3)' : 'hsl(var(--text-primary))', width: 22, height: 22 }}>
+              <ChevronLeft size={14} />
+            </IconButton>
+            <Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary))' }}>
+              {hasPagination ? `${page} / ${totalPages}` : '1 / 1'}
+            </Typography>
+            <IconButton size="small" disabled={page >= totalPages} onClick={() => setColumnPages({ ...columnPages, [col.id]: page + 1 })} sx={{ color: page >= totalPages ? 'hsl(var(--text-secondary) / 0.3)' : 'hsl(var(--text-primary))', width: 22, height: 22 }}>
+              <ChevronRight size={14} />
+            </IconButton>
+          </Box>
+        )
+      })()}
+    </Box>
+  )
+
   return (
     <Box className="page-root">
-      <PageHeader title="Solicitações" />
+      <PageHeader
+        title="Solicitações"
+        inlineAction={
+          <Button
+            onClick={() => setCreateOpen(true)}
+            sx={{
+              background: 'hsl(var(--primary))',
+              color: '#fff',
+              borderRadius: 999,
+              height: 36,
+              minWidth: 36,
+              padding: '0 9px',
+              overflow: 'hidden',
+              textTransform: 'none',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+              transition: 'padding 0.3s ease, background 0.2s ease',
+              '&:hover': {
+                background: 'hsl(var(--primary-hover))',
+                padding: '0 11px',
+                '& .expand-text': {
+                  maxWidth: 200,
+                  opacity: 1,
+                  marginLeft: 1,
+                },
+              },
+            }}
+          >
+            <Plus size={18} style={{ flexShrink: 0 }} />
+            <Box
+              component="span"
+              className="expand-text"
+              sx={{
+                whiteSpace: 'nowrap',
+                maxWidth: 0,
+                opacity: 0,
+                overflow: 'hidden',
+                transition: 'max-width 0.3s ease, opacity 0.3s ease, margin-left 0.3s ease',
+                fontSize: 13,
+                fontWeight: 600,
+              }}
+            >
+              Nova Solicitação
+            </Box>
+          </Button>
+        }
+      />
 
-      {/* ── filter bars ── */}
-      {/* group 1: date range */}
+      {/* ── filtros (container único colapsável) ── */}
       <Box
         sx={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          justifyContent: 'center',
-          gap: 1.5,
           mb: 2,
-          alignItems: 'center',
-          p: 2,
           borderRadius: 2,
           bgcolor: 'hsl(var(--surface-2))',
           border: '1px solid hsl(var(--border))',
+          overflow: 'hidden',
         }}
       >
-        <TextField
-          type="date"
-          size="small"
-          label="De"
-          InputLabelProps={{ shrink: true }}
-          inputProps={{ style: { textAlign: isMobile ? 'center' : 'left' } }}
-          value={dateFrom}
-          onChange={(e) => setDateFrom(e.target.value)}
-          sx={{ ...inputSx, minWidth: 150 }}
-        />
-        <TextField
-          type="date"
-          size="small"
-          label="Até"
-          InputLabelProps={{ shrink: true }}
-          inputProps={{ style: { textAlign: isMobile ? 'center' : 'left' } }}
-          value={dateTo}
-          onChange={(e) => setDateTo(e.target.value)}
-          sx={{ ...inputSx, minWidth: 150 }}
-        />
-        <Button
-          size="small"
-          onClick={() => {
-            setDateFrom('')
-            setDateTo('')
-            setColumnPages({})
-          }}
-          sx={{ color: 'hsl(var(--text-secondary))', textTransform: 'none', borderRadius: 2, width: isMobile ? '100%' : undefined }}
-        >
-          Limpar Filtros
-        </Button>
-      </Box>
-
-      {/* group 2: age range */}
-      <Box
-        sx={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          justifyContent: 'center',
-          gap: 1.5,
-          mb: 2,
-          alignItems: 'center',
-          p: 2,
-          borderRadius: 2,
-          bgcolor: 'hsl(var(--surface-2))',
-          border: '1px solid hsl(var(--border))',
-        }}
-      >
-        <TextField
-          label="Idade mín"
-          size="small"
-          type="number"
-          inputProps={{ style: { textAlign: isMobile ? 'center' : 'left' } }}
-          value={ageMin}
-          onChange={(e) => {
-            const v = e.target.value
-            setAgeMin(v)
-            if (v && ageMax && parseInt(v) > parseInt(ageMax)) setAgeMax(v)
-          }}
-          sx={{ ...inputSx, minWidth: 110 }}
-        />
-        <TextField
-          label="Idade máx"
-          size="small"
-          type="number"
-          inputProps={{ style: { textAlign: isMobile ? 'center' : 'left' } }}
-          value={ageMax}
-          onChange={(e) => {
-            const v = e.target.value
-            setAgeMax(v)
-            if (v && ageMin && parseInt(v) < parseInt(ageMin)) setAgeMin(v)
-          }}
-          sx={{ ...inputSx, minWidth: 110 }}
-        />
-        <Button
-          size="small"
-          onClick={() => {
-            setAgeMin('')
-            setAgeMax('')
-            setColumnPages({})
-          }}
-          sx={{ color: 'hsl(var(--text-secondary))', textTransform: 'none', borderRadius: 2 }}
-        >
-          Limpar Filtros
-        </Button>
-      </Box>
-
-      {/* group 3: category multi-select */}
-      <Box
-        sx={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          justifyContent: 'center',
-          gap: 1.5,
-          mb: 2,
-          alignItems: 'center',
-          p: 2,
-          borderRadius: 2,
-          bgcolor: 'hsl(var(--surface-2))',
-          border: '1px solid hsl(var(--border))',
-        }}
-      >
-        <Autocomplete
-          multiple
-          size="small"
-          options={CATEGORIAS}
-          value={catFilter}
-          onChange={(_, v) => { setCatFilter(v); setColumnPages({}) }}
-          getOptionLabel={(opt) => formatCategoryName(opt)}
-          renderInput={(params) => (
-            <TextField {...params} label="Categorias" size="small" sx={{ ...inputSx, minWidth: { xs: 160, sm: 400 } }} />
-          )}
-          sx={{ width: '100%', maxWidth: { xs: '100%', sm: 600 } }}
-        />
-        <Button
-          size="small"
-          onClick={() => {
-            setCatFilter([])
-            setColumnPages({})
-          }}
-          sx={{ color: 'hsl(var(--text-secondary))', textTransform: 'none', borderRadius: 2 }}
-        >
-          Limpar Filtros
-        </Button>
-      </Box>
-
-      {/* group 3b: região */}
-      <Box
-        sx={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          justifyContent: 'center',
-          gap: 1.5,
-          mb: 2,
-          alignItems: 'center',
-          p: 2,
-          borderRadius: 2,
-          bgcolor: 'hsl(var(--surface-2))',
-          border: '1px solid hsl(var(--border))',
-        }}
-      >
-        <TextField
-          select
-          size="small"
-          label="Região"
-          value={regiaoFilter}
-          onChange={(e) => { setRegiaoFilter(e.target.value); setColumnPages({}) }}
-          sx={{ ...inputSx, minWidth: { xs: 200, sm: 280 } }}
-        >
-          <MenuItem value="">Todas</MenuItem>
-          {REGIOES_FILTRO.map((r) => (
-            <MenuItem key={r} value={r}>
-              {r} ({regiaoCounts[r] ?? 0})
-            </MenuItem>
-          ))}
-        </TextField>
-        <Button
-          size="small"
-          onClick={() => {
-            setRegiaoFilter('')
-            setColumnPages({})
-          }}
-          sx={{ color: 'hsl(var(--text-secondary))', textTransform: 'none', borderRadius: 2 }}
-        >
-          Limpar Filtros
-        </Button>
-      </Box>
-
-      {/* group 4: search + address */}
-      <Box
-        sx={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          justifyContent: 'center',
-          gap: 1.5,
-          mb: 2,
-          alignItems: 'center',
-          p: 2,
-          borderRadius: 2,
-          bgcolor: 'hsl(var(--surface-2))',
-          border: '1px solid hsl(var(--border))',
-        }}
-      >
-        <TextField
-          label="Buscar nome ou telefone"
-          size="small"
-          inputProps={{ style: { textAlign: isMobile ? 'center' : 'left' } }}
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          sx={{ ...inputSx, minWidth: 220 }}
-        />
-        <TextField
-          label="Endereço"
-          size="small"
-          inputProps={{ style: { textAlign: isMobile ? 'center' : 'left' } }}
-          value={enderecoFilter}
-          onChange={(e) => setEnderecoFilter(e.target.value)}
-          sx={{ ...inputSx, minWidth: 160 }}
-        />
-        <TextField
-          label="Bairro"
-          size="small"
-          inputProps={{ style: { textAlign: isMobile ? 'center' : 'left' } }}
-          value={bairroFilter}
-          onChange={(e) => setBairroFilter(e.target.value)}
-          sx={{ ...inputSx, minWidth: 140 }}
-        />
-        <TextField
-          label="Cidade"
-          size="small"
-          inputProps={{ style: { textAlign: isMobile ? 'center' : 'left' } }}
-          value={cidadeFilter}
-          onChange={(e) => setCidadeFilter(e.target.value)}
-          sx={{ ...inputSx, minWidth: 140 }}
-        />
-        <Button
-          size="small"
-          onClick={() => {
-            setSearchText('')
-            setEnderecoFilter('')
-            setBairroFilter('')
-            setCidadeFilter('')
-            setColumnPages({})
-          }}
-          sx={{ color: 'hsl(var(--text-secondary))', textTransform: 'none', borderRadius: 2 }}
-        >
-          Limpar Filtros
-        </Button>
-      </Box>
-
-      {/* + Nova Reclamação button */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-        <Button
-          variant="contained"
-          startIcon={<Plus size={18} />}
-          onClick={() => setCreateOpen(true)}
+        {/* Cabeçalho clicável */}
+        <Box
+          onClick={() => setFiltrosAbertos((v) => !v)}
           sx={{
-            background: 'hsl(var(--primary))',
-            textTransform: 'none',
-            borderRadius: 2,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 1,
+            p: 1.5,
+            cursor: 'pointer',
+            userSelect: 'none',
+            '&:hover': { bgcolor: 'hsl(var(--surface))' },
           }}
         >
-          Nova Solicitação
-        </Button>
+          <Typography sx={{ fontSize: 14, fontWeight: 600, color: 'hsl(var(--text-primary))' }}>
+            Filtros
+          </Typography>
+          <ChevronDown
+            size={20}
+            color="hsl(var(--text-secondary))"
+            style={{
+              transition: 'transform 0.2s ease',
+              transform: filtrosAbertos ? 'rotate(180deg)' : 'rotate(0deg)',
+            }}
+          />
+        </Box>
+
+        {/* Conteúdo dos filtros */}
+        <Collapse in={filtrosAbertos} timeout="auto" unmountOnExit>
+          <Box sx={{ borderTop: '1px solid hsl(var(--border))', p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {/* group 1: date range */}
+            <Box
+              sx={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                justifyContent: 'center',
+                gap: 1.5,
+                alignItems: 'center',
+              }}
+            >
+              <TextField
+                type="date"
+                size="small"
+                label="De"
+                InputLabelProps={{ shrink: true }}
+                inputProps={{ style: { textAlign: isMobile ? 'center' : 'left' } }}
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                sx={{ ...inputSx, minWidth: 150 }}
+              />
+              <TextField
+                type="date"
+                size="small"
+                label="Até"
+                InputLabelProps={{ shrink: true }}
+                inputProps={{ style: { textAlign: isMobile ? 'center' : 'left' } }}
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                sx={{ ...inputSx, minWidth: 150 }}
+              />
+              <Button
+                size="small"
+                onClick={() => {
+                  setDateFrom('')
+                  setDateTo('')
+                  setColumnPages({})
+                }}
+                sx={{ color: 'hsl(var(--text-secondary))', textTransform: 'none', borderRadius: 2, width: isMobile ? '100%' : undefined }}
+              >
+                Limpar Filtros
+              </Button>
+            </Box>
+
+            {/* group 2: age range */}
+            <Box
+              sx={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                justifyContent: 'center',
+                gap: 1.5,
+                alignItems: 'center',
+              }}
+            >
+              <TextField
+                label="Idade mín"
+                size="small"
+                type="number"
+                inputProps={{ style: { textAlign: isMobile ? 'center' : 'left' } }}
+                value={ageMin}
+                onChange={(e) => {
+                  const v = e.target.value
+                  setAgeMin(v)
+                  if (v && ageMax && parseInt(v) > parseInt(ageMax)) setAgeMax(v)
+                }}
+                sx={{ ...inputSx, minWidth: 110 }}
+              />
+              <TextField
+                label="Idade máx"
+                size="small"
+                type="number"
+                inputProps={{ style: { textAlign: isMobile ? 'center' : 'left' } }}
+                value={ageMax}
+                onChange={(e) => {
+                  const v = e.target.value
+                  setAgeMax(v)
+                  if (v && ageMin && parseInt(v) < parseInt(ageMin)) setAgeMin(v)
+                }}
+                sx={{ ...inputSx, minWidth: 110 }}
+              />
+              <Button
+                size="small"
+                onClick={() => {
+                  setAgeMin('')
+                  setAgeMax('')
+                  setColumnPages({})
+                }}
+                sx={{ color: 'hsl(var(--text-secondary))', textTransform: 'none', borderRadius: 2 }}
+              >
+                Limpar Filtros
+              </Button>
+            </Box>
+
+            {/* group 3: category multi-select */}
+            <Box
+              sx={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                justifyContent: 'center',
+                gap: 1.5,
+                alignItems: 'center',
+              }}
+            >
+              <Autocomplete
+                multiple
+                size="small"
+                options={CATEGORIAS}
+                value={catFilter}
+                onChange={(_, v) => { setCatFilter(v); setColumnPages({}) }}
+                getOptionLabel={(opt) => formatCategoryName(opt)}
+                renderInput={(params) => (
+                  <TextField {...params} label="Categorias" size="small" sx={{ ...inputSx, minWidth: { xs: 160, sm: 400 } }} />
+                )}
+                sx={{ width: '100%', maxWidth: { xs: '100%', sm: 600 } }}
+              />
+              <Button
+                size="small"
+                onClick={() => {
+                  setCatFilter([])
+                  setColumnPages({})
+                }}
+                sx={{ color: 'hsl(var(--text-secondary))', textTransform: 'none', borderRadius: 2 }}
+              >
+                Limpar Filtros
+              </Button>
+            </Box>
+
+            {/* group 3b: região */}
+            <Box
+              sx={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                justifyContent: 'center',
+                gap: 1.5,
+                alignItems: 'center',
+              }}
+            >
+              <TextField
+                select
+                size="small"
+                label="Região"
+                value={regiaoFilter}
+                onChange={(e) => { setRegiaoFilter(e.target.value); setColumnPages({}) }}
+                sx={{ ...inputSx, minWidth: { xs: 200, sm: 280 } }}
+              >
+                <MenuItem value="">Todas</MenuItem>
+                {REGIOES_FILTRO.map((r) => (
+                  <MenuItem key={r} value={r}>
+                    {r} ({regiaoCounts[r] ?? 0})
+                  </MenuItem>
+                ))}
+              </TextField>
+              <Button
+                size="small"
+                onClick={() => {
+                  setRegiaoFilter('')
+                  setColumnPages({})
+                }}
+                sx={{ color: 'hsl(var(--text-secondary))', textTransform: 'none', borderRadius: 2 }}
+              >
+                Limpar Filtros
+              </Button>
+            </Box>
+
+            {/* group 4: search + address */}
+            <Box
+              sx={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                justifyContent: 'center',
+                gap: 1.5,
+                alignItems: 'center',
+              }}
+            >
+              <TextField
+                label="Buscar nome ou telefone"
+                size="small"
+                inputProps={{ style: { textAlign: isMobile ? 'center' : 'left' } }}
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                sx={{ ...inputSx, minWidth: 220 }}
+              />
+              <TextField
+                label="Endereço"
+                size="small"
+                inputProps={{ style: { textAlign: isMobile ? 'center' : 'left' } }}
+                value={enderecoFilter}
+                onChange={(e) => setEnderecoFilter(e.target.value)}
+                sx={{ ...inputSx, minWidth: 160 }}
+              />
+              <TextField
+                label="Bairro"
+                size="small"
+                inputProps={{ style: { textAlign: isMobile ? 'center' : 'left' } }}
+                value={bairroFilter}
+                onChange={(e) => setBairroFilter(e.target.value)}
+                sx={{ ...inputSx, minWidth: 140 }}
+              />
+              <TextField
+                label="Cidade"
+                size="small"
+                inputProps={{ style: { textAlign: isMobile ? 'center' : 'left' } }}
+                value={cidadeFilter}
+                onChange={(e) => setCidadeFilter(e.target.value)}
+                sx={{ ...inputSx, minWidth: 140 }}
+              />
+              <Button
+                size="small"
+                onClick={() => {
+                  setSearchText('')
+                  setEnderecoFilter('')
+                  setBairroFilter('')
+                  setCidadeFilter('')
+                  setColumnPages({})
+                }}
+                sx={{ color: 'hsl(var(--text-secondary))', textTransform: 'none', borderRadius: 2 }}
+              >
+                Limpar Filtros
+              </Button>
+            </Box>
+          </Box>
+        </Collapse>
       </Box>
 
       {loading ? (
-        <KanbanSkeleton columns={5} />
+        <KanbanSkeleton columns={7} />
       ) : (
+      <React.Fragment>
+      {/* headers sticky — fora do overflow do kanban, position: sticky funciona */}
+      {!isMobile && (
+        <Box
+          sx={{
+            position: 'sticky',
+            top: 64,
+            zIndex: 10,
+            overflow: 'hidden',
+            mb: 1,
+            background: 'hsl(var(--background))',
+            py: 0.5,
+          }}
+        >
+          <Box
+            ref={headersRef}
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: `repeat(${COLUMNS.length}, minmax(260px, 1fr))`,
+              gap: 2,
+              px: 0.5,
+            }}
+          >
+            {COLUMNS.map((col) => renderColumnHeader(col, itemsForColumn(filteredRows, col.id)))}
+          </Box>
+        </Box>
+      )}
+      {/* scrollbar horizontal do topo (mirror do kanban) */}
+      {!isMobile && (
+        <Box
+          ref={topScrollRef}
+          sx={{
+            width: '100%',
+            height: 6,
+            overflowX: 'auto',
+            overflowY: 'hidden',
+            mb: 1,
+          }}
+        >
+          <Box sx={{ height: 1, width: `calc(${COLUMNS.length} * 260px + ${COLUMNS.length - 1} * 16px + 8px)` }} />
+        </Box>
+      )}
       <Box
         ref={kanbanRef}
         onDragOver={(e) => { if (!isMobile) startAutoScroll(e.clientX) }}
         onDragLeave={stopAutoScroll}
         sx={{
-          display: 'flex',
-          flexDirection: isMobile ? 'column' : 'row',
+          display: 'grid',
+          gridTemplateColumns: isMobile ? '1fr' : `repeat(${COLUMNS.length}, minmax(260px, 1fr))`,
           gap: 2,
-          overflowX: isMobile ? 'hidden' : 'auto',
           pb: 2,
           pt: 1,
           px: 0.5,
           position: 'relative',
-          '&::-webkit-scrollbar': { height: 6 },
-          '&::-webkit-scrollbar-thumb': { background: 'hsl(var(--border))', borderRadius: 3 },
+          alignItems: 'stretch',
+          overflowX: 'auto',
+          overflowY: 'clip',
         }}
       >
         {COLUMNS.map((col) => {
@@ -1247,9 +1653,6 @@ const ReclamacoesPage: React.FC = () => {
               onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOverCol(null) }}
               onDrop={(e) => handleDrop(e, col.id)}
               sx={{
-                minWidth: isMobile ? undefined : 260,
-                width: isMobile ? '100%' : undefined,
-                flex: '1 1 0',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 1.5,
@@ -1261,80 +1664,29 @@ const ReclamacoesPage: React.FC = () => {
                 } : {}),
               }}
             >
-              {/* column header */}
-              <Box
-                sx={{
-                  p: 1.5,
-                  borderRadius: 2,
-                  bgcolor: col.headerBg,
-                  borderTop: `3px solid ${col.color}`,
-                  border: '1px solid hsl(var(--border))',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
-                  gap: 1,
-                }}
-              >
-                <Typography sx={{ fontWeight: 700, fontSize: 13, color: col.color, letterSpacing: '0.03em', textTransform: 'uppercase' }}>
-                  {col.label}
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  {(() => {
-                    const totalPages = Math.ceil(items.length / 5)
-                    const page = columnPages[col.id] || 1
-                    if (totalPages <= 1) return null
-                    return (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <IconButton size="small" disabled={page <= 1} onClick={() => setColumnPages({ ...columnPages, [col.id]: page - 1 })} sx={{ color: page <= 1 ? 'hsl(var(--text-secondary) / 0.3)' : 'hsl(var(--text-primary))', width: 22, height: 22 }}>
-                          <ChevronLeft size={14} />
-                        </IconButton>
-                        <Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary))' }}>
-                          {page} / {totalPages}
-                        </Typography>
-                        <IconButton size="small" disabled={page >= totalPages} onClick={() => setColumnPages({ ...columnPages, [col.id]: page + 1 })} sx={{ color: page >= totalPages ? 'hsl(var(--text-secondary) / 0.3)' : 'hsl(var(--text-primary))', width: 22, height: 22 }}>
-                          <ChevronRight size={14} />
-                        </IconButton>
-                      </Box>
-                    )
-                  })()}
-                  <Box
-                    sx={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      bgcolor: col.color,
-                      color: '#fff',
-                      fontSize: 11,
-                      fontWeight: 800,
-                    }}
-                  >
-                    {items.length}
-                  </Box>
-                </Box>
-              </Box>
+              {/* column header — só no mobile (desktop usa headers sticky acima) */}
+              {isMobile && renderColumnHeader(col, items)}
 
               {/* card list */}
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pb: 1 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pb: 1, pt: 1, flex: '1 1 auto', justifyContent: items.length === 0 ? 'center' : 'flex-start', border: '1px dashed hsl(var(--border))', borderRadius: 2 }}>
                 {items.length === 0 && (
-                  <Box sx={{ p: 4, textAlign: 'center', border: '1px dashed hsl(var(--border))', borderRadius: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
+                  <Box sx={{ p: 4, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1.5, flex: '1 1 auto', minHeight: 200 }}>
                     <Inbox size={32} style={{ color: 'hsl(var(--text-secondary) / 0.3)', animation: 'empty-pulse 2.5s ease-in-out infinite' }} />
                     <Typography sx={{ color: 'hsl(var(--text-secondary) / 0.5)', fontSize: 13, fontWeight: 500 }}>
-                      {col.id === 'pendentes' && 'Nenhuma solicitação pendente'}
+                      {col.id === 'sem-tratativa' && 'Nenhuma solicitação sem tratativa'}
                       {col.id === 'em-analise' && 'Nada em análise no momento'}
-                      {col.id === 'aprovar-indicacao' && 'Nenhuma indicação aprovada'}
                       {col.id === 'aprovar-requerimento' && 'Nenhum requerimento aprovado'}
-                      {col.id === 'reprovar' && 'Nenhuma solicitação reprovada'}
+                      {col.id === 'aprovar-indicacao' && 'Nenhuma indicação aprovada'}
+                      {col.id === 'aprovar-causa-animal' && 'Nenhuma causa animal aprovada'}
+                      {col.id === 'desqualificar' && 'Nenhuma solicitação desqualificada'}
+                      {col.id === 'finalizado' && 'Nenhuma solicitação finalizada'}
                     </Typography>
-                    {col.id === 'pendentes' && (
+                    {col.id === 'sem-tratativa' && (
                       <Typography sx={{ color: 'hsl(var(--text-secondary) / 0.3)', fontSize: 11 }}>
                         Novas solicitações aparecerão aqui
                       </Typography>
                     )}
-                    {(col.id === 'em-analise' || col.id === 'aprovar-indicacao' || col.id === 'aprovar-requerimento' || col.id === 'reprovar') && (
+                    {(col.id === 'em-analise' || col.id === 'aprovar-requerimento' || col.id === 'aprovar-indicacao' || col.id === 'aprovar-causa-animal' || col.id === 'desqualificar' || col.id === 'finalizado') && (
                       <Typography sx={{ color: 'hsl(var(--text-secondary) / 0.3)', fontSize: 11 }}>
                         Arraste uma solicitação aqui
                       </Typography>
@@ -1345,14 +1697,18 @@ const ReclamacoesPage: React.FC = () => {
                   const page = columnPages[col.id] || 1
                   const start = (page - 1) * 5
                   const pageItems = items.slice(start, start + 5)
-                  return pageItems.map((row) => (
+                  return pageItems.map((row, cardIdx) => (
                     <Box
                       key={row.id}
+                      data-card-row={cardIdx}
                       draggable
                       onDragStart={(e) => handleDragStart(e, row.id)}
                       onDragEnd={handleDragEnd}
                       onClick={(e) => {
-                        if ((e.target as HTMLElement).closest('button')) return
+                        const target = e.target as HTMLElement
+                        if (target.closest('button')) return
+                        /* ignorar cliques dentro do Select/FormControl (Mover para...) */
+                        if (target.closest('.MuiSelect-select, .MuiFormControl-root, [role="combobox"], [role="listbox"], [role="option"], .MuiBackdrop-root, .MuiMenuItem-root')) return
                         openDetail(row)
                       }}
                       sx={{
@@ -1364,7 +1720,7 @@ const ReclamacoesPage: React.FC = () => {
                         opacity: draggingId === row.id ? 0.4 : 1,
                         transition: 'all 0.2s ease',
                         cursor: 'grab',
-                        height: 360,
+                        minHeight: 360,
                         display: 'flex',
                         flexDirection: 'column',
                         overflow: 'hidden',
@@ -1376,7 +1732,7 @@ const ReclamacoesPage: React.FC = () => {
                         },
                       }}
                     >
-                      {(col.id === 'pendentes' || col.id === 'em-analise') && (() => {
+                      {(col.id === 'sem-tratativa' || col.id === 'em-analise') && (() => {
                         const urgency = getUrgencyLevel(row.dataAtualizacao)
                         const diffDays = Math.floor((Date.now() - toUTCDate(row.dataAtualizacao).getTime()) / (1000 * 60 * 60 * 24))
                         const urgencyConfig = {
@@ -1406,13 +1762,15 @@ const ReclamacoesPage: React.FC = () => {
                           <Tooltip title="Editar">
                             <IconButton size="small" onClick={() => openEdit(row)} sx={{ color: 'hsl(var(--accent))', bgcolor: 'hsl(var(--accent) / 0.12)', borderRadius: '50%', width: 28, height: 28, '&:hover': { bgcolor: 'hsl(var(--accent) / 0.2)' } }}><Pencil size={14} /></IconButton>
                           </Tooltip>
+                          {false && (
                           <Tooltip title="Excluir">
                             <IconButton size="small" onClick={() => doAction(() => deleteOcorrencia(row.id), 'Excluir Solicitação', `Confirmar exclusão #${row.id}?`)} sx={{ color: 'hsl(var(--error))', bgcolor: 'hsl(var(--error) / 0.12)', borderRadius: '50%', width: 28, height: 28, '&:hover': { bgcolor: 'hsl(var(--error) / 0.2)' } }}><Trash2 size={14} /></IconButton>
                           </Tooltip>
+                          )}
                         </Box>
                       </Box>
 
-                      <Box sx={{ overflowY: 'auto', flex: 1, minHeight: 0, '&::-webkit-scrollbar': { width: 4 }, '&::-webkit-scrollbar-track': { background: 'transparent' }, '&::-webkit-scrollbar-thumb': { background: 'hsl(var(--border))', borderRadius: 2 } }}>
+                      <Box sx={{ overflowY: 'auto', flex: 1, minHeight: 0, pr: 0.75, mr: -0.75, '&::-webkit-scrollbar': { width: 4 }, '&::-webkit-scrollbar-track': { background: 'transparent' }, '&::-webkit-scrollbar-thumb': { background: 'hsl(var(--border))', borderRadius: 2 } }}>
                       {/* manual badge centered below name */}
                       {row.ehManual && (
                         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0.5, mb: 0.5 }}>
@@ -1470,6 +1828,27 @@ const ReclamacoesPage: React.FC = () => {
                         </Typography>
                       </Box>
 
+                      {row.mensagem && (
+                        <Box sx={{
+                          mb: 1.5,
+                          bgcolor: 'hsl(var(--info) / 0.08)',
+                          border: '1px solid hsl(var(--info) / 0.2)',
+                          borderLeft: '3px solid hsl(var(--info))',
+                          borderRadius: 1,
+                          px: 1.5,
+                          py: 1,
+                        }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8, mb: 0.3 }}>
+                            <Typography sx={{ fontSize: 10, color: 'hsl(var(--info))', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>
+                              Mensagem Enviada ao Cidadão
+                            </Typography>
+                          </Box>
+                          <Typography sx={{ fontSize: 11, color: 'hsl(var(--text-primary))', lineHeight: 1.4, whiteSpace: 'pre-wrap', display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                            {row.mensagem}
+                          </Typography>
+                        </Box>
+                      )}
+
                       </Box>
 
                       {row.observacao && (
@@ -1496,45 +1875,23 @@ const ReclamacoesPage: React.FC = () => {
 
                       {/* actions */}
                       <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', pt: 1, borderTop: '1px solid hsl(var(--surface-2))', flexWrap: 'wrap', flexShrink: 0 }}>
-                        {isMobile && col.id === 'pendentes' && (
-                          <>
-                            <Button size="small" startIcon={<Eye size={14} />} onClick={() => doAction(() => colocarEmAnalise(row.id), 'Enviar para Em Análise', `Confirmar envio #${row.id} para análise?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: '#62A1D8', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--info) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Em Análise</Button>
-                            <Button size="small" startIcon={<CheckCircle size={14} />} onClick={() => doAction(() => aprovarInquerito(row.id), 'Aprovar como Indicação', `Confirmar aprovação #${row.id}?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: '#66BB80', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--success) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Indicação</Button>
-                            <Button size="small" startIcon={<FileText size={14} />} onClick={() => doAction(() => aprovarRequerimento(row.id), 'Aprovar como Requerimento', `Confirmar requerimento #${row.id}?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: '#E89E70', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--accent) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Requerimento</Button>
-                            <Button size="small" startIcon={<XCircle size={14} />} onClick={() => doAction(() => reprovarInquerito(row.id), 'Reprovar', `Confirmar reprovação #${row.id}?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: 'hsl(var(--error))', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--error) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Reprovar</Button>
-                          </>
-                        )}
-                        {isMobile && col.id === 'em-analise' && (
-                          <>
-                            <Button size="small" startIcon={<ChevronLeft size={14} />} onClick={() => doAction(() => colocarComoCriado(row.id), 'Enviar para Pendentes', `Confirmar envio #${row.id} para pendentes?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: '#A1A9B8', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--text-secondary) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Pendentes</Button>
-                            <Button size="small" startIcon={<CheckCircle size={14} />} onClick={() => doAction(() => aprovarInquerito(row.id), 'Aprovar como Indicação', `Confirmar aprovação #${row.id}?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: '#66BB80', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--success) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Indicação</Button>
-                            <Button size="small" startIcon={<FileText size={14} />} onClick={() => doAction(() => aprovarRequerimento(row.id), 'Aprovar como Requerimento', `Confirmar requerimento #${row.id}?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: '#E89E70', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--accent) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Requerimento</Button>
-                            <Button size="small" startIcon={<XCircle size={14} />} onClick={() => doAction(() => reprovarInquerito(row.id), 'Reprovar', `Confirmar reprovação #${row.id}?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: 'hsl(var(--error))', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--error) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Reprovar</Button>
-                          </>
-                        )}
-                        {isMobile && col.id === 'aprovar-indicacao' && (
-                          <>
-                            <Button size="small" startIcon={<ChevronLeft size={14} />} onClick={() => doAction(() => colocarComoCriado(row.id), 'Enviar para Pendentes', `Confirmar envio #${row.id} para pendentes?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: '#A1A9B8', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--text-secondary) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Pendentes</Button>
-                            <Button size="small" startIcon={<Eye size={14} />} onClick={() => doAction(() => colocarEmAnalise(row.id), 'Enviar para Em Análise', `Confirmar envio #${row.id} para análise?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: '#62A1D8', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--info) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Em Análise</Button>
-                            <Button size="small" startIcon={<FileText size={14} />} onClick={() => doAction(() => aprovarRequerimento(row.id), 'Aprovar como Requerimento', `Confirmar requerimento #${row.id}?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: '#E89E70', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--accent) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Requerimento</Button>
-                            <Button size="small" startIcon={<XCircle size={14} />} onClick={() => doAction(() => reprovarInquerito(row.id), 'Reprovar', `Confirmar reprovação #${row.id}?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: 'hsl(var(--error))', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--error) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Reprovar</Button>
-                          </>
-                        )}
-                        {isMobile && col.id === 'aprovar-requerimento' && (
-                          <>
-                            <Button size="small" startIcon={<ChevronLeft size={14} />} onClick={() => doAction(() => colocarComoCriado(row.id), 'Enviar para Pendentes', `Confirmar envio #${row.id} para pendentes?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: '#A1A9B8', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--text-secondary) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Pendentes</Button>
-                            <Button size="small" startIcon={<Eye size={14} />} onClick={() => doAction(() => colocarEmAnalise(row.id), 'Enviar para Em Análise', `Confirmar envio #${row.id} para análise?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: '#62A1D8', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--info) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Em Análise</Button>
-                            <Button size="small" startIcon={<CheckCircle size={14} />} onClick={() => doAction(() => aprovarInquerito(row.id), 'Aprovar como Indicação', `Confirmar aprovação #${row.id}?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: '#66BB80', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--success) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Indicação</Button>
-                            <Button size="small" startIcon={<XCircle size={14} />} onClick={() => doAction(() => reprovarInquerito(row.id), 'Reprovar', `Confirmar reprovação #${row.id}?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: 'hsl(var(--error))', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--error) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Reprovar</Button>
-                          </>
-                        )}
-                        {isMobile && col.id === 'reprovar' && (
-                          <>
-                            <Button size="small" startIcon={<ChevronLeft size={14} />} onClick={() => doAction(() => colocarComoCriado(row.id), 'Enviar para Pendentes', `Confirmar envio #${row.id} para pendentes?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: '#A1A9B8', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--text-secondary) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Pendentes</Button>
-                            <Button size="small" startIcon={<Eye size={14} />} onClick={() => doAction(() => colocarEmAnalise(row.id), 'Enviar para Em Análise', `Confirmar envio #${row.id} para análise?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: '#62A1D8', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--info) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Em Análise</Button>
-                            <Button size="small" startIcon={<CheckCircle size={14} />} onClick={() => doAction(() => aprovarInquerito(row.id), 'Aprovar como Indicação', `Confirmar aprovação #${row.id}?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: '#66BB80', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--success) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Indicação</Button>
-                            <Button size="small" startIcon={<FileText size={14} />} onClick={() => doAction(() => aprovarRequerimento(row.id), 'Aprovar como Requerimento', `Confirmar requerimento #${row.id}?`)} sx={{ flex: '1 1 calc(50% - 8px)', color: '#E89E70', textTransform: 'none', fontSize: 11, border: '1px solid hsl(var(--accent) / 0.2)', borderRadius: 1.5, px: 1.5 }}>Requerimento</Button>
-                          </>
+                        {isMobile && (
+                          <FormControl fullWidth size="small" variant="filled" sx={{ ...inputSx, minWidth: 200 }}>
+                            <Select
+                              value=""
+                              displayEmpty
+                              renderValue={() => 'Mover para...'}
+                              onChange={(e) => {
+                                const target = e.target.value
+                                if (target) handleMobileMove(row, target)
+                              }}
+                              sx={{ fontSize: 12 }}
+                            >
+                              {COLUMNS.filter((c) => c.id !== col.id).map((c) => (
+                                <MenuItem key={c.id} value={c.id} sx={{ fontSize: 12 }}>{c.label}</MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
                         )}
                       </Box>
                     </Box>
@@ -1546,10 +1903,52 @@ const ReclamacoesPage: React.FC = () => {
           )
         })}
       </Box>
+      </React.Fragment>
       )}
 
       {/* ── dialogs ── */}
       <ConfirmDialog open={confirmOpen} title={confirmTitle} message={confirmMessage} onConfirm={() => confirmAction?.()} onCancel={() => setConfirmOpen(false)} />
+
+      {/* dialog de mensagem ao mover de coluna */}
+      <Dialog open={actionDialogOpen} onClose={() => setActionDialogOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: dialogSx }}>
+        <DialogTitle sx={{ color: 'hsl(var(--accent))', fontWeight: 700 }}>{actionDialogTitle}</DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+          {actionDialogRequiresDate && (
+            <TextField
+              type="date"
+              fullWidth
+              label="Data do Lembrete"
+              variant="filled"
+              InputLabelProps={{ shrink: true }}
+              value={actionDialogData}
+              onChange={(e) => setActionDialogData(e.target.value)}
+              sx={inputSx}
+            />
+          )}
+          <TextField
+            fullWidth
+            multiline
+            minRows={3}
+            label={actionDialogRequiresDate ? 'Lembrete interno' : 'Motivo (enviado ao cidadão)'}
+            variant="filled"
+            value={actionDialogMensagem}
+            onChange={(e) => setActionDialogMensagem(e.target.value)}
+            sx={inputSx}
+            placeholder={actionDialogRequiresDate ? 'Digite um lembrete para acompanhar esta solicitação...' : 'Digite o motivo da decisão (será incluído na mensagem enviada ao cidadão)...'}
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setActionDialogOpen(false)} sx={{ color: 'hsl(var(--text-secondary))', textTransform: 'none' }}>Cancelar</Button>
+          <Button
+            onClick={handleActionDialogConfirm}
+            variant="contained"
+            disabled={!actionDialogMensagem.trim() || (actionDialogRequiresDate && !actionDialogData) || actionDialogSubmitting}
+            sx={{ background: 'hsl(var(--primary))', textTransform: 'none', borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
+          >
+            {actionDialogSubmitting ? <CircularProgress size={20} sx={{ color: '#fff' }} /> : 'Confirmar e Enviar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog open={editOpen} onClose={() => setEditOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: dialogSx }}>
         <DialogTitle sx={{ color: 'hsl(var(--accent))', fontWeight: 700 }}>Editar Solicitação #{editRow?.id}</DialogTitle>
@@ -1599,8 +1998,34 @@ const ReclamacoesPage: React.FC = () => {
 
       {/* detail dialog */}
       <Dialog open={detailOpen} onClose={() => setDetailOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: dialogSx }}>
-        <DialogTitle sx={{ color: 'hsl(var(--accent))', fontWeight: 700 }}>Solicitação #{detailRow?.id}</DialogTitle>
-        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography sx={{ color: 'hsl(var(--accent))', fontWeight: 700, fontSize: 18 }}>
+              Solicitação #{detailRow?.id}
+            </Typography>
+          </Box>
+          {detailRow && (() => {
+            const col = COLUMNS.find((c) => c.id === getColumnId(detailRow))
+            const badgeColor = cardBorderLeft[getColumnId(detailRow)]
+            return (
+              <Box
+                sx={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: badgeColor,
+                  bgcolor: `${badgeColor}22`,
+                  border: `1px solid ${badgeColor}55`,
+                  borderRadius: 999,
+                  px: 1.4,
+                  py: 0.4,
+                }}
+              >
+                {col?.label ?? statusDisplay[detailRow.status.toLowerCase()] ?? detailRow.status}
+              </Box>
+            )
+          })()}
+        </DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 1 }}>
           {(() => {
             const r = detailRow
             if (!r) return null
@@ -1609,58 +2034,43 @@ const ReclamacoesPage: React.FC = () => {
               <>
                 {/* Dados do Cliente */}
                 <Box>
-                  <Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary))', textTransform: 'uppercase', letterSpacing: '0.05em', mb: 1, fontWeight: 600 }}>
-                    Dados do Cliente
-                  </Typography>
-                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
-                    <Box><Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary) / 0.6)' }}>Telefone</Typography><Typography sx={{ fontSize: 13, color: 'hsl(var(--text-primary))' }}>{formatPhoneDisplay(r.telefone)}</Typography></Box>
-                    <Box><Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary) / 0.6)' }}>Nome</Typography><Typography sx={{ fontSize: 13, color: 'hsl(var(--text-primary))' }}>{r.nomeCliente || c?.nome || '-'}</Typography></Box>
-                    <Box><Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary) / 0.6)' }}>Data Nasc.</Typography><Typography sx={{ fontSize: 13, color: 'hsl(var(--text-primary))' }}>{c?.dataNascimento ? formatDate(c.dataNascimento) : '-'}</Typography></Box>
-                    <Box><Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary) / 0.6)' }}>Idade</Typography><Typography sx={{ fontSize: 13, color: 'hsl(var(--text-primary))' }}>{calcAge(c?.dataNascimento) !== null ? `${calcAge(c!.dataNascimento)} anos` : '-'}</Typography></Box>
-                    <Box sx={{ gridColumn: '1 / -1' }}><Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary) / 0.6)' }}>Endereço</Typography><Typography sx={{ fontSize: 13, color: 'hsl(var(--text-primary))' }}>{r.enderecoCliente || c?.endereco || '-'}</Typography></Box>
-                    <Box><Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary) / 0.6)' }}>Bairro</Typography><Typography sx={{ fontSize: 13, color: 'hsl(var(--text-primary))' }}>{r.bairroCliente || c?.bairro || '-'}</Typography></Box>
-                    <Box><Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary) / 0.6)' }}>Cidade</Typography><Typography sx={{ fontSize: 13, color: 'hsl(var(--text-primary))' }}>{r.cidadeCliente || c?.cidade || '-'}</Typography></Box>
+                  <DetailSectionHeader icon={User} label="Dados do Cliente" colorVar="accent" />
+                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
+                    <DetailField label="Telefone" value={formatPhoneDisplay(r.telefone)} />
+                    <DetailField label="Nome" value={r.nomeCliente || c?.nome} />
+                    <DetailField label="Data Nasc." value={c?.dataNascimento ? formatDate(c.dataNascimento) : undefined} />
+                    <DetailField label="Idade" value={calcAge(c?.dataNascimento) !== null ? `${calcAge(c!.dataNascimento)} anos` : undefined} />
+                    <DetailField span label="Endereço" value={r.enderecoCliente || c?.endereco} />
+                    <DetailField label="Bairro" value={r.bairroCliente || c?.bairro} />
+                    <DetailField label="Cidade" value={r.cidadeCliente || c?.cidade} />
                   </Box>
                 </Box>
-
-                <Box sx={{ borderTop: '1px solid hsl(var(--border))', my: 0.5 }} />
 
                 {/* Dados da Ocorrência */}
                 <Box>
-                  <Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary))', textTransform: 'uppercase', letterSpacing: '0.05em', mb: 1, fontWeight: 600 }}>
-                    Dados da Ocorrência
-                  </Typography>
-                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
-                    <Box><Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary) / 0.6)' }}>Categoria</Typography><Typography sx={{ fontSize: 13, color: 'hsl(var(--text-primary))' }}>{formatCategoryName(r.categoria)}</Typography></Box>
-                    <Box><Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary) / 0.6)' }}>Status</Typography><Typography sx={{ fontSize: 13, color: 'hsl(var(--text-primary))' }}>{statusDisplay[r.status.toLowerCase()] ?? r.status}</Typography></Box>
-                    <Box><Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary) / 0.6)' }}>Origem</Typography><Typography sx={{ fontSize: 13, color: 'hsl(var(--text-primary))' }}>{r.ehManual ? 'Manual' : 'Agente'}</Typography></Box>
-                    <Box><Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary) / 0.6)' }}>Região</Typography><Typography sx={{ fontSize: 13, color: 'hsl(var(--text-primary))' }}>{r.detalhes?.regiao || '-'}</Typography></Box>
-                    <Box><Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary) / 0.6)' }}>Data Criação</Typography><Typography sx={{ fontSize: 13, color: 'hsl(var(--text-primary))' }}>{formatDate(r.dataCriacao)}</Typography></Box>
-                    <Box><Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary) / 0.6)' }}>Data Atualização</Typography><Typography sx={{ fontSize: 13, color: 'hsl(var(--text-primary))' }}>{formatDate(r.dataAtualizacao)}</Typography></Box>
+                  <DetailSectionHeader icon={ClipboardList} label="Dados da Ocorrência" colorVar="info" />
+                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
+                    <DetailField label="Categoria" value={formatCategoryName(r.categoria)} />
+                    <DetailField label="Origem" value={r.ehManual ? 'Manual' : 'Agente'} />
+                    <DetailField label="Região" value={r.detalhes?.regiao} />
+                    <DetailField label="Data Criação" value={formatDate(r.dataCriacao)} />
+                    <DetailField span label="Data Atualização" value={formatDate(r.dataAtualizacao)} />
                   </Box>
                 </Box>
 
-                <Box sx={{ borderTop: '1px solid hsl(var(--border))', my: 0.5 }} />
-
                 {/* Situação */}
                 {r.situacaoResumida && (
-                  <>
-                    <Box>
-                      <Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary))', textTransform: 'uppercase', letterSpacing: '0.05em', mb: 1, fontWeight: 600 }}>
-                        Situação Resumida
-                      </Typography>
-                      <Typography sx={{ fontSize: 13, color: 'hsl(var(--text-primary))', lineHeight: 1.5 }}>
-                        {r.situacaoResumida}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ borderTop: '1px solid hsl(var(--border))', my: 0.5 }} />
-                  </>
+                  <Box>
+                    <DetailSectionHeader icon={FileText} label="Situação Resumida" colorVar="text-secondary" />
+                    <Typography sx={{ fontSize: 13, color: 'hsl(var(--text-primary))', lineHeight: 1.5, bgcolor: 'hsl(var(--surface-2) / 0.6)', border: '1px solid hsl(var(--border) / 0.6)', borderRadius: 1.5, px: 1.6, py: 1.1 }}>
+                      {r.situacaoResumida}
+                    </Typography>
+                  </Box>
                 )}
 
                 {/* Mídias */}
                 {r.detalhes?.midiasAnimal && (
                   <>
-                    <Box sx={{ borderTop: '1px solid hsl(var(--border))', my: 0.5 }} />
                     <Box>
                       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
                         <Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary))', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
@@ -1731,82 +2141,54 @@ const ReclamacoesPage: React.FC = () => {
 
                 {/* Detalhes */}
                 {getDetalhesEntries(r.detalhes, r.categoria).filter(([k, v]) => k !== 'midiasAnimal' && (k === 'conheceTutor' || (v && v !== ''))).length > 0 && (
-                  <>
-                    <Box sx={{ borderTop: '1px solid hsl(var(--border))', my: 0.5 }} />
-                    <Box>
-                      <Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary))', textTransform: 'uppercase', letterSpacing: '0.05em', mb: 1, fontWeight: 600 }}>
-                        Detalhes
-                      </Typography>
-                      <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
-                        {getDetalhesEntries(r.detalhes, r.categoria).filter(([k, v]) => k !== 'midiasAnimal' && k !== 'regiao' && (k === 'conheceTutor' || (v && v !== ''))).map(([k, v]) => {
-                          const detailLabels: Record<string, string> = {
-                            enderecoOcorrencia: 'Endereço da Ocorrência',
-                            conheceTutor: 'Conhece o Tutor',
-                            condicoesAnimal: 'Condições do Animal',
-                            frequenciaMausTratos: 'Frequência de Maus Tratos',
-                            nomeAnimal: 'Nome do Animal',
-                            especieAnimal: 'Espécie',
-                            idadeAnimal: 'Idade',
-                            sexoAnimal: 'Sexo',
-                            bairroAnimal: 'Bairro do Animal',
-                            nomeResponsavelAnimal: 'Nome do Responsável',
-                            telefoneResponsavelAnimal: 'Telefone do Responsável',
-                            historicoAnimal: 'Histórico',
-                            temCadUnico: 'Cad. Único',
-                            ehProtetorIndependente: 'É Protetor Independente',
-                            situacaoAnimal: 'Situação Animal',
-                            quandoCruzou: 'Quando Cruzou',
-                            infoSaudeAnimal: 'Info Saúde',
-                            detalhesDenuncia: 'Detalhes da Denúncia',
-                            tempoAnimalLocal: 'Tempo no Local',
-                            ferimentosAnimal: 'Ferimentos',
-                            providenciasAnimal: 'Providências',
-                            protocoloDenuncia: 'Protocolo da Denúncia',
-                          }
-                          const valueMap: Record<string, string> = { sim: 'Sim', nao: 'Não', SIM: 'Sim', NAO: 'Não' }
-                          const displayValue = (k === 'conheceTutor' && !v) ? 'Não Informado' : (valueMap[String(v)] ?? String(v))
-                          return (
-                            <Box key={k}>
-                              <Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary) / 0.6)' }}>
-                                {detailLabels[k] ?? k.replace(/([A-Z])/g, ' $1').trim()}
-                              </Typography>
-                              <Typography sx={{ fontSize: 13, color: 'hsl(var(--text-primary))' }}>
-                                {displayValue}
-                              </Typography>
-                            </Box>
-                          )
-                        })}
-                      </Box>
+                  <Box>
+                    <DetailSectionHeader icon={ListChecks} label="Detalhes" colorVar="text-secondary" />
+                    <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
+                      {getDetalhesEntries(r.detalhes, r.categoria).filter(([k, v]) => k !== 'midiasAnimal' && k !== 'regiao' && (k === 'conheceTutor' || (v && v !== ''))).map(([k, v]) => {
+                        const detailLabels: Record<string, string> = {
+                          enderecoOcorrencia: 'Endereço da Ocorrência',
+                          conheceTutor: 'Conhece o Tutor',
+                          condicoesAnimal: 'Condições do Animal',
+                          frequenciaMausTratos: 'Frequência de Maus Tratos',
+                          nomeAnimal: 'Nome do Animal',
+                          especieAnimal: 'Espécie',
+                          idadeAnimal: 'Idade',
+                          sexoAnimal: 'Sexo',
+                          bairroAnimal: 'Bairro do Animal',
+                          nomeResponsavelAnimal: 'Nome do Responsável',
+                          telefoneResponsavelAnimal: 'Telefone do Responsável',
+                          historicoAnimal: 'Histórico',
+                          temCadUnico: 'Cad. Único',
+                          ehProtetorIndependente: 'É Protetor Independente',
+                          situacaoAnimal: 'Situação Animal',
+                          quandoCruzou: 'Quando Cruzou',
+                          infoSaudeAnimal: 'Info Saúde',
+                          detalhesDenuncia: 'Detalhes da Denúncia',
+                          tempoAnimalLocal: 'Tempo no Local',
+                          ferimentosAnimal: 'Ferimentos',
+                          providenciasAnimal: 'Providências',
+                          protocoloDenuncia: 'Protocolo da Denúncia',
+                        }
+                        const valueMap: Record<string, string> = { sim: 'Sim', nao: 'Não', SIM: 'Sim', NAO: 'Não' }
+                        const displayValue = (k === 'conheceTutor' && !v) ? 'Não Informado' : (valueMap[String(v)] ?? String(v))
+                        return (
+                          <DetailField key={k} label={detailLabels[k] ?? k.replace(/([A-Z])/g, ' $1').trim()} value={displayValue} />
+                        )
+                      })}
                     </Box>
-                  </>
+                  </Box>
+                )}
+
+                {r.mensagem && (
+                  <DetailMessageBox icon={MessageCircle} label="Mensagem Enviada ao Cidadão" value={r.mensagem} colorVar="info" />
                 )}
 
                 {r.mensagemFinal && (
-                  <>
-                    <Box sx={{ borderTop: '1px solid hsl(var(--border))', my: 0.5 }} />
-                    <Box>
-                      <Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary))', textTransform: 'uppercase', letterSpacing: '0.05em', mb: 1, fontWeight: 600 }}>
-                        Mensagem Final
-                      </Typography>
-                      <Typography sx={{ fontSize: 13, color: 'hsl(var(--text-primary))', lineHeight: 1.5 }}>
-                        {r.mensagemFinal}
-                      </Typography>
-                    </Box>
-                  </>
+                  <DetailMessageBox icon={FileCheck} label="Mensagem Final" value={r.mensagemFinal} colorVar="success" />
                 )}
 
                 {r.observacao && (
-                  <>
-                    <Box sx={{ borderTop: '1px solid hsl(var(--border))', my: 0.5 }} />
-                    <Box>
-                      <Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary))', textTransform: 'uppercase', letterSpacing: '0.05em', mb: 1, fontWeight: 600 }}>
-                        Observação
-                      </Typography>
-                      <Typography sx={{ fontSize: 13, color: 'hsl(var(--text-primary))', lineHeight: 1.5 }}>
-                        {r.observacao}
-                      </Typography>
-                    </Box>
-                  </>
+                  <DetailMessageBox icon={StickyNote} label="Observação" value={r.observacao} colorVar="accent" italic />
                 )}
               </>
             )

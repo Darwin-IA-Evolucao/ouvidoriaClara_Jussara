@@ -5,6 +5,7 @@ const statusColors: Record<string, { bg: string; color: string; border: string }
   'em análise': { bg: 'hsl(var(--info) / 0.15)', color: 'hsl(var(--info))', border: '1px solid hsl(var(--info) / 0.3)' },
   'aprovado': { bg: 'hsl(var(--success) / 0.15)', color: 'hsl(var(--success))', border: '1px solid hsl(var(--success) / 0.3)' },
   'reprovado': { bg: 'hsl(var(--error) / 0.15)', color: 'hsl(var(--error))', border: '1px solid hsl(var(--error) / 0.3)' },
+  'finalizado': { bg: 'hsl(var(--info) / 0.15)', color: 'hsl(var(--info))', border: '1px solid hsl(var(--info) / 0.3)' },
   'protocolada': { bg: 'hsl(var(--info) / 0.15)', color: 'hsl(var(--info))', border: '1px solid hsl(var(--info) / 0.3)' },
   'resolvido': { bg: 'hsl(var(--success) / 0.15)', color: 'hsl(var(--success))', border: '1px solid hsl(var(--success) / 0.3)' },
 }
@@ -19,7 +20,8 @@ export const statusDisplay: Record<string, string> = {
   'criado': 'Criado',
   'em análise': 'Em Análise',
   'aprovado': 'Aprovado',
-  'reprovado': 'Reprovado',
+  'reprovado': 'Desqualificado',
+  'finalizado': 'Finalizado',
   'protocolada': 'Protocolada',
   'resolvido': 'Resolvido',
 }

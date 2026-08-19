@@ -12,6 +12,7 @@ import {
   Menu,
   X,
   MapPin,
+  MessageCircle,
 } from 'lucide-react'
 import { getTheme, toggleTheme } from '../utils/theme'
 import { clearSession } from '../utils/session'
@@ -22,6 +23,7 @@ const navItems = [
   { to: '/contatos', icon: Phone, label: 'Contatos' },
   { to: '/liderancas', icon: Megaphone, label: 'Lideranças' },
   { to: '/enderecos', icon: MapPin, label: 'Endereços' },
+  { to: '/conversas', icon: MessageCircle, label: 'Conversas' },
   { to: '/estatisticas', icon: LayoutDashboard, label: 'Estatísticas' },
 ]
 

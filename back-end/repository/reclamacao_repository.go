@@ -127,7 +127,7 @@ func scanOcorrencia(row interface {
 
 func (repo ReclamacaoRepository) GetAllOcorrencias(telefone string) ([]models.Ocorrencia, error) {
 	const baseQuery = `
-		SELECT idreclamacao, telefone, categoria, reclamacao, tipo, status, detalhes, eh_manual, observacao, mensagem_final, telefone_acessor, data_criacao, data_atualizacao
+		SELECT idreclamacao, telefone, categoria, reclamacao, tipo, status, detalhes, eh_manual, observacao, mensagem_final, telefone_acessor, mensagem, data_criacao, data_atualizacao
 		FROM reclamacao`
 
 	var rows *sql.Rows

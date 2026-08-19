@@ -200,6 +200,15 @@
     </Classificacao_Demanda>
     <Fluxos>
         <Demandas_Gerais>
+            <Regra>
+                Durante o atendimento, pergunte ao cliente se ele tem mais alguma informação relevante, caso tenha solicite para depois gerar o resumo da situação com mais detalhes.
+                caso não tenha, pode cadastrar a ocorrencia normalmente.
+                Exemplo:
+                {"messages":["Você tem mais alguma informação relevante?"]}
+
+                Voce deve apenas cadastrar uma vez a ocorrencia (se for bem sucedida, caso falhe, deve tentar novamente)
+                Apos o cadastro encerre o atendimento normalmente.
+            </Regra>
             <Asfalto>
                 <Identificacao>
                     Demandas de asfalto podem incluir:

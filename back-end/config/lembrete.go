@@ -20,6 +20,11 @@ func VerificarLembrete(conn *sqlx.DB) ([]models.Cliente, error) {
 	return clientes, err
 }
 
+func AtualizarAviso(conn *sqlx.DB) error {
+	const query = `UPDATE aviso SET avisado = true WHERE data BETWEEN NOW() - INTERVAL '1 day' AND NOW() AND avisado = false`
+	_, err := conn.Exec(query)
+	return err
+}
 func EnviarLembrete(conn *sqlx.DB) {
 	clientes, err := VerificarLembrete(conn)
 	if err != nil {
@@ -39,6 +44,11 @@ func EnviarLembrete(conn *sqlx.DB) {
 			continue
 		}
 		fmt.Printf("[ENVIAR LEMBRETE] Lembrete enviado para: %s - %s\n", cliente.Telefone, cliente.Nome)
+	}
+	err = AtualizarAviso(conn)
+	if err != nil {
+		fmt.Println("[ENVIAR LEMBRETE] Erro ao atualizar aviso: ", err)
+		return
 	}
 }
 

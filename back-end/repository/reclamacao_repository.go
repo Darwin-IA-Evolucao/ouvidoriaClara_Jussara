@@ -111,7 +111,7 @@ func scanOcorrencia(row interface {
 	var detalhesJSON []byte
 	if err := row.Scan(
 		&o.ID, &o.Telefone, &o.Categoria, &o.SituacaoResumida,
-		&o.Tipo, &o.Status, &detalhesJSON, &o.EhManual, &o.Observacao, &o.MensagemFinal, &o.TelefoneAcessor,
+		&o.Tipo, &o.Status, &detalhesJSON, &o.EhManual, &o.Observacao, &o.MensagemFinal, &o.TelefoneAcessor, &o.Mensagem,
 		&o.DataCriacao, &o.DataAtualizacao,
 	); err != nil {
 		return o, err
@@ -158,7 +158,7 @@ func (repo ReclamacaoRepository) GetAllOcorrencias(telefone string) ([]models.Oc
 
 func (repo ReclamacaoRepository) GetOcorrenciaById(id string) (*models.Ocorrencia, error) {
 	const query = `
-		SELECT idreclamacao, telefone, categoria, reclamacao, tipo, status, detalhes, eh_manual, observacao, mensagem_final, telefone_acessor, data_criacao, data_atualizacao
+		SELECT idreclamacao, telefone, categoria, reclamacao, tipo, status, detalhes, eh_manual, observacao, mensagem_final, telefone_acessor, mensagem, data_criacao, data_atualizacao
 		FROM reclamacao WHERE idreclamacao = $1`
 	row := repo.connection.QueryRow(query, id)
 	o, err := scanOcorrencia(row)

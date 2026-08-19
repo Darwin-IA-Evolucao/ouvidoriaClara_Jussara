@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"sync"
 	"time"
 )
@@ -71,9 +72,21 @@ type AddMensagemIA struct {
 	Conteudo string `json:"conteudo"`
 }
 
+func (a *AddMensagemIA) Print() {
+	fmt.Println("AddMensagemIA")
+	fmt.Println("Telefone: ", a.Telefone)
+	fmt.Println("Conteudo: ", a.Conteudo)
+}
+
 type AddMensagemAgente struct {
 	Telefone string `json:"telefone"`
 	Conteudo string `json:"conteudo"`
+}
+
+func (a *AddMensagemAgente) Print() {
+	fmt.Println("AddMensagemAgente")
+	fmt.Println("Telefone: ", a.Telefone)
+	fmt.Println("Conteudo: ", a.Conteudo)
 }
 
 type MensagemHistorico struct {

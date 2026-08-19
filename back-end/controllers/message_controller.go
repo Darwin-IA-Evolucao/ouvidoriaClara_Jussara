@@ -62,6 +62,7 @@ func (ctrl *MensagemController) AddMensagemIA(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Erro ao receber request em AddMensagemIA: " + err.Error()})
 		return
 	}
+	body.Print()
 	err := ctrl.usecase.SalvarMensagemIA(body.Telefone, body.Conteudo)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao salvar mensagem IA: " + err.Error()})
@@ -76,6 +77,7 @@ func (ctrl *MensagemController) AddMensagemAgente(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Erro ao receber request em AddMensagemAgente: " + err.Error()})
 		return
 	}
+	body.Print()
 	historico, err := ctrl.usecase.EnviarMensagemAgente(body.Telefone, body.Conteudo)
 	if err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"error": "Erro ao enviar mensagem do agente: " + err.Error()})
@@ -126,6 +128,11 @@ func (ctrl *MensagemController) UploadMidiaChat(c *gin.Context) {
 	}
 
 	linkMidia := fmt.Sprintf("%s/%s", os.Getenv("BASE_URL_UPLOAD"), url.PathEscape(uniqueName))
+
+	fmt.Println("Link Midia: ", linkMidia)
+	fmt.Println("Telefone: ", telefone)
+	fmt.Println("Remetente: ", remetente)
+	fmt.Println("Tipo: ", tipo)
 	historico, err := ctrl.usecase.SalvarMidiaChat(telefone, remetente, tipo, linkMidia, c.PostForm("conteudo"))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao salvar midia no historico: " + err.Error()})

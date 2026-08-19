@@ -1227,7 +1227,7 @@ const ReclamacoesPage: React.FC = () => {
     >
       {/* linha 1: título + ícone de quantidade */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography sx={{ fontWeight: 700, fontSize: 13, color: col.color, letterSpacing: '0.03em', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: '1 1 auto', minWidth: 0 }}>
+        <Typography sx={{ fontWeight: 700, fontSize: 13, color: col.color, letterSpacing: '0.03em', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', flex: '1 1 auto', minWidth: 0 }}>
           {col.label}
         </Typography>
         <Box
@@ -1603,7 +1603,7 @@ const ReclamacoesPage: React.FC = () => {
             ref={headersRef}
             sx={{
               display: 'grid',
-              gridTemplateColumns: `repeat(${COLUMNS.length}, minmax(260px, 1fr))`,
+              gridTemplateColumns: `repeat(${COLUMNS.length}, 300px)`,
               gap: 2,
               px: 0.5,
             }}
@@ -1624,7 +1624,7 @@ const ReclamacoesPage: React.FC = () => {
             mb: 1,
           }}
         >
-          <Box sx={{ height: 1, width: `calc(${COLUMNS.length} * 260px + ${COLUMNS.length - 1} * 16px + 8px)` }} />
+          <Box sx={{ height: 1, width: `calc(${COLUMNS.length} * 300px + ${COLUMNS.length - 1} * 16px + 8px)` }} />
         </Box>
       )}
       <Box
@@ -1633,7 +1633,7 @@ const ReclamacoesPage: React.FC = () => {
         onDragLeave={stopAutoScroll}
         sx={{
           display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : `repeat(${COLUMNS.length}, minmax(260px, 1fr))`,
+          gridTemplateColumns: isMobile ? '1fr' : `repeat(${COLUMNS.length}, 300px)`,
           gap: 2,
           pb: 2,
           pt: 1,

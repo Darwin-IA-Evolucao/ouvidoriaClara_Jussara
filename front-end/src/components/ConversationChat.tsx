@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Box, Typography, CircularProgress, Alert, TextField, IconButton, Chip } from '@mui/material'
-import { MessageCircle, AlertCircle, Send, Power, Bot } from 'lucide-react'
+import { MessageCircle, AlertCircle, Send, Power } from 'lucide-react'
 import ChatBubble from './ChatBubble'
 import {
   getHistoricoChat,
@@ -18,21 +18,6 @@ interface ConversationChatProps {
 }
 
 const POLL_INTERVAL = 8000 // 8s
-
-const BG_IMAGES = [
-  '/15c24c6a-fcf0-43f7-ac5f-732067eda52a.jpeg',
-  '/b6043048-4920-4170-930a-59b54a1e2f45.jpeg',
-  '/d1d092d8-8e15-4d3f-8d18-706b6309ba30.jpeg',
-  '/d4062c0c-db57-4e2d-ae93-00c29f2a728b.jpeg',
-]
-
-function pickBgForTelefone(telefone: string): string {
-  let hash = 0
-  for (let i = 0; i < telefone.length; i++) {
-    hash = (hash * 31 + telefone.charCodeAt(i)) | 0
-  }
-  return BG_IMAGES[Math.abs(hash) % BG_IMAGES.length]
-}
 
 const ConversationChat: React.FC<ConversationChatProps> = ({ conversa, onMessageSent, clientesMap }) => {
   const [messages, setMessages] = React.useState<MensagemChat[]>([])
@@ -190,25 +175,10 @@ const ConversationChat: React.FC<ConversationChatProps> = ({ conversa, onMessage
           justifyContent: 'center',
           bgcolor: 'hsl(var(--background))',
           color: 'hsl(var(--text-secondary))',
-          position: 'relative',
-          overflow: 'hidden',
         }}
       >
-        <Box
-          sx={{
-            position: 'absolute',
-            inset: 0,
-            backgroundImage: `url(${BG_IMAGES[0]})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            filter: 'blur(24px) brightness(0.3)',
-            transform: 'scale(1.1)',
-          }}
-        />
-        <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <MessageCircle size={48} style={{ opacity: 0.5, marginBottom: 16 }} />
-          <Typography sx={{ fontSize: 14, fontWeight: 500 }}>Selecione uma conversa para visualizar</Typography>
-        </Box>
+        <MessageCircle size={48} style={{ opacity: 0.3, marginBottom: 16 }} />
+        <Typography sx={{ fontSize: 15 }}>Selecione uma conversa para visualizar</Typography>
       </Box>
     )
   }
@@ -221,24 +191,8 @@ const ConversationChat: React.FC<ConversationChatProps> = ({ conversa, onMessage
         flexDirection: 'column',
         bgcolor: 'hsl(var(--background))',
         minHeight: 0,
-        position: 'relative',
-        overflow: 'hidden',
       }}
     >
-      {/* Background com blur — fora do scroll, fica fixo */}
-      <Box
-        sx={{
-          position: 'absolute',
-          inset: 0,
-          backgroundImage: `url(${pickBgForTelefone(conversa.telefone)})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          filter: 'blur(20px) brightness(0.4)',
-          transform: 'scale(1.1)',
-          zIndex: 0,
-          pointerEvents: 'none',
-        }}
-      />
       <ChatHeader
         conversa={conversa}
         iaLigada={iaLigada}
@@ -256,11 +210,9 @@ const ConversationChat: React.FC<ConversationChatProps> = ({ conversa, onMessage
           overflowX: 'hidden',
           minHeight: 0,
           py: 1.5,
-          position: 'relative',
-          zIndex: 1,
         }}
       >
-        <Box sx={{ position: 'relative' }}>
+        <Box>
         {loading && messages.length === 0 ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
             <CircularProgress size={28} sx={{ color: 'hsl(var(--accent))' }} />
@@ -283,7 +235,7 @@ const ConversationChat: React.FC<ConversationChatProps> = ({ conversa, onMessage
         ) : messages.length === 0 ? (
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 6 }}>
             <MessageCircle size={36} color="hsl(var(--text-secondary))" style={{ opacity: 0.4, marginBottom: 12 }} />
-            <Typography sx={{ fontSize: 13, color: 'hsl(var(--text-secondary))' }}>
+            <Typography sx={{ fontSize: 14, color: 'hsl(var(--text-secondary))' }}>
               Nenhuma mensagem encontrada nesta conversa.
             </Typography>
           </Box>
@@ -303,8 +255,6 @@ const ConversationChat: React.FC<ConversationChatProps> = ({ conversa, onMessage
           gap: 1,
           alignItems: 'flex-end',
           flexShrink: 0,
-          position: 'relative',
-          zIndex: 2,
         }}
       >
         <TextField
@@ -329,7 +279,7 @@ const ConversationChat: React.FC<ConversationChatProps> = ({ conversa, onMessage
               '&:hover fieldset': { borderColor: 'hsl(var(--accent))' },
               '&.Mui-focused fieldset': { borderColor: 'hsl(var(--accent))' },
             },
-            '& textarea': { color: 'hsl(var(--text-primary))', fontSize: 13.5, lineHeight: 1.4 },
+            '& textarea': { color: 'hsl(var(--text-primary))', fontSize: 15, lineHeight: 1.4 },
           }}
         />
         <IconButton
@@ -379,14 +329,12 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ conversa, iaLigada, onReligarIa
       alignItems: 'center',
       justifyContent: 'space-between',
       gap: 1,
-      position: 'relative',
-      zIndex: 2,
     }}
   >
     <Box sx={{ minWidth: 0, flex: 1 }}>
       <Typography
         sx={{
-          fontSize: 14,
+          fontSize: 15,
           fontWeight: 600,
           color: 'hsl(var(--text-primary))',
           overflow: 'hidden',
@@ -397,7 +345,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ conversa, iaLigada, onReligarIa
         {nome || formatPhoneDisplay(conversa.telefone)}
       </Typography>
       {nome && (
-        <Typography sx={{ fontSize: 12, color: 'hsl(var(--text-secondary))' }}>
+        <Typography sx={{ fontSize: 13, color: 'hsl(var(--text-secondary))' }}>
           {formatPhoneDisplay(conversa.telefone)}
         </Typography>
       )}
@@ -410,8 +358,8 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ conversa, iaLigada, onReligarIa
           size="small"
           label="Ju: ..."
           sx={{
-            fontSize: 11,
-            height: 24,
+            fontSize: 12,
+            height: 26,
             bgcolor: 'hsl(var(--surface-2))',
             color: 'hsl(var(--text-secondary))',
           }}
@@ -419,14 +367,12 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ conversa, iaLigada, onReligarIa
       ) : iaLigada ? (
         <Chip
           size="small"
-          icon={<Bot size={13} />}
           label="Ju ligada"
           sx={{
-            fontSize: 11,
-            height: 24,
+            fontSize: 12,
+            height: 26,
             bgcolor: 'hsl(var(--success) / 0.15)',
             color: 'hsl(var(--success))',
-            '& .MuiChip-icon': { color: 'hsl(var(--success))' },
           }}
         />
       ) : (
@@ -435,8 +381,8 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ conversa, iaLigada, onReligarIa
             size="small"
             label="Ju desligada"
             sx={{
-              fontSize: 11,
-              height: 24,
+              fontSize: 12,
+              height: 26,
               bgcolor: 'hsl(var(--warning) / 0.15)',
               color: 'hsl(var(--warning))',
             }}

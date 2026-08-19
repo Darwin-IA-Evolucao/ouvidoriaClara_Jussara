@@ -246,7 +246,7 @@ const ChatBubbleBase: React.FC<ChatBubbleProps> = ({ message }) => {
         {!isCliente && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: message.conteudo ? 0.5 : 0 }}>
             {message.remetente === 'ia' && <Brain size={11} color="rgba(255,255,255,0.7)" />}
-            <Typography sx={{ fontSize: 10, opacity: 0.7, fontWeight: 600 }}>
+            <Typography sx={{ fontSize: 11, opacity: 0.7, fontWeight: 600 }}>
               {message.remetente === 'ia' ? 'Ju' : 'Assessor'}
             </Typography>
           </Box>
@@ -291,7 +291,7 @@ const ChatBubbleBase: React.FC<ChatBubbleProps> = ({ message }) => {
                 zIndex: 2,
               }}
             >
-              <Typography sx={{ fontSize: 11, color: '#fff', whiteSpace: 'nowrap', lineHeight: 1, fontWeight: 500 }}>
+              <Typography sx={{ fontSize: 12, color: '#fff', whiteSpace: 'nowrap', lineHeight: 1, fontWeight: 500 }}>
                 {formatTime(message.criadoEm)}
               </Typography>
             </Box>
@@ -381,7 +381,7 @@ const ChatBubbleBase: React.FC<ChatBubbleProps> = ({ message }) => {
             <Box sx={{ minWidth: 0, flex: 1 }}>
               <Typography
                 sx={{
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: 500,
                   color: bubbleColor,
                   overflow: 'hidden',
@@ -391,7 +391,7 @@ const ChatBubbleBase: React.FC<ChatBubbleProps> = ({ message }) => {
               >
                 {docNome}
               </Typography>
-              <Typography sx={{ fontSize: 11, color: isCliente ? 'hsl(var(--text-secondary))' : 'rgba(255,255,255,0.6)', textTransform: 'uppercase' }}>
+              <Typography sx={{ fontSize: 12, color: isCliente ? 'hsl(var(--text-secondary))' : 'rgba(255,255,255,0.6)', textTransform: 'uppercase' }}>
                 {docExt || 'arquivo'}
               </Typography>
             </Box>
@@ -403,14 +403,14 @@ const ChatBubbleBase: React.FC<ChatBubbleProps> = ({ message }) => {
           <Typography
             component="div"
             sx={{
-              fontSize: 13.5,
-              lineHeight: 1.4,
+              fontSize: 15,
+              lineHeight: 1.45,
               whiteSpace: 'pre-wrap',
               wordBreak: 'break-word',
               '& .wa-bold': { fontWeight: 700 },
               '& .wa-italic': { fontStyle: 'italic' },
               '& .wa-strike': { textDecoration: 'line-through' },
-              '& .wa-code': { fontFamily: 'monospace', fontSize: 12, bgcolor: 'rgba(0,0,0,0.08)', px: 0.3, borderRadius: 0.5 },
+              '& .wa-code': { fontFamily: 'monospace', fontSize: 13.5, bgcolor: 'rgba(0,0,0,0.08)', px: 0.3, borderRadius: 0.5 },
             }}
             dangerouslySetInnerHTML={{ __html: formatWhatsAppText(message.conteudo) }}
           />
@@ -424,7 +424,7 @@ const ChatBubbleBase: React.FC<ChatBubbleProps> = ({ message }) => {
               position: 'absolute',
               bottom: 4,
               right: 8,
-              fontSize: 10,
+              fontSize: 11,
               color: isCliente ? 'hsl(var(--text-secondary))' : 'rgba(255,255,255,0.7)',
               whiteSpace: 'nowrap',
               lineHeight: 1,

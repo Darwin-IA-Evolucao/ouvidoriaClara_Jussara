@@ -47,9 +47,8 @@ func (repo ReclamacaoRepository) UpdateMensagem(id, mensagem string) error {
 }
 
 func (repo ReclamacaoRepository) GetReclamacaoById(id string) (*models.Ocorrencia, error) {
-	const query = `SELECT * FROM reclamacao WHERE idreclamacao = $1`
-	var data models.Ocorrencia
-	err := repo.connection.Get(&data, query, id)
+	const query = `SELECT idreclamacao, telefone, categoria, reclamacao, tipo, status, detalhes, eh_manual, observacao, mensagem_final, telefone_acessor, mensagem, data_criacao, data_atualizacao FROM reclamacao WHERE idreclamacao = $1`
+	data, err := scanOcorrencia(repo.connection.QueryRow(query, id))
 	if err != nil {
 		return nil, err
 	}

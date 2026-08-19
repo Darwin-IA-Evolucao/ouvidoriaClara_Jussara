@@ -129,8 +129,10 @@ SELECT EXISTS (SELECT 1 FROM campanhas WHERE palavra_chave = '$1') AS existe;
 CREATE TABLE historico_chat (
     id SERIAL PRIMARY KEY,
     telefone VARCHAR(64) NOT NULL,
-    remetente VARCHAR(20) NOT NULL CHECK (remetente IN ('cliente', 'ia')),
+    remetente VARCHAR(20) NOT NULL CHECK (remetente IN ('cliente', 'ia', 'agente')),
     conteudo TEXT NOT NULL,
+    tipo VARCHAR(10) NOT NULL DEFAULT 'texto' CHECK (tipo IN ('texto', 'audio', 'imagem')),
+    link_midia TEXT NOT NULL DEFAULT '',
     criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 

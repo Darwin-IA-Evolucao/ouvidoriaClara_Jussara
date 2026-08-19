@@ -140,6 +140,10 @@ func tipoMidiaPorExtensao(nomeArquivo string) string {
 		return "imagem"
 	case ".ogg", ".oga", ".opus", ".mp3", ".m4a", ".wav", ".aac", ".amr":
 		return "audio"
+	case ".mp4", ".webm", ".mov", ".avi", ".wmv", ".flv", ".mkv":
+		return "video"
+	case ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx":
+		return "documento"
 	}
 	return ""
 }

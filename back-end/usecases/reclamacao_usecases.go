@@ -55,6 +55,25 @@ func (uc ReclamacaoUseCases) GetCategorias() []string {
 	return categorias
 }
 
+func mensagemStatusCliente(nome, status, motivo string) string {
+	nome = strings.TrimSpace(nome)
+	msg := fmt.Sprintf("Olá %s sua solicitação foi %s\n\n", nome, status)
+	if strings.TrimSpace(motivo) != "" {
+		msg += fmt.Sprintf("Motivo: %s\n\n", motivo)
+	}
+	msg += "Atenciosamente"
+	return msg
+}
+
+func (uc ReclamacaoUseCases) nomePorTelefone(telefone string) string {
+	cliente, err := uc.clienteUC.GetClienteByTelefone(telefone)
+	if err != nil {
+		fmt.Println("[NOME POR TELEFONE] Erro ao buscar cliente: ", err)
+		return ""
+	}
+	return cliente.Nome
+}
+
 func (uc ReclamacaoUseCases) CreateReclamacao(data models.RequestData) error {
 	if !ehCategoria(data.Categoria) {
 		return fmt.Errorf("Categoria inválida")
@@ -89,21 +108,16 @@ func (uc ReclamacaoUseCases) AprovarInquerito(id string, mensagem string) error 
 	if err := uc.repository.UpdateStatusTipo(id, "aprovado", "indicacao"); err != nil {
 		return err
 	}
-	err = uc.repository.UpdateMensagem(id, mensagem)
+	msg := mensagemStatusCliente(uc.nomePorTelefone(reclamacao.Telefone), "aprovada", mensagem)
+	err = uc.repository.UpdateMensagem(id, msg)
 	if err != nil {
 		return err
 	}
-	err = config.EnviarMensagem(reclamacao.Telefone, mensagem)
+	err = config.EnviarMensagem(reclamacao.Telefone, msg)
 	if err != nil {
 		return apperror.Internal(fmt.Sprintf("Erro ao enviar mensagem de aprovação de inquerito: %s", err.Error()))
 	}
-	// data, err := uc.repository.GetReclamacaoById(id)
-	// if err != nil {
-	// 	return err
-	// }
-	// if _, err := services.EnviaInquerito(*data); err != nil {
-	// 	return err
-	// }
+
 	return nil
 }
 func (uc ReclamacaoUseCases) ColocarEmAnalise(id, data string) error {
@@ -146,11 +160,12 @@ func (uc ReclamacaoUseCases) AprovarRequerimento(id string, mensagem string) err
 	if err != nil {
 		return err
 	}
-	err = uc.repository.UpdateMensagem(id, mensagem)
+	msg := mensagemStatusCliente(uc.nomePorTelefone(reclamacao.Telefone), "aprovada", mensagem)
+	err = uc.repository.UpdateMensagem(id, msg)
 	if err != nil {
 		return err
 	}
-	err = config.EnviarMensagem(reclamacao.Telefone, mensagem)
+	err = config.EnviarMensagem(reclamacao.Telefone, msg)
 	if err != nil {
 		return apperror.Internal(fmt.Sprintf("Erro ao enviar mensagem de aprovação de requerimento: %s", err.Error()))
 	}
@@ -186,11 +201,12 @@ func (uc ReclamacaoUseCases) AprovarComoAmbos(id string, mensagem string) error 
 	if err != nil {
 		return err
 	}
-	err = uc.repository.UpdateMensagem(id, mensagem)
+	msg := mensagemStatusCliente(uc.nomePorTelefone(reclamacao.Telefone), "aprovada", mensagem)
+	err = uc.repository.UpdateMensagem(id, msg)
 	if err != nil {
 		return err
 	}
-	err = config.EnviarMensagem(reclamacao.Telefone, mensagem)
+	err = config.EnviarMensagem(reclamacao.Telefone, msg)
 	if err != nil {
 		return apperror.Internal(fmt.Sprintf("Erro ao enviar mensagem de aprovação de requerimento: %s", err.Error()))
 	}
@@ -233,15 +249,19 @@ func (uc ReclamacaoUseCases) AprovarCausaAnimal(id string, mensagem string) erro
 	if err != nil {
 		return err
 	}
-	err = uc.repository.UpdateMensagem(id, mensagem)
+	if err := uc.repository.UpdateStatusTipo(id, "aprovado", "causa animal"); err != nil {
+		return err
+	}
+	msg := mensagemStatusCliente(uc.nomePorTelefone(reclamacao.Telefone), "aprovada", mensagem)
+	err = uc.repository.UpdateMensagem(id, msg)
 	if err != nil {
 		return err
 	}
-	err = config.EnviarMensagem(reclamacao.Telefone, mensagem)
+	err = config.EnviarMensagem(reclamacao.Telefone, msg)
 	if err != nil {
 		return apperror.Internal(fmt.Sprintf("Erro ao enviar mensagem de aprovação de causa animal: %s", err.Error()))
 	}
-	return uc.repository.UpdateStatusTipo(id, "aprovado", "causa animal")
+	return nil
 }
 
 func (uc ReclamacaoUseCases) FinalizarReclamacao(id string, mensagem string) error {
@@ -249,30 +269,40 @@ func (uc ReclamacaoUseCases) FinalizarReclamacao(id string, mensagem string) err
 	if err != nil {
 		return err
 	}
-	err = uc.repository.UpdateMensagem(id, mensagem)
+	if err := uc.repository.UpdateStatusTipo(id, "finalizado", ""); err != nil {
+		return err
+	}
+	msg := mensagemStatusCliente(uc.nomePorTelefone(reclamacao.Telefone), "finalizada", mensagem)
+	err = uc.repository.UpdateMensagem(id, msg)
 	if err != nil {
 		return err
 	}
-	err = config.EnviarMensagem(reclamacao.Telefone, mensagem)
+	err = config.EnviarMensagem(reclamacao.Telefone, msg)
 	if err != nil {
 		return apperror.Internal(fmt.Sprintf("Erro ao enviar mensagem de finalização de reclamacao: %s", err.Error()))
 	}
-	return uc.repository.UpdateStatusTipo(id, "finalizado", "")
+
+	return nil
 }
 func (uc ReclamacaoUseCases) ReprovarInquerito(id string, mensagem string) error {
 	reclamacao, err := uc.repository.GetReclamacaoById(id)
 	if err != nil {
 		return err
 	}
-	err = uc.repository.UpdateMensagem(id, mensagem)
+	if err := uc.repository.UpdateStatus(id, "reprovado"); err != nil {
+		return err
+	}
+	msg := mensagemStatusCliente(uc.nomePorTelefone(reclamacao.Telefone), "reprovada", mensagem)
+	err = uc.repository.UpdateMensagem(id, msg)
 	if err != nil {
 		return err
 	}
-	err = config.EnviarMensagem(reclamacao.Telefone, mensagem)
+	err = config.EnviarMensagem(reclamacao.Telefone, msg)
 	if err != nil {
 		return apperror.Internal(fmt.Sprintf("Erro ao enviar mensagem de reprovação de inquerito: %s", err.Error()))
 	}
-	return uc.repository.UpdateStatus(id, "reprovado")
+
+	return nil
 }
 
 //------------------------------------------------------------------------------------------ new

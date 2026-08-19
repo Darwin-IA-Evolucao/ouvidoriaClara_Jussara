@@ -1,24 +1,32 @@
 import { apiGet, apiPost, apiPut, apiDelete } from '../utils/api'
 import type { Ocorrencia, OcorrenciaRequest, OcorrenciaUpdateRequest } from '../types'
 
-export async function aprovarInquerito(id: number): Promise<void> {
-  await apiPost<void>(`/aprovar/${id}`, {})
+export async function aprovarInquerito(id: number, mensagem: string): Promise<void> {
+  await apiPost<void>(`/aprovar/${id}`, { mensagem })
 }
 
-export async function aprovarRequerimento(id: number): Promise<void> {
-  await apiPost<void>(`/aprovar/requerimento/${id}`, {})
+export async function aprovarRequerimento(id: number, mensagem: string): Promise<void> {
+  await apiPost<void>(`/aprovar/requerimento/${id}`, { mensagem })
 }
 
-export async function aprovarComoAmbos(id: number): Promise<void> {
-  await apiPost<void>(`/indicreq/${id}`, {})
+export async function aprovarCausaAnimal(id: number, mensagem: string): Promise<void> {
+  await apiPost<void>(`/aprovar/causa-animal/${id}`, { mensagem })
 }
 
-export async function reprovarInquerito(id: number): Promise<void> {
-  await apiPost<void>(`/reprovar/${id}`, {})
+export async function aprovarComoAmbos(id: number, mensagem: string): Promise<void> {
+  await apiPost<void>(`/indicreq/${id}`, { mensagem })
 }
 
-export async function colocarEmAnalise(id: number): Promise<void> {
-  await apiPost<void>(`/analise/${id}`, {})
+export async function reprovarInquerito(id: number, mensagem: string): Promise<void> {
+  await apiPost<void>(`/reprovar/${id}`, { mensagem })
+}
+
+export async function finalizarReclamacao(id: number, mensagem: string): Promise<void> {
+  await apiPost<void>(`/finalizar/${id}`, { mensagem })
+}
+
+export async function colocarEmAnalise(id: number, data: string): Promise<void> {
+  await apiPost<void>(`/analise/${id}`, { data })
 }
 
 export async function colocarComoCriado(id: number): Promise<void> {

@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { useState, useEffect, useMemo } from 'react'
 import { Typography, Box, TextField, Button, useMediaQuery, useTheme } from '@mui/material'
-import { FileText, Users, TrendingUp, TrendingDown, BarChart3, XCircle } from 'lucide-react'
+import { FileText, Users, TrendingUp, TrendingDown, BarChart3, XCircle, Inbox, Heart, CheckCircle } from 'lucide-react'
 import GlassPanel from '../components/GlassPanel'
 import PageHeader from '../components/PageHeader'
 import { inputSx } from '../utils/inputSx'
@@ -224,22 +224,25 @@ const DashboardPage: React.FC = () => {
 
   const kanbanData = (() => {
     const counts: Record<string, number> = {
-      'Solicitações Pendentes': 0,
+      'Sem Tratativa': 0,
       'Em Análise': 0,
-      'Aprovados como Indicação': 0,
-      'Aprovados como Requerimento': 0,
-      'Reprovados': 0,
+      'Aprovar como Requerimento': 0,
+      'Aprovar como Indicação': 0,
+      'Aprovar como Causa Animal': 0,
+      'Desqualificado': 0,
+      'Finalizado': 0,
     }
     for (const o of filteredOcorrencias) {
       const status = o.status.toLowerCase()
-      if (status === 'criado') counts['Solicitações Pendentes']++
+      if (status === 'criado') counts['Sem Tratativa']++
       else if (status === 'em análise' || status === 'em analise') counts['Em Análise']++
-      else if (status === 'aprovado' && o.tipo === 'indicacao') counts['Aprovados como Indicação']++
-      else if (status === 'aprovado' && o.tipo === 'requerimento') counts['Aprovados como Requerimento']++
-      else if (status === 'reprovado') counts['Reprovados']++
+      else if (status === 'aprovado' && o.tipo === 'requerimento') counts['Aprovar como Requerimento']++
+      else if (status === 'aprovado' && o.tipo === 'indicacao') counts['Aprovar como Indicação']++
+      else if (status === 'aprovado' && o.tipo === 'causa animal') counts['Aprovar como Causa Animal']++
+      else if (status === 'reprovado') counts['Desqualificado']++
+      else if (status === 'finalizado') counts['Finalizado']++
     }
     return Object.entries(counts)
-      .filter(([, v]) => v > 0)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
   })()
@@ -299,25 +302,32 @@ const DashboardPage: React.FC = () => {
           Limpar Filtros
         </Button>
       </Box>
-      <Box sx={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 2.5, alignItems: 'stretch' }}>
-        {/* Coluna 1 — Indicações */}
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-          <StatCard sx={{ flex: 1 }} label="Total de Indicações" value={computedStats?.totalIndicacoes ?? 0} icon={BarChart3} color="#66BB80" />
-          <StatCard sx={{ flex: 1 }} label="Taxa de Conversão Indicações" value={`${(computedStats?.percIndicacao ?? 0).toFixed(1)}%`} icon={TrendingUp} color="#66BB80" subtitle="Percentual de solicitações classificadas como indicação em relação ao total de solicitações" />
+      {/* Cards por coluna do Kanban (7 colunas, agrupados em 3 colunas visuais) */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 2, mb: 2.5, alignItems: 'stretch' }}>
+        {/* Coluna 1 */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <StatCard sx={{ flex: 1 }} label="Sem Tratativa" value={filteredOcorrencias.filter((o) => o.status.toLowerCase() === 'criado').length} icon={Inbox} color="#A1A9B8" />
+          <StatCard sx={{ flex: 1 }} label="Em Análise" value={filteredOcorrencias.filter((o) => o.status.toLowerCase() === 'em análise' || o.status.toLowerCase() === 'em analise').length} icon={BarChart3} color="#62A1D8" />
         </Box>
 
-        {/* Coluna 2 — Requerimentos */}
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-          <StatCard sx={{ flex: 1 }} label="Total de Requerimentos" value={computedStats?.totalRequerimentos ?? 0} icon={FileText} color="#E89E70" />
-          <StatCard sx={{ flex: 1 }} label="Taxa de Conversão Requerimentos" value={`${(computedStats?.percRequerimento ?? 0).toFixed(1)}%`} icon={TrendingUp} color="#E89E70" subtitle="Percentual de solicitações classificadas como requerimento em relação ao total de solicitações" />
+        {/* Coluna 2 */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <StatCard sx={{ flex: 1 }} label="Aprovar como Requerimento" value={filteredOcorrencias.filter((o) => o.status.toLowerCase() === 'aprovado' && o.tipo === 'requerimento').length} icon={FileText} color="#E89E70" />
+          <StatCard sx={{ flex: 1 }} label="Aprovar como Indicação" value={filteredOcorrencias.filter((o) => o.status.toLowerCase() === 'aprovado' && o.tipo === 'indicacao').length} icon={TrendingUp} color="#66BB80" />
+          <StatCard sx={{ flex: 1 }} label="Aprovar como Causa Animal" value={filteredOcorrencias.filter((o) => o.status.toLowerCase() === 'aprovado' && o.tipo === 'causa animal').length} icon={Heart} color="#B98CE8" />
         </Box>
 
-        {/* Coluna 3 — Gerais (3 cards, crescem para igualar altura) */}
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-          <StatCard sx={{ flex: 1 }} label="Total de Solicitações" value={computedStats?.numReclamacoes ?? 0} icon={FileText} color="#41669C" trend={trends.reclamacoes} />
-          <StatCard sx={{ flex: 1 }} label="Total de Pessoas Atendidas" value={computedStats?.numPessoas ?? 0} icon={Users} color="#62A1D8" trend={trends.pessoas} />
-          <StatCard sx={{ flex: 1 }} label="Total de Solicitações Reprovadas" value={filteredOcorrencias.filter((o) => o.status.toLowerCase() === 'reprovado').length} icon={XCircle} color="#D16670" trend={trends.reprovadas} />
+        {/* Coluna 3 */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <StatCard sx={{ flex: 1 }} label="Desqualificado" value={filteredOcorrencias.filter((o) => o.status.toLowerCase() === 'reprovado').length} icon={XCircle} color="#D16670" />
+          <StatCard sx={{ flex: 1 }} label="Finalizado" value={filteredOcorrencias.filter((o) => o.status.toLowerCase() === 'finalizado').length} icon={CheckCircle} color="#5B8FE0" />
         </Box>
+      </Box>
+
+      {/* Cards gerais */}
+      <Box sx={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 2.5, alignItems: 'stretch', mb: 2.5 }}>
+        <StatCard sx={{ flex: 1 }} label="Total de Solicitações" value={computedStats?.numReclamacoes ?? 0} icon={FileText} color="#41669C" trend={trends.reclamacoes} />
+        <StatCard sx={{ flex: 1 }} label="Total de Pessoas Atendidas" value={computedStats?.numPessoas ?? 0} icon={Users} color="#62A1D8" trend={trends.pessoas} />
       </Box>
 
       {computedStats && (

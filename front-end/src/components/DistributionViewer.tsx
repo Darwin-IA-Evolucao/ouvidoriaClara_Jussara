@@ -10,10 +10,17 @@ import { formatCategoryName } from '../utils/categories'
 import type { Stat, Ocorrencia } from '../types'
 
 const STATUS_COLUMN_LABELS: Record<string, string> = {
-  'criado': 'Solicitações Pendentes',
+  'criado': 'Sem Tratativa',
   'em análise': 'Em Análise',
-  'aprovado': 'Aprovado',
-  'reprovado': 'Reprovar',
+  'em analise': 'Em Análise',
+  'reprovado': 'Desqualificado',
+  'finalizado': 'Finalizado',
+}
+
+const TYPE_COLUMN_LABELS: Record<string, string> = {
+  'indicacao': 'Aprovar como Indicação',
+  'requerimento': 'Aprovar como Requerimento',
+  'causa animal': 'Aprovar como Causa Animal',
 }
 
 interface DistributionViewerProps {
@@ -35,7 +42,7 @@ const PIE_COLORS = [
 const TABS: { key: Tab; label: string }[] = [
   { key: 'regiao', label: 'Região' },
   { key: 'categoria', label: 'Categoria' },
-  { key: 'tipo', label: 'Status' },
+  { key: 'tipo', label: 'Colunas' },
 ]
 
 interface TooltipProps {
@@ -113,11 +120,20 @@ const DistributionViewer: React.FC<DistributionViewerProps> = ({ stats, ocorrenc
       : ocorrencias
     const map: Record<string, number> = {}
     for (const o of filtered) {
-      const st = o.status || 'Sem Status'
-      map[st] = (map[st] || 0) + 1
+      const st = (o.status || 'Sem Status').toLowerCase()
+      const tipo = (o.tipo || '').toLowerCase()
+      if (st === 'aprovado' && TYPE_COLUMN_LABELS[tipo]) {
+        const name = TYPE_COLUMN_LABELS[tipo]
+        map[name] = (map[name] || 0) + 1
+      } else if (STATUS_COLUMN_LABELS[st]) {
+        const name = STATUS_COLUMN_LABELS[st]
+        map[name] = (map[name] || 0) + 1
+      } else {
+        map[st] = (map[st] || 0) + 1
+      }
     }
     return Object.entries(map)
-      .map(([status, value]) => ({ name: STATUS_COLUMN_LABELS[status.toLowerCase()] ?? status, value, raw: status }))
+      .map(([name, value]) => ({ name, value, raw: name }))
       .sort((a, b) => b.value - a.value)
   }, [ocorrencias, selectedRegiao])
 

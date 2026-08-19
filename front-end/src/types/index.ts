@@ -133,6 +133,7 @@ export interface GetMensagensResponse {
 
 export interface Ocorrencia {
   id: number
+  mensagem?: string
   telefone: string
   categoria: string
   situacaoResumida: string
@@ -275,4 +276,30 @@ export interface Stat {
   totalIndicacoes: number
   requerimentosAprovados: number
   totalRequerimentos: number
+}
+
+// ---- Conversas (chat nativo historico_chat) ----
+
+export interface MensagemChat {
+  id: number
+  remetente: 'cliente' | 'ia' | 'agente'
+  conteudo: string
+  tipo: string // 'texto' | 'imagem' | 'audio'
+  linkMidia: string
+  criadoEm: string
+}
+
+export interface HistoricoChatResponse {
+  telefone: string
+  nome: string
+  mensagens: MensagemChat[]
+}
+
+export interface ConversaResumo {
+  telefone: string
+  nome: string
+  ultimaMensagem: string
+  remetenteUltima: string
+  tipoUltima: string
+  criadoEm: string
 }

@@ -2,7 +2,7 @@ import * as React from 'react'
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   Box, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, Alert, IconButton, CircularProgress, Menu, MenuItem,
+  TextField, Alert, IconButton, CircularProgress, Menu, MenuItem, useMediaQuery, useTheme,
 } from '@mui/material'
 import { Plus, Pencil, Trash2, Megaphone, Users, FileDown, FileUp } from 'lucide-react'
 import {
@@ -48,6 +48,8 @@ const ChartTooltip: React.FC<{
 }
 
 const CampanhasPage: React.FC = () => {
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const [campanhas, setCampanhas] = useState<Campanha[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -319,11 +321,13 @@ const CampanhasPage: React.FC = () => {
           display: 'flex',
           gap: 1.5,
           mb: 2,
-          alignItems: 'center',
+          alignItems: isMobile ? 'stretch' : 'center',
           p: 2,
           borderRadius: 2,
           bgcolor: 'hsl(var(--surface-2))',
           border: '1px solid hsl(var(--border))',
+          flexDirection: isMobile ? 'column' : 'row',
+          flexWrap: 'wrap',
         }}
       >
         <TextField
@@ -335,7 +339,7 @@ const CampanhasPage: React.FC = () => {
           sx={{ ...inputSx, minWidth: 140, flex: 1 }}
           inputProps={{ autoComplete: 'off' }}
         />
-        <Box sx={{ display: 'flex', gap: 1.5, flexShrink: 0 }}>
+        <Box sx={{ display: 'flex', gap: 1.5, flexShrink: 0, flexWrap: 'wrap', justifyContent: isMobile ? 'stretch' : 'center', width: isMobile ? '100%' : undefined, flexDirection: isMobile ? 'column' : 'row' }}>
           <Button
             variant="contained"
             startIcon={<Plus size={16} />}
@@ -346,9 +350,10 @@ const CampanhasPage: React.FC = () => {
               borderRadius: 2,
               boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
               whiteSpace: 'nowrap',
+              width: isMobile ? '100%' : undefined,
             }}
           >
-            Nova liderança
+            {isMobile ? 'Novo' : 'Nova liderança'}
           </Button>
           <Button
             variant="outlined"
@@ -361,9 +366,10 @@ const CampanhasPage: React.FC = () => {
               whiteSpace: 'nowrap',
               borderColor: 'hsl(var(--border))',
               color: 'hsl(var(--accent))',
+              width: isMobile ? '100%' : undefined,
             }}
           >
-            Exportar lideranças
+            {isMobile ? 'Exportar' : 'Exportar lideranças'}
           </Button>
           <Button
             variant="outlined"
@@ -375,9 +381,10 @@ const CampanhasPage: React.FC = () => {
               whiteSpace: 'nowrap',
               borderColor: 'hsl(var(--border))',
               color: 'hsl(var(--accent))',
+              width: isMobile ? '100%' : undefined,
             }}
           >
-            Importar lideranças
+            {isMobile ? 'Importar' : 'Importar lideranças'}
           </Button>
         </Box>
       </Box>

@@ -1,0 +1,465 @@
+import * as React from 'react'
+import { Box, Typography, CircularProgress, Alert, TextField, IconButton, Chip } from '@mui/material'
+import { MessageCircle, AlertCircle, Send, Power, Bot } from 'lucide-react'
+import ChatBubble from './ChatBubble'
+import {
+  getHistoricoChat,
+  enviarMensagemAgente,
+  getIaLigada,
+  religarIa,
+} from '../services/difyService'
+import { formatPhoneDisplay } from '../utils/phone'
+import type { ConversaResumo, MensagemChat } from '../types'
+
+interface ConversationChatProps {
+  conversa: ConversaResumo | null
+  onMessageSent?: () => void
+  clientesMap?: Map<string, string>
+}
+
+const POLL_INTERVAL = 8000 // 8s
+
+const BG_IMAGES = [
+  '/15c24c6a-fcf0-43f7-ac5f-732067eda52a.jpeg',
+  '/b6043048-4920-4170-930a-59b54a1e2f45.jpeg',
+  '/d1d092d8-8e15-4d3f-8d18-706b6309ba30.jpeg',
+  '/d4062c0c-db57-4e2d-ae93-00c29f2a728b.jpeg',
+]
+
+function pickBgForTelefone(telefone: string): string {
+  let hash = 0
+  for (let i = 0; i < telefone.length; i++) {
+    hash = (hash * 31 + telefone.charCodeAt(i)) | 0
+  }
+  return BG_IMAGES[Math.abs(hash) % BG_IMAGES.length]
+}
+
+const ConversationChat: React.FC<ConversationChatProps> = ({ conversa, onMessageSent, clientesMap }) => {
+  const [messages, setMessages] = React.useState<MensagemChat[]>([])
+  const [loading, setLoading] = React.useState(true)
+  const [error, setError] = React.useState<string | null>(null)
+  const [inputValue, setInputValue] = React.useState('')
+  const [sending, setSending] = React.useState(false)
+  const [iaLigada, setIaLigada] = React.useState<boolean | null>(null)
+  const [togglingIa, setTogglingIa] = React.useState(false)
+  const scrollRef = React.useRef<HTMLDivElement>(null)
+  const abortRef = React.useRef<AbortController | null>(null)
+
+  // Carrega mensagens + status da IA quando a conversa muda + polling
+  React.useEffect(() => {
+    if (!conversa || !conversa.telefone) {
+      setMessages([])
+      setError(null)
+      setIaLigada(null)
+      return
+    }
+
+    let cancelled = false
+    let pollTimer: ReturnType<typeof setTimeout> | null = null
+
+    const loadMessages = async () => {
+      if (abortRef.current) {
+        abortRef.current.abort()
+      }
+      const controller = new AbortController()
+      abortRef.current = controller
+
+      try {
+        const data = await getHistoricoChat(conversa.telefone, controller.signal)
+        if (cancelled) return
+        setMessages(data.mensagens || [])
+        setError(null)
+      } catch (err) {
+        if (cancelled || (err as Error).name === 'AbortError') return
+        setError((err as Error).message || 'Erro ao carregar mensagens')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    const loadIaStatus = async () => {
+      try {
+        const ligada = await getIaLigada(conversa.telefone)
+        if (cancelled) return
+        setIaLigada(ligada)
+      } catch {
+        if (!cancelled) setIaLigada(null)
+      }
+    }
+
+    setLoading(true)
+    loadMessages()
+    loadIaStatus()
+
+    // Polling a cada 8s
+    const startPolling = () => {
+      pollTimer = setTimeout(async () => {
+        if (cancelled) return
+        await Promise.all([loadMessages(), loadIaStatus()])
+        if (!cancelled) startPolling()
+      }, POLL_INTERVAL)
+    }
+    startPolling()
+
+    return () => {
+      cancelled = true
+      if (pollTimer) clearTimeout(pollTimer)
+      if (abortRef.current) abortRef.current.abort()
+    }
+  }, [conversa])
+
+  // Auto-scroll para o final quando mensagens chegam
+  const prevMsgCountRef = React.useRef(0)
+  const prevTelRef = React.useRef<string | null>(null)
+  React.useLayoutEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+
+    const isConvChanged = prevTelRef.current !== conversa?.telefone
+    prevTelRef.current = conversa?.telefone ?? null
+
+    // Primeira carga de mensagens (refresh ou troca de conversa) — sempre vai para o final
+    if (isConvChanged || (prevMsgCountRef.current === 0 && messages.length > 0)) {
+      el.scrollTop = el.scrollHeight
+      prevMsgCountRef.current = messages.length
+      return
+    }
+
+    if (messages.length > prevMsgCountRef.current) {
+      const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+      if (distFromBottom < 150) {
+        el.scrollTop = el.scrollHeight
+      }
+    }
+    prevMsgCountRef.current = messages.length
+  }, [messages, conversa?.telefone])
+
+  // Enviar mensagem do agente
+  const handleSend = async () => {
+    const conteudo = inputValue.trim()
+    if (!conteudo || !conversa || sending) return
+
+    setSending(true)
+    try {
+      const novaMensagem = await enviarMensagemAgente(conversa.telefone, conteudo)
+      // Adiciona a mensagem otimisticamente na lista
+      setMessages((prev) => [...prev, novaMensagem])
+      setInputValue('')
+      // O envio desliga a IA automaticamente
+      setIaLigada(false)
+      // Notifica o parent para recarregar a lista de conversas
+      onMessageSent?.()
+      // Scroll para o bottom
+      setTimeout(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+        }
+      }, 50)
+    } catch (err) {
+      console.error('Erro ao enviar mensagem:', err)
+      setError('Erro ao enviar mensagem: ' + (err as Error).message)
+    } finally {
+      setSending(false)
+    }
+  }
+
+  // Religar a IA
+  const handleReligarIa = async () => {
+    if (!conversa || togglingIa) return
+    setTogglingIa(true)
+    try {
+      await religarIa(conversa.telefone)
+      setIaLigada(true)
+    } catch (err) {
+      console.error('Erro ao religar IA:', err)
+      setError('Erro ao religar IA: ' + (err as Error).message)
+    } finally {
+      setTogglingIa(false)
+    }
+  }
+
+  // Empty state — nenhuma conversa selecionada
+  if (!conversa) {
+    return (
+      <Box
+        sx={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          bgcolor: 'hsl(var(--background))',
+          color: 'hsl(var(--text-secondary))',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            backgroundImage: `url(${BG_IMAGES[0]})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            filter: 'blur(24px) brightness(0.3)',
+            transform: 'scale(1.1)',
+          }}
+        />
+        <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <MessageCircle size={48} style={{ opacity: 0.5, marginBottom: 16 }} />
+          <Typography sx={{ fontSize: 14, fontWeight: 500 }}>Selecione uma conversa para visualizar</Typography>
+        </Box>
+      </Box>
+    )
+  }
+
+  return (
+    <Box
+      sx={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        bgcolor: 'hsl(var(--background))',
+        minHeight: 0,
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Background com blur — fora do scroll, fica fixo */}
+      <Box
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage: `url(${pickBgForTelefone(conversa.telefone)})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          filter: 'blur(20px) brightness(0.4)',
+          transform: 'scale(1.1)',
+          zIndex: 0,
+          pointerEvents: 'none',
+        }}
+      />
+      <ChatHeader
+        conversa={conversa}
+        iaLigada={iaLigada}
+        onReligarIa={handleReligarIa}
+        togglingIa={togglingIa}
+        clientesMap={clientesMap}
+      />
+
+      {/* Área de mensagens */}
+      <Box
+        ref={scrollRef}
+        sx={{
+          flex: 1,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          minHeight: 0,
+          py: 1.5,
+          position: 'relative',
+          zIndex: 1,
+        }}
+      >
+        <Box sx={{ position: 'relative' }}>
+        {loading && messages.length === 0 ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+            <CircularProgress size={28} sx={{ color: 'hsl(var(--accent))' }} />
+          </Box>
+        ) : error ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+            <Alert
+              severity="error"
+              icon={<AlertCircle size={18} />}
+              sx={{
+                bgcolor: 'hsl(var(--error) / 0.1)',
+                color: 'hsl(var(--text-primary))',
+                '& .MuiAlert-icon': { color: 'hsl(var(--error))' },
+                maxWidth: 500,
+              }}
+            >
+              {error}
+            </Alert>
+          </Box>
+        ) : messages.length === 0 ? (
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 6 }}>
+            <MessageCircle size={36} color="hsl(var(--text-secondary))" style={{ opacity: 0.4, marginBottom: 12 }} />
+            <Typography sx={{ fontSize: 13, color: 'hsl(var(--text-secondary))' }}>
+              Nenhuma mensagem encontrada nesta conversa.
+            </Typography>
+          </Box>
+        ) : (
+          messages.map((msg) => <ChatBubble key={msg.id} message={msg} />)
+        )}
+        </Box>
+      </Box>
+
+      {/* Input de mensagem */}
+      <Box
+        sx={{
+          p: 1.5,
+          borderTop: '1px solid hsl(var(--border))',
+          bgcolor: 'hsl(var(--surface))',
+          display: 'flex',
+          gap: 1,
+          alignItems: 'flex-end',
+          flexShrink: 0,
+          position: 'relative',
+          zIndex: 2,
+        }}
+      >
+        <TextField
+          fullWidth
+          multiline
+          maxRows={4}
+          size="small"
+          placeholder="Digite uma mensagem..."
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault()
+              handleSend()
+            }
+          }}
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              bgcolor: 'hsl(var(--surface-2))',
+              borderRadius: 2,
+              '& fieldset': { borderColor: 'hsl(var(--border))' },
+              '&:hover fieldset': { borderColor: 'hsl(var(--accent))' },
+              '&.Mui-focused fieldset': { borderColor: 'hsl(var(--accent))' },
+            },
+            '& textarea': { color: 'hsl(var(--text-primary))', fontSize: 13.5, lineHeight: 1.4 },
+          }}
+        />
+        <IconButton
+          onClick={handleSend}
+          disabled={!inputValue.trim() || sending}
+          sx={{
+            bgcolor: inputValue.trim() && !sending ? 'hsl(var(--accent))' : 'hsl(var(--surface-2))',
+            color: inputValue.trim() && !sending ? '#fff' : 'hsl(var(--text-secondary))',
+            '&:hover': { bgcolor: 'hsl(var(--accent-hover))' },
+            '&.Mui-disabled': { bgcolor: 'hsl(var(--surface-2))' },
+            borderRadius: 2,
+            p: 1,
+          }}
+        >
+          {sending ? <CircularProgress size={18} /> : <Send size={18} />}
+        </IconButton>
+      </Box>
+    </Box>
+  )
+}
+
+interface ChatHeaderProps {
+  conversa: ConversaResumo
+  iaLigada: boolean | null
+  onReligarIa: () => void
+  togglingIa: boolean
+  clientesMap?: Map<string, string>
+}
+
+const ChatHeader: React.FC<ChatHeaderProps> = ({ conversa, iaLigada, onReligarIa, togglingIa, clientesMap }) => {
+  // Nome: tabela cliente > nome do backend > vazio (mostra só telefone)
+  // Nome: tabela cliente > nome do backend > vazio (mostra só telefone)
+  // O backend pode retornar "?" quando o nome não existe — tratamos como vazio
+  const isNomeValido = (n: string | undefined | null): boolean =>
+    !!n && n.trim() !== '' && n.trim() !== '?' && n.trim() !== 'null'
+  const nomeCliente = clientesMap?.get(conversa.telefone)
+  const nome = isNomeValido(nomeCliente) ? nomeCliente! : isNomeValido(conversa.nome) ? conversa.nome : ''
+  return (
+  <Box
+    sx={{
+      px: 2,
+      py: 1.5,
+      borderBottom: '1px solid hsl(var(--border))',
+      bgcolor: 'hsl(var(--surface))',
+      flexShrink: 0,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 1,
+      position: 'relative',
+      zIndex: 2,
+    }}
+  >
+    <Box sx={{ minWidth: 0, flex: 1 }}>
+      <Typography
+        sx={{
+          fontSize: 14,
+          fontWeight: 600,
+          color: 'hsl(var(--text-primary))',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {nome || formatPhoneDisplay(conversa.telefone)}
+      </Typography>
+      {nome && (
+        <Typography sx={{ fontSize: 12, color: 'hsl(var(--text-secondary))' }}>
+          {formatPhoneDisplay(conversa.telefone)}
+        </Typography>
+      )}
+    </Box>
+
+    {/* Status da IA + botão religar */}
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
+      {iaLigada === null ? (
+        <Chip
+          size="small"
+          label="Ju: ..."
+          sx={{
+            fontSize: 11,
+            height: 24,
+            bgcolor: 'hsl(var(--surface-2))',
+            color: 'hsl(var(--text-secondary))',
+          }}
+        />
+      ) : iaLigada ? (
+        <Chip
+          size="small"
+          icon={<Bot size={13} />}
+          label="Ju ligada"
+          sx={{
+            fontSize: 11,
+            height: 24,
+            bgcolor: 'hsl(var(--success) / 0.15)',
+            color: 'hsl(var(--success))',
+            '& .MuiChip-icon': { color: 'hsl(var(--success))' },
+          }}
+        />
+      ) : (
+        <>
+          <Chip
+            size="small"
+            label="Ju desligada"
+            sx={{
+              fontSize: 11,
+              height: 24,
+              bgcolor: 'hsl(var(--warning) / 0.15)',
+              color: 'hsl(var(--warning))',
+            }}
+          />
+          <IconButton
+            onClick={onReligarIa}
+            disabled={togglingIa}
+            size="small"
+            title="Religar Ju"
+            sx={{
+              bgcolor: 'hsl(var(--success) / 0.15)',
+              color: 'hsl(var(--success))',
+              '&:hover': { bgcolor: 'hsl(var(--success) / 0.25)' },
+              p: 0.75,
+            }}
+          >
+            {togglingIa ? <CircularProgress size={14} /> : <Power size={15} />}
+          </IconButton>
+        </>
+      )}
+    </Box>
+  </Box>
+  )
+}
+
+export default ConversationChat

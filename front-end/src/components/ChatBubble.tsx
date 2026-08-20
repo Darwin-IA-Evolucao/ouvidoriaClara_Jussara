@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Box, Dialog, DialogContent, IconButton, Typography } from '@mui/material'
-import { Brain, Play, Pause, X, FileText, Expand, Download } from 'lucide-react'
+import { Play, Pause, X, FileText, Expand, Download } from 'lucide-react'
 import type { MensagemChat } from '../types'
 
 interface ChatBubbleProps {
@@ -245,8 +245,7 @@ const ChatBubbleBase: React.FC<ChatBubbleProps> = ({ message }) => {
         {/* Tag de remetente (ia vs agente) */}
         {!isCliente && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: message.conteudo ? 0.5 : 0 }}>
-            {message.remetente === 'ia' && <Brain size={11} color="rgba(255,255,255,0.7)" />}
-            <Typography sx={{ fontSize: 11, opacity: 0.7, fontWeight: 600 }}>
+            <Typography sx={{ fontSize: 11, fontWeight: 700, color: message.remetente === 'ia' ? 'hsl(var(--info))' : 'hsl(45 100% 85%)' }}>
               {message.remetente === 'ia' ? 'Ju' : 'Assessor'}
             </Typography>
           </Box>

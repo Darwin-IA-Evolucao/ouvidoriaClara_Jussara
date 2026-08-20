@@ -527,6 +527,7 @@ const ReclamacoesPage: React.FC = () => {
   const [dragOverCol, setDragOverCol] = useState<string | null>(null)
   const kanbanRef = useRef<HTMLDivElement>(null)
   const topScrollRef = useRef<HTMLDivElement>(null)
+  const topThumbRef = useRef<HTMLDivElement>(null)
   const headersRef = useRef<HTMLDivElement>(null)
   const autoScrollRef = useRef<number | null>(null)
 
@@ -763,32 +764,45 @@ const ReclamacoesPage: React.FC = () => {
     return () => kanban.removeEventListener('scroll', onScroll)
   }, [loading, isMobile, filteredRows])
 
-  /* sync scroll horizontal: topo ↔ kanban */
+  /* scrollbar do topo desenhada via JS: thumb (largura + posição) calculado a partir do kanbanRef real,
+     evitando o bug do Chromium onde overflow-x:auto mede scrollWidth errado em zooms fracionários */
   useEffect(() => {
-    const top = topScrollRef.current
+    if (isMobile) return
     const kanban = kanbanRef.current
-    if (!top || !kanban || isMobile) return
+    const track = topScrollRef.current
+    const thumb = topThumbRef.current
+    if (!kanban || !track || !thumb) return
 
-    let syncing = false
-    const syncFromTop = () => {
-      if (syncing) return
-      syncing = true
-      kanban.scrollLeft = top.scrollLeft
-      syncing = false
+    const update = () => {
+      const trackWidth = track.clientWidth
+      const { scrollWidth, clientWidth, scrollLeft } = kanban
+      if (scrollWidth <= clientWidth) {
+        thumb.style.width = '100%'
+        thumb.style.left = '0px'
+        return
+      }
+      const thumbWidth = Math.max(30, (clientWidth / scrollWidth) * trackWidth)
+      const maxThumbLeft = trackWidth - thumbWidth
+      const maxScrollLeft = scrollWidth - clientWidth
+      const left = (scrollLeft / maxScrollLeft) * maxThumbLeft
+      thumb.style.width = `${thumbWidth}px`
+      thumb.style.left = `${left}px`
     }
-    const syncFromKanban = () => {
-      if (syncing) return
-      syncing = true
-      top.scrollLeft = kanban.scrollLeft
-      syncing = false
-    }
-    top.addEventListener('scroll', syncFromTop)
-    kanban.addEventListener('scroll', syncFromKanban)
+
+    update()
+    kanban.addEventListener('scroll', update, { passive: true })
+    const ro = new ResizeObserver(update)
+    ro.observe(kanban)
+    ro.observe(track)
+    window.addEventListener('resize', update)
+    window.visualViewport?.addEventListener('resize', update)
     return () => {
-      top.removeEventListener('scroll', syncFromTop)
-      kanban.removeEventListener('scroll', syncFromKanban)
+      kanban.removeEventListener('scroll', update)
+      ro.disconnect()
+      window.removeEventListener('resize', update)
+      window.visualViewport?.removeEventListener('resize', update)
     }
-  }, [loading, isMobile])
+  }, [loading, isMobile, filteredRows])
 
   /* equalizar altura dos cards: todos os cards da mesma linha (mesmo índice na página) ficam com a altura do maior */
   useLayoutEffect(() => {
@@ -1612,19 +1626,53 @@ const ReclamacoesPage: React.FC = () => {
           </Box>
         </Box>
       )}
-      {/* scrollbar horizontal do topo (mirror do kanban) */}
+      {/* scrollbar horizontal do topo — desenhada via JS (o overflow-x nativo tem bug de arredondamento
+          do Chromium em zooms fracionários como 67%/90%/110%, onde scrollWidth é medido igual a clientWidth
+          mesmo com conteúdo maior). Track + thumb calculados a partir do kanbanRef real. */}
       {!isMobile && (
         <Box
           ref={topScrollRef}
+          onMouseDown={(e) => {
+            const track = e.currentTarget
+            const kanban = kanbanRef.current
+            if (!kanban) return
+            const moveTo = (clientX: number) => {
+              const rect = track.getBoundingClientRect()
+              const ratio = (clientX - rect.left) / rect.width
+              const maxScroll = kanban.scrollWidth - kanban.clientWidth
+              kanban.scrollLeft = Math.max(0, Math.min(maxScroll, ratio * kanban.scrollWidth - kanban.clientWidth / 2))
+            }
+            moveTo(e.clientX)
+            const onMove = (ev: MouseEvent) => moveTo(ev.clientX)
+            const onUp = () => {
+              window.removeEventListener('mousemove', onMove)
+              window.removeEventListener('mouseup', onUp)
+            }
+            window.addEventListener('mousemove', onMove)
+            window.addEventListener('mouseup', onUp)
+          }}
           sx={{
             width: '100%',
             height: 6,
-            overflowX: 'auto',
-            overflowY: 'hidden',
             mb: 1,
+            position: 'relative',
+            bgcolor: 'hsl(var(--surface-2))',
+            borderRadius: 3,
+            cursor: 'pointer',
           }}
         >
-          <Box sx={{ height: 1, width: `calc(${COLUMNS.length} * 300px + ${COLUMNS.length - 1} * 16px + 8px)` }} />
+          <Box
+            ref={topThumbRef}
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              height: '100%',
+              width: '100%',
+              bgcolor: 'hsl(222 25% 30%)',
+              borderRadius: 3,
+            }}
+          />
         </Box>
       )}
       <Box

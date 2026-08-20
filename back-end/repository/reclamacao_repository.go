@@ -214,3 +214,9 @@ func (repo ReclamacaoRepository) CreateAviso(idReclamacao, data, mensagem string
 	_, err := repo.connection.Exec(query, idReclamacao, data, mensagem)
 	return err
 }
+
+func (repo ReclamacaoRepository) DesativarAvisos(idReclamacao string) error {
+	const query = `UPDATE aviso SET avisado = true WHERE id_reclamacao = $1 AND avisado = false`
+	_, err := repo.connection.Exec(query, idReclamacao)
+	return err
+}

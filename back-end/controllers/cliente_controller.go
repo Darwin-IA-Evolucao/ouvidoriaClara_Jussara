@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -58,7 +59,17 @@ func (ctrl *ClienteController) GetClienteByTelefone(c *gin.Context) {
 }
 
 func (ctrl *ClienteController) GetAllClientes(c *gin.Context) {
-	list, err := ctrl.usecase.GetAllClientes()
+	limit, err := strconv.Atoi(c.Query("limit"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "limite invalido"})
+		return
+	}
+	offset, err := strconv.Atoi(c.Query("offset"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "offset invalido"})
+		return
+	}
+	list, err := ctrl.usecase.GetAllClientes(limit, offset)
 	if err != nil {
 		var appErr *apperror.AppError
 		if errors.As(err, &appErr) {
@@ -143,7 +154,7 @@ func (ctrl *ClienteController) CreateClienteDify(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"telefone": cliente.Telefone, "message": "Cliente criado com sucesso", "valido": true})
 }
 
-//VERIFICACOES DE CLIENTES LIGADOS
+// VERIFICACOES DE CLIENTES LIGADOS
 func (controller ClienteController) IsRoboLigado(c *gin.Context) {
 	telefone := c.Param("telefone")
 
@@ -189,7 +200,17 @@ func (controller ClienteController) LigaRobo(c *gin.Context) {
 }
 
 func (controller ClienteController) GetClientesGelo(c *gin.Context) {
-	gelos, err := controller.usecase.GetClientesGelo()
+	limit, err := strconv.Atoi(c.Query("limit"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "limite invalido"})
+		return
+	}
+	offset, err := strconv.Atoi(c.Query("offset"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "offset invalido"})
+		return
+	}
+	gelos, err := controller.usecase.GetClientesGelo(limit, offset)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		fmt.Println(err)

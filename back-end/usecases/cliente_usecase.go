@@ -33,8 +33,8 @@ func (u *ClienteUseCase) GetClienteByTelefone(telefone string) (models.Cliente, 
 	return c, nil
 }
 
-func (u *ClienteUseCase) GetAllClientes() ([]models.Cliente, error) {
-	list, err := u.repo.GetAllClientes()
+func (u *ClienteUseCase) GetAllClientes(limit, offset int) ([]models.Cliente, error) {
+	list, err := u.repo.GetAllClientes(limit, offset)
 	if err != nil {
 		return nil, apperror.Internal(err.Error())
 	}
@@ -105,15 +105,15 @@ func (uc ClienteUseCase) GetAllClientesBloqueados() ([]string, error) {
 }
 
 func (uc ClienteUseCase) SetClienteBloqueado(idCliente string) error {
-	return  uc.repo.SetClienteBloqueado(idCliente)
+	return uc.repo.SetClienteBloqueado(idCliente)
 }
 
 func (uc ClienteUseCase) DeleteClienteBloqueadoByID(idCliente string) error {
 	return uc.repo.DeleteClienteBloqueadoByID(idCliente)
 }
 
-func (usecase ClienteUseCase) GetClientesGelo() ([]models.ClienteGelo, error) {
-	return usecase.repo.GetClientesGelo()
+func (usecase ClienteUseCase) GetClientesGelo(limit, offset int) ([]models.ClienteGelo, error) {
+	return usecase.repo.GetClientesGelo(limit, offset)
 }
 
 func (usecase ClienteUseCase) ExisteCliente(telefone string) (bool, error) {

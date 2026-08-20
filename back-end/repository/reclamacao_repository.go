@@ -84,7 +84,7 @@ func (repo ReclamacaoRepository) GetAllReclamacoes() ([]models.Reclamacao, error
 		reclamacao.Categoria = strings.ToLower(reclamacao.Categoria)
 		reclamacoes = append(reclamacoes, reclamacao)
 	}
-	return reclamacoes, nil
+	return reclamacoes, rows.Err()
 }
 
 // --------------------------------------------------------------------------------------- NEW

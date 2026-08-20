@@ -3,6 +3,7 @@ package repository
 import (
 	"back-end/models"
 	"database/sql"
+	"fmt"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -37,9 +38,11 @@ func (repo LeadRepository) AtivarLead(telefone string) (sql.Result, error) {
 	return res, nil
 }
 
-func (repo LeadRepository) GetAllLeads() ([]models.Contact, error) {
-	const query = `SELECT * FROM contatos`
-
+func (repo LeadRepository) GetAllLeads(limit, offset int) ([]models.Contact, error) {
+	query := `SELECT * FROM contatos`
+	if limit > 0 && offset >= 0 {
+		query += fmt.Sprintf(" LIMIT %d OFFSET %d", limit, offset)
+	}
 	var leads []models.Contact
 	err := repo.connection.Select(&leads, query)
 	if err != nil {

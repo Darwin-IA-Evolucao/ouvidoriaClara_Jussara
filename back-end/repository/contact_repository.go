@@ -2,6 +2,7 @@ package repository
 
 import (
 	"back-end/models"
+	"fmt"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -14,14 +15,17 @@ func NewContatoRepo(db *sqlx.DB) *ContatoRepo {
 	return &ContatoRepo{db: db}
 }
 
-func (r *ContatoRepo) GetAllContatos()([]models.Contact, error){
-	const query = `SELECT * FROM contatos`
+func (r *ContatoRepo) GetAllContatos(limit, offset int) ([]models.Contact, error) {
+	query := `SELECT * FROM contatos`
+	if limit > 0 && offset >= 0 {
+		query += fmt.Sprintf(" LIMIT %d OFFSET %d", limit, offset)
+	}
 	var contatos []models.Contact
 	err := r.db.Select(&contatos, query)
 	return contatos, err
 }
 
-func (r *ContatoRepo)	GetContatoByTelefone(telefone string) (*models.Contato, error) {
+func (r *ContatoRepo) GetContatoByTelefone(telefone string) (*models.Contato, error) {
 	const query = `SELECT * FROM contatos WHERE telefone = $1`
 	var contato models.Contato
 	err := r.db.Get(&contato, query, telefone)
@@ -30,7 +34,7 @@ func (r *ContatoRepo)	GetContatoByTelefone(telefone string) (*models.Contato, er
 	}
 	return &contato, nil
 }
-func (r ContatoRepo) GetClienteBloqueadoById(telefoneCliente string) error{
+func (r ContatoRepo) GetClienteBloqueadoById(telefoneCliente string) error {
 	query := `SELECT idcliente FROM clientesbloqueados WHERE idcliente = $1`
 
 	var bloqueado string

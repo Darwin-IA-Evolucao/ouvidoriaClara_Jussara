@@ -23,8 +23,8 @@ func NewContatoUseCase(repo repository.ContatoRepo, campanhaRepo *repository.Cam
 	return &ContatoUseCase{repo: repo, campanhaRepo: campanhaRepo}
 }
 
-func (u *ContatoUseCase) GetAllContatos() ([]models.Contact, error) {
-	return u.repo.GetAllContatos()
+func (u *ContatoUseCase) GetAllContatos(limit, offset int) ([]models.Contact, error) {
+	return u.repo.GetAllContatos(limit, offset)
 }
 
 func (u *ContatoUseCase) GetContatoByTelefone(telefone string) (*models.Contato, error) {

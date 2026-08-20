@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -20,7 +21,17 @@ func NewContatoController(usecase *usecases.ContatoUseCase) *ContatoController {
 }
 
 func (ctrl *ContatoController) GetAllContatos(c *gin.Context) {
-	contatos, err := ctrl.usecase.GetAllContatos()
+	limit, err := strconv.Atoi(c.Query("limit"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "limite invalido"})
+		return
+	}
+	offset, err := strconv.Atoi(c.Query("offset"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "offset invalido"})
+		return
+	}
+	contatos, err := ctrl.usecase.GetAllContatos(limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao buscar contatos: " + err.Error()})
 		fmt.Println("erro ao buscar contato: ", err.Error())
@@ -98,7 +109,6 @@ func (ctrl *ContatoController) ImportContatos(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, result)
 }
-
 
 func respondContatoErr(c *gin.Context, err error) {
 	var appErr *apperror.AppError

@@ -31,8 +31,11 @@ func (r *ClienteRepo) GetClienteByTelefone(telefone string) (models.Cliente, err
 	return c, err
 }
 
-func (r *ClienteRepo) GetAllClientes() ([]models.Cliente, error) {
-	const query = `SELECT telefone, nome, cidade, endereco, bairro, data_nascimento, data_criacao FROM cliente ORDER BY nome`
+func (r *ClienteRepo) GetAllClientes(limit, offset int) ([]models.Cliente, error) {
+	query := `SELECT telefone, nome, cidade, endereco, bairro, data_nascimento, data_criacao FROM cliente ORDER BY nome`
+	if limit > 0 && offset >= 0 {
+		query += fmt.Sprintf(" LIMIT %d OFFSET %d", limit, offset)
+	}
 	var list []models.Cliente
 	err := r.db.Select(&list, query)
 	return list, err
@@ -109,12 +112,14 @@ func (repo ClienteRepo) DeleteClienteBloqueadoByID(idCliente string) error {
 	return nil
 }
 
-func (repo ClienteRepo) GetClientesGelo() ([]models.ClienteGelo, error) {
-	const query = `SELECT c.nome, c.telefone, c.ativo
+func (repo ClienteRepo) GetClientesGelo(limit, offset int) ([]models.ClienteGelo, error) {
+	query := `SELECT c.nome, c.telefone, c.ativo
 					FROM contatos c
 					LEFT JOIN reclamacao r ON c.telefone = r.telefone
 					WHERE r.telefone IS NULL`
-
+	if limit > 0 && offset >= 0 {
+		query += fmt.Sprintf(" LIMIT %d OFFSET %d", limit, offset)
+	}
 	var clientes []models.ClienteGelo
 	err := repo.db.Select(&clientes, query)
 	if err != nil {

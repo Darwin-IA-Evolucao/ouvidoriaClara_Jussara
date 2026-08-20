@@ -1,78 +1,78 @@
 import { apiGet, apiPost, apiPut, apiDelete } from '../utils/api'
-import { API_BASE_URL } from '../utils/config'
-import type { LeadsResponse, Cliente, Contato, ContatoUnificado } from '../types'
+import type { LeadsResponse, Cliente, ContatoUnificado } from '../types'
+
+// Resposta do endpoint /contatos-unificados (join server-side de contatos, cliente,
+// clientesbloqueados e reclamacao). Campos nullable vêm como string | null do back-end.
+interface ContatosUnificadosResponse {
+  contatos: Array<{
+    telefone: string
+    nome: string | null
+    cidade: string | null
+    endereco: string | null
+    bairro: string | null
+    dataNascimento: string | null
+    dataCriacao: string | null
+    conversationId: string | null
+    instance: string | null
+    campanha: string | null
+    leadAtivo: boolean
+    darwinAtivo: boolean
+    isGelado: boolean
+    isCliente: boolean
+  }>
+  total: number
+  limite: number
+  usados: number
+  ocupacao: string
+}
 
 export async function getAllContatosUnificados(): Promise<{ contatos: ContatoUnificado[]; total: number; usados: number; ocupacao: string; limite: number }> {
-  const [leadsRes, clientes, contatos, ligadosRes] = await Promise.all([
-    apiGet<LeadsResponse>('/leads'),
-    apiGet<Cliente[]>('/clientes').catch(() => [] as Cliente[]),
-    apiGet<Contato[]>('/contatos').catch(() => [] as Contato[]),
-    apiGet<{ bloqueados: string[] }>('/ligados').catch(() => ({ bloqueados: [] as string[] })),
-  ])
+  // Endpoint único server-side: faz join de contatos + cliente + clientesbloqueados + reclamacao.
+  // limit=0 faz o repositório não aplicar LIMIT/OFFSET (retorna todos os registros),
+  // já que o front faz filtros/paginação client-side.
+  const res = await apiGet<ContatosUnificadosResponse>('/contatos-unificados?limit=0&offset=0')
 
-  const clientesMap = new Map<string, Cliente>()
-  ;(clientes || []).forEach((c) => { clientesMap.set(c.telefone, c) })
-
-  const contatosMap = new Map<string, Contato>()
-  ;(contatos || []).forEach((c) => { contatosMap.set(c.telefone, c) })
-
-  const bloqueadosSet = new Set(ligadosRes.bloqueados || [])
-
-  let geloPhones = new Set<string>()
-  try {
-    const geloRes = await apiGet<Cliente[]>('/clientes-gelo')
-    ;(geloRes || []).forEach((g) => geloPhones.add(g.telefone))
-  } catch {
-    try {
-      const resp = await fetch(`${API_BASE_URL}/clientes-gelo`)
-      if (resp.ok) {
-        const data = await resp.json()
-        const arr = Array.isArray(data) ? data : data?.cliente ?? []
-        arr.forEach((g: any) => {
-          const tel = g.telefone || g.Telefone
-          if (tel) geloPhones.add(tel)
-        })
-      }
-    } catch { /* ignore */ }
-  }
-
-  const leads = leadsRes.leads || []
-
-  const contatosUnificados: ContatoUnificado[] = leads.map((lead) => {
-    const cliente = clientesMap.get(lead.telefone)
-    const contato = contatosMap.get(lead.telefone)
-    const isGelado = geloPhones.has(lead.telefone)
-
-    return {
-      telefone: lead.telefone,
-      nome: cliente?.nome || lead.nome || lead.telefone,
-      cidade: cliente?.cidade,
-      endereco: cliente?.endereco,
-      bairro: cliente?.bairro,
-      dataNascimento: cliente?.dataNascimento,
-      dataCriacao: cliente?.dataCriacao || contato?.data_criacao,
-      conversationId: contato?.conversationId ?? null,
-      instance: contato?.instance ?? null,
-      campanha: contato?.campanha ?? null,
-      leadAtivo: lead.ativo,
-      darwinAtivo: !bloqueadosSet.has(lead.telefone),
-      isGelado,
-      isCliente: !!cliente,
-      hasReclamacao: false,
-    }
-  })
+  const contatos: ContatoUnificado[] = (res.contatos || []).map((c) => ({
+    telefone: c.telefone,
+    nome: c.nome || c.telefone,
+    cidade: c.cidade || undefined,
+    endereco: c.endereco || undefined,
+    bairro: c.bairro || undefined,
+    dataNascimento: c.dataNascimento || undefined,
+    dataCriacao: c.dataCriacao || undefined,
+    conversationId: c.conversationId,
+    instance: c.instance,
+    campanha: c.campanha,
+    leadAtivo: c.leadAtivo,
+    darwinAtivo: c.darwinAtivo,
+    isGelado: c.isGelado,
+    isCliente: c.isCliente,
+    hasReclamacao: false, // preenchido pelo caller via getAllOcorrencias
+  }))
 
   return {
-    contatos: contatosUnificados,
-    total: leadsRes.total ?? contatosUnificados.length,
-    usados: leadsRes.usados ?? contatosUnificados.filter((c) => c.leadAtivo).length,
-    ocupacao: leadsRes.ocupacao ?? `${contatosUnificados.filter((c) => c.darwinAtivo).length}/${leadsRes.limite || 0}`,
-    limite: leadsRes.limite ?? 0,
+    contatos,
+    total: res.total ?? contatos.length,
+    usados: res.usados ?? contatos.filter((c) => c.leadAtivo).length,
+    ocupacao: res.ocupacao ?? '0/0',
+    limite: res.limite ?? 0,
   }
 }
 
 export async function ativarLead(telefone: string): Promise<void> {
   await apiPut<void>(`/leads/ativar/${telefone}`, {})
+}
+
+// Versão leve para refresh do summary: busca só /leads (1 request) em vez de
+// getAllContatosUnificados. Usado após toggle de Darwin.
+export async function getLeadsSummary(): Promise<{ total: number; usados: number; ocupacao: string; limite: number }> {
+  const leadsRes = await apiGet<LeadsResponse>('/leads?limit=0&offset=0')
+  return {
+    total: leadsRes.total ?? 0,
+    usados: leadsRes.usados ?? 0,
+    ocupacao: leadsRes.ocupacao ?? '0/0',
+    limite: leadsRes.limite ?? 0,
+  }
 }
 
 export async function desativarLead(telefone: string): Promise<void> {

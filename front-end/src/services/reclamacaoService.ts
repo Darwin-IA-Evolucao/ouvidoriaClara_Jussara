@@ -25,8 +25,8 @@ export async function finalizarReclamacao(id: number, mensagem: string): Promise
   await apiPost<void>(`/finalizar/${id}`, { mensagem })
 }
 
-export async function colocarEmAnalise(id: number, data: string): Promise<void> {
-  await apiPost<void>(`/analise/${id}`, { data })
+export async function colocarEmAnalise(id: number, data: string, mensagem: string): Promise<void> {
+  await apiPost<void>(`/analise/${id}`, { data, mensagem })
 }
 
 export async function colocarComoCriado(id: number): Promise<void> {

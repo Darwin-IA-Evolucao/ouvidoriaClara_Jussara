@@ -2,7 +2,7 @@ import { apiGet, apiPost, apiPostForm } from '../utils/api'
 import type { Contato, ImportContatosResult } from '../types'
 
 export async function getAllContatos(): Promise<Contato[]> {
-  return apiGet<Contato[]>('/contatos')
+  return apiGet<Contato[]>('/contatos?limit=0&offset=0')
 }
 
 export async function getContatoByTelefone(telefone: string): Promise<Contato> {

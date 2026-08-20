@@ -1145,8 +1145,8 @@ const ReclamacoesPage: React.FC = () => {
     const title = `Mover para ${colDef?.label ?? targetCol}`
 
     if (targetCol === 'em-analise') {
-      openActionDialog(title, true, async (_mensagem, data) => {
-        await colocarEmAnalise(row.id, data)
+      openActionDialog(title, true, async (mensagem, data) => {
+        await colocarEmAnalise(row.id, data, mensagem)
       })
     } else if (targetCol === 'aprovar-indicacao') {
       openActionDialog(title, false, async (mensagem) => {
@@ -1185,8 +1185,8 @@ const ReclamacoesPage: React.FC = () => {
     const title = `Mover para ${colDef?.label ?? targetCol}`
 
     if (targetCol === 'em-analise') {
-      openActionDialog(title, true, async (_mensagem, data) => {
-        await colocarEmAnalise(row.id, data)
+      openActionDialog(title, true, async (mensagem, data) => {
+        await colocarEmAnalise(row.id, data, mensagem)
       })
     } else if (targetCol === 'aprovar-indicacao') {
       openActionDialog(title, false, async (mensagem) => {
@@ -1635,14 +1635,28 @@ const ReclamacoesPage: React.FC = () => {
           onMouseDown={(e) => {
             const track = e.currentTarget
             const kanban = kanbanRef.current
-            if (!kanban) return
+            const thumb = topThumbRef.current
+            if (!kanban || !thumb) return
+            const maxScrollLeft = kanban.scrollWidth - kanban.clientWidth
+            if (maxScrollLeft <= 0) return
+            // impede seleção de texto / drag nativo de roubar o mouseup (causa do drag "preso")
+            e.preventDefault()
+            const trackRect = track.getBoundingClientRect()
+            const thumbRect = thumb.getBoundingClientRect()
+            const thumbWidth = thumbRect.width
+            const maxThumbLeft = Math.max(1, trackRect.width - thumbWidth)
+            const clickX = e.clientX - trackRect.left
+            const thumbLeft = thumbRect.left - trackRect.left
+            // clicou no próprio thumb: agarra mantendo o offset do clique (sem teleporte);
+            // clicou na track (fora do thumb): centraliza o thumb no ponto clicado (page-jump)
+            const clickedOnThumb = e.target === thumb
+            const grabOffset = clickedOnThumb ? clickX - thumbLeft : thumbWidth / 2
             const moveTo = (clientX: number) => {
-              const rect = track.getBoundingClientRect()
-              const ratio = (clientX - rect.left) / rect.width
-              const maxScroll = kanban.scrollWidth - kanban.clientWidth
-              kanban.scrollLeft = Math.max(0, Math.min(maxScroll, ratio * kanban.scrollWidth - kanban.clientWidth / 2))
+              const desiredLeft = (clientX - trackRect.left) - grabOffset
+              const clampedLeft = Math.max(0, Math.min(maxThumbLeft, desiredLeft))
+              kanban.scrollLeft = (clampedLeft / maxThumbLeft) * maxScrollLeft
             }
-            moveTo(e.clientX)
+            if (!clickedOnThumb) moveTo(e.clientX)
             const onMove = (ev: MouseEvent) => moveTo(ev.clientX)
             const onUp = () => {
               window.removeEventListener('mousemove', onMove)
@@ -1659,6 +1673,7 @@ const ReclamacoesPage: React.FC = () => {
             bgcolor: 'hsl(var(--surface-2))',
             borderRadius: 3,
             cursor: 'pointer',
+            userSelect: 'none',
           }}
         >
           <Box
@@ -1669,8 +1684,9 @@ const ReclamacoesPage: React.FC = () => {
               left: 0,
               height: '100%',
               width: '100%',
-              bgcolor: 'hsl(222 25% 30%)',
+              bgcolor: 'hsl(var(--scrollbar-thumb))',
               borderRadius: 3,
+              cursor: 'grab',
             }}
           />
         </Box>

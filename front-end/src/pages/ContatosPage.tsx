@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import {
   Box, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, Chip, Alert, useMediaQuery, useTheme, Select, MenuItem, Autocomplete, Collapse,
@@ -14,6 +14,7 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import { inputSx, dialogSx } from '../utils/inputSx'
 import {
   getAllContatosUnificados,
+  getLeadsSummary,
   ligarRobo, desligarRobo, createCliente, updateCliente, deleteCliente,
 } from '../services/contatoUnificadoService'
 import { formatPhoneDisplay } from '../utils/phone'
@@ -96,12 +97,18 @@ const ContatosPage: React.FC = () => {
 
   const refreshSummary = useCallback(async () => {
     try {
-      const data = await getAllContatosUnificados()
-      setSummary({ total: data.total, usados: data.usados, ocupacao: data.ocupacao, limite: data.limite })
+      const data = await getLeadsSummary()
+      setSummary(data)
     } catch { /* ignore */ }
   }, [])
 
-  useEffect(() => { load() }, [load])
+  // Guard contra StrictMode double-load no dev (evita 2× requests no mount)
+  const loadedRef = useRef(false)
+  useEffect(() => {
+    if (loadedRef.current) return
+    loadedRef.current = true
+    load()
+  }, [load])
   useEffect(() => { fetchCategorias().then(setCategorias) }, [])
 
   const filtered = useMemo(() => {
@@ -446,13 +453,13 @@ const ContatosPage: React.FC = () => {
               <Box sx={{ position: 'relative', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 2 }}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, width: { xs: '100%', sm: 240 } }}>
                   <Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary))', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600, textAlign: 'center' }}>Status Darwin</Typography>
-                  <Button fullWidth variant="outlined" onClick={() => setFilters((p) => ({ ...p, darwin: p.darwin === true ? null : true }))} sx={{ justifyContent: 'flex-start', textTransform: 'none', borderRadius: 2, py: 0.75, fontSize: 13, fontWeight: 600, ...(filters.darwin === true ? { background: 'hsl(var(--primary) / 0.15)', borderColor: 'hsl(var(--primary) / 0.5)', color: 'hsl(var(--accent))', boxShadow: 'none' } : { borderColor: 'hsl(var(--border))', color: 'hsl(var(--text-secondary))' }) }}>Darwin Ativo</Button>
-                  <Button fullWidth variant="outlined" onClick={() => setFilters((p) => ({ ...p, darwin: p.darwin === false ? null : false }))} sx={{ justifyContent: 'flex-start', textTransform: 'none', borderRadius: 2, py: 0.75, fontSize: 13, fontWeight: 600, ...(filters.darwin === false ? { background: 'hsl(var(--primary) / 0.15)', borderColor: 'hsl(var(--primary) / 0.5)', color: 'hsl(var(--accent))', boxShadow: 'none' } : { borderColor: 'hsl(var(--border))', color: 'hsl(var(--text-secondary))' }) }}>Darwin Inativo</Button>
+                  <Button fullWidth variant="outlined" onClick={() => setFilters((p) => ({ ...p, darwin: p.darwin === true ? null : true }))} sx={{ justifyContent: 'center', textTransform: 'none', borderRadius: 2, py: 0.75, fontSize: 13, fontWeight: 600, ...(filters.darwin === true ? { background: 'hsl(var(--primary) / 0.15)', borderColor: 'hsl(var(--primary) / 0.5)', color: 'hsl(var(--accent))', boxShadow: 'none' } : { borderColor: 'hsl(var(--border))', color: 'hsl(var(--text-secondary))' }) }}>Darwin Ativo</Button>
+                  <Button fullWidth variant="outlined" onClick={() => setFilters((p) => ({ ...p, darwin: p.darwin === false ? null : false }))} sx={{ justifyContent: 'center', textTransform: 'none', borderRadius: 2, py: 0.75, fontSize: 13, fontWeight: 600, ...(filters.darwin === false ? { background: 'hsl(var(--primary) / 0.15)', borderColor: 'hsl(var(--primary) / 0.5)', color: 'hsl(var(--accent))', boxShadow: 'none' } : { borderColor: 'hsl(var(--border))', color: 'hsl(var(--text-secondary))' }) }}>Darwin Inativo</Button>
                 </Box>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, width: { xs: '100%', sm: 240 } }}>
                   <Typography sx={{ fontSize: 11, color: 'hsl(var(--text-secondary))', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600, textAlign: 'center' }}>Perfil Contato</Typography>
-                  <Button fullWidth variant="outlined" onClick={() => setFilters((p) => ({ ...p, gelo: p.gelo === true ? null : true }))} sx={{ justifyContent: 'flex-start', textTransform: 'none', borderRadius: 2, py: 0.75, fontSize: 13, fontWeight: 600, ...(filters.gelo === true ? { background: 'hsl(var(--primary) / 0.15)', borderColor: 'hsl(var(--primary) / 0.5)', color: 'hsl(var(--accent))', boxShadow: 'none' } : { borderColor: 'hsl(var(--border))', color: 'hsl(var(--text-secondary))' }) }}>Contatos Gelos</Button>
-                  <Button fullWidth variant="outlined" onClick={() => setFilters((p) => ({ ...p, reclamacao: p.reclamacao === true ? null : true }))} sx={{ justifyContent: 'flex-start', textTransform: 'none', borderRadius: 2, py: 0.75, fontSize: 13, fontWeight: 600, ...(filters.reclamacao === true ? { background: 'hsl(var(--primary) / 0.15)', borderColor: 'hsl(var(--primary) / 0.5)', color: 'hsl(var(--accent))', boxShadow: 'none' } : { borderColor: 'hsl(var(--border))', color: 'hsl(var(--text-secondary))' }) }}>Contatos com Solicitações</Button>
+                  <Button fullWidth variant="outlined" onClick={() => setFilters((p) => ({ ...p, gelo: p.gelo === true ? null : true }))} sx={{ justifyContent: 'center', textTransform: 'none', borderRadius: 2, py: 0.75, fontSize: 13, fontWeight: 600, ...(filters.gelo === true ? { background: 'hsl(var(--primary) / 0.15)', borderColor: 'hsl(var(--primary) / 0.5)', color: 'hsl(var(--accent))', boxShadow: 'none' } : { borderColor: 'hsl(var(--border))', color: 'hsl(var(--text-secondary))' }) }}>Contatos Gelos</Button>
+                  <Button fullWidth variant="outlined" onClick={() => setFilters((p) => ({ ...p, reclamacao: p.reclamacao === true ? null : true }))} sx={{ justifyContent: 'center', textTransform: 'none', borderRadius: 2, py: 0.75, fontSize: 13, fontWeight: 600, ...(filters.reclamacao === true ? { background: 'hsl(var(--primary) / 0.15)', borderColor: 'hsl(var(--primary) / 0.5)', color: 'hsl(var(--accent))', boxShadow: 'none' } : { borderColor: 'hsl(var(--border))', color: 'hsl(var(--text-secondary))' }) }}>Contatos com Solicitações</Button>
                 </Box>
                 <Button
                   onClick={resetFilters}
@@ -586,7 +593,7 @@ const ContatosPage: React.FC = () => {
                   if (!isNaN(p) && p >= 1 && p <= totalPages) setCurrentPage(p)
                 }
               }}
-              sx={{ width: 60, ...inputSx }}
+              sx={{ width: 90, ...inputSx }}
               inputProps={{ min: 1, max: totalPages, style: { textAlign: 'center' }, autoComplete: 'off' }}
             />
             <Button size="small" onClick={() => {

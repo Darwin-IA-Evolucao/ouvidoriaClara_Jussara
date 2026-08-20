@@ -52,6 +52,42 @@ func (repo LeadRepository) GetAllLeads(limit, offset int) ([]models.Contact, err
 	return leads, nil
 }
 
+func (repo LeadRepository) GetAllContatosUnificados(limit, offset int) ([]models.ContatosUnificados, error) {
+	query := `
+		SELECT
+			c.telefone,
+			COALESCE(cl.nome, c.nome, c.telefone) AS nome,
+			cl.cidade,
+			cl.endereco,
+			cl.bairro,
+			cl.data_nascimento,
+			COALESCE(cl.data_criacao::text, c.data_criacao::text) AS data_criacao,
+			c.conversation_id,
+			c.instance,
+			c.campanha,
+			c.ativo AS lead_ativo,
+			(cb.idcliente IS NULL) AS darwin_ativo,
+			(r.telefone IS NULL) AS is_gelado,
+			(cl.telefone IS NOT NULL) AS is_cliente
+		FROM contatos c
+		LEFT JOIN cliente cl ON cl.telefone = c.telefone
+		LEFT JOIN clientesbloqueados cb ON cb.idcliente = c.telefone
+		LEFT JOIN (
+			SELECT DISTINCT telefone FROM reclamacao
+		) r ON r.telefone = c.telefone
+		ORDER BY c.data_criacao DESC
+	`
+	if limit > 0 && offset >= 0 {
+		query += fmt.Sprintf(" LIMIT %d OFFSET %d", limit, offset)
+	}
+	var leadsUnificados []models.ContatosUnificados
+	err := repo.connection.Select(&leadsUnificados, query)
+	if err != nil {
+		return nil, err
+	}
+	return leadsUnificados, nil
+}
+
 func (repo LeadRepository) GetCountContatosAtivos() (int, error) {
 	const query = `SELECT COUNT(*) FROM contatos WHERE ativo = true`
 

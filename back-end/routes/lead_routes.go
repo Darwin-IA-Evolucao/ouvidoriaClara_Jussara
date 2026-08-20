@@ -7,7 +7,8 @@ import (
 )
 
 func SetupLeadRoutes(router *gin.Engine, leadController controllers.LeadController) {
-	router.DELETE("/leads/:telefone", leadController.DesativarLead)  
-	router.PUT("/leads/ativar/:telefone", leadController.AtivarLead) 
-	router.GET("/leads", leadController.GetAllLeads)                
+	router.DELETE("/leads/:telefone", leadController.DesativarLead)
+	router.PUT("/leads/ativar/:telefone", leadController.AtivarLead)
+	router.GET("/leads", leadController.GetAllLeads)
+	router.GET("/contatos-unificados", leadController.GetAllContatosUnificados)
 }

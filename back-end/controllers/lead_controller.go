@@ -100,3 +100,22 @@ func (controller LeadController) GetAllLeads(c *gin.Context) {
 		"total":    totalContatos,
 	})
 }
+
+func (controller LeadController) GetAllContatosUnificados(c *gin.Context) {
+	limit, err := strconv.Atoi(c.Query("limit"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "limite invalido"})
+		return
+	}
+	offset, err := strconv.Atoi(c.Query("offset"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "offset invalido"})
+		return
+	}
+	leadsUnificados, err := controller.useCase.GetAllContatosUnificados(limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, leadsUnificados)
+}

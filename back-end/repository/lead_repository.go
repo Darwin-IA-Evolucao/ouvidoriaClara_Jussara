@@ -75,7 +75,7 @@ func (repo LeadRepository) GetAllContatosUnificados(limit, offset int) ([]models
 		LEFT JOIN (
 			SELECT DISTINCT telefone FROM reclamacao
 		) r ON r.telefone = c.telefone
-		ORDER BY c.data_criacao DESC, nome ASC
+		ORDER BY c.data_criacao DESC, c.telefone ASC
 	`
 	if limit > 0 && offset >= 0 {
 		query += fmt.Sprintf(" LIMIT %d OFFSET %d", limit, offset)

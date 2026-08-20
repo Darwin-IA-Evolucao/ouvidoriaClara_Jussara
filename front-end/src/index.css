@@ -19,6 +19,11 @@
   --warning: 35 66% 62%;
   --info: 210 68% 56%;
   --app-bg: hsl(var(--background));
+  /* Chat — fundo da área de mensagens e bolha do cliente (precisam de contraste entre si) */
+  --chat-bg: 222 16% 12%;
+  --bubble-client: 222 15% 18%;
+  /* Scrollbar custom (topo do kanban) — mesma cor da scrollbar nativa */
+  --scrollbar-thumb: 222 25% 30%;
 }
 
 body.theme-light {
@@ -38,6 +43,12 @@ body.theme-light {
   --warning: 35 62% 54%;
   --info: 210 62% 48%;
   --app-bg: hsl(var(--background));
+  /* Chat — fundo levemente cinza (93%) para a bolha branca (100%) ter contraste visível,
+     como no WhatsApp onde o fundo é beje e a bolha do cliente é branca */
+  --chat-bg: 210 20% 93%;
+  --bubble-client: 0 0% 100%;
+  /* Scrollbar custom (topo do kanban) — mesma cor da scrollbar nativa */
+  --scrollbar-thumb: 220 13% 80%;
 }
 
 * {

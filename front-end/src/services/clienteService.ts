@@ -2,7 +2,7 @@ import { apiGet, apiPost, apiPut, apiDelete } from '../utils/api'
 import type { Cliente } from '../types'
 
 export async function getAllClientes(): Promise<Cliente[]> {
-  return apiGet<Cliente[]>('/clientes')
+  return apiGet<Cliente[]>('/clientes?limit=0&offset=0')
 }
 
 export async function getClienteByTelefone(telefone: string): Promise<Cliente> {

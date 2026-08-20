@@ -2,7 +2,7 @@ import { apiGet, apiPut, apiDelete } from '../utils/api'
 import type { LeadsResponse } from '../types'
 
 export async function getAllLeads(): Promise<LeadsResponse> {
-  return apiGet<LeadsResponse>('/leads')
+  return apiGet<LeadsResponse>('/leads?limit=0&offset=0')
 }
 
 export async function ativarLead(telefone: string): Promise<void> {

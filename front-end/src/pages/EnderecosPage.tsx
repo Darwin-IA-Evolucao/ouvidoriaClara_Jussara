@@ -281,7 +281,7 @@ const EnderecosPage: React.FC = () => {
                     }
                   }}
                   placeholder={(page + 1).toString()}
-                  sx={{ ...inputSx, width: 70, '& .MuiFilledInput-input': { fontSize: 12, textAlign: 'center', py: 0.5, px: 0.5 } }}
+                  sx={{ ...inputSx, width: 90, '& .MuiFilledInput-input': { fontSize: 12, textAlign: 'center', py: 0.5, px: 0.5 } }}
                   inputProps={{ autoComplete: 'off' }}
                 />
                 <Button

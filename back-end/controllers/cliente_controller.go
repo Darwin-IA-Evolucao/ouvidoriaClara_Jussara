@@ -171,7 +171,17 @@ func (controller ClienteController) IsRoboLigado(c *gin.Context) {
 }
 
 func (controller ClienteController) GetStatusLigados(c *gin.Context) {
-	bloqueados, err := controller.usecase.GetAllClientesBloqueados()
+	limit, err := strconv.Atoi(c.Query("limit"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "limite invalido"})
+		return
+	}
+	offset, err := strconv.Atoi(c.Query("offset"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "offset invalido"})
+		return
+	}
+	bloqueados, err := controller.usecase.GetAllClientesBloqueados(limit, offset)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Erro ao verificar status", "details": err.Error()})
 		return

@@ -79,8 +79,11 @@ func (repo ClienteRepo) GetClienteBloqueadoById(telefoneCliente string) error {
 	return nil
 }
 
-func (repo ClienteRepo) GetAllClientesBloqueados() ([]string, error) {
-	const query = `SELECT idcliente FROM clientesbloqueados`
+func (repo ClienteRepo) GetAllClientesBloqueados(limit, offset int) ([]string, error) {
+	query := `SELECT idcliente FROM clientesbloqueados`
+	if limit > 0 && offset >= 0 {
+		query += fmt.Sprintf(" LIMIT %d OFFSET %d", limit, offset)
+	}
 	var ids []string
 	err := repo.db.Select(&ids, query)
 	if err != nil {

@@ -113,7 +113,7 @@ func (repo ClienteRepo) GetClientesGelo() ([]models.ClienteGelo, error) {
 	const query = `SELECT c.nome, c.telefone, c.ativo
 					FROM contatos c
 					LEFT JOIN reclamacao r ON c.telefone = r.telefone
-					WHERE c.telefone IS NULL`
+					WHERE r.telefone IS NULL`
 
 	var clientes []models.ClienteGelo
 	err := repo.db.Select(&clientes, query)

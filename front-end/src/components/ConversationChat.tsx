@@ -189,7 +189,7 @@ const ConversationChat: React.FC<ConversationChatProps> = ({ conversa, onMessage
         flex: 1,
         display: 'flex',
         flexDirection: 'column',
-        bgcolor: 'hsl(var(--background))',
+        bgcolor: 'hsl(var(--chat-bg))',
         minHeight: 0,
       }}
     >

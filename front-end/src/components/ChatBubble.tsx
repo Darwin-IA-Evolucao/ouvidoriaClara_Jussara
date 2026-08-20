@@ -207,9 +207,10 @@ const ChatBubbleBase: React.FC<ChatBubbleProps> = ({ message }) => {
   // bolha "fantasma" só com o timestamp, sem fundo visível, logo abaixo de mensagens de mídia
   if (!message.conteudo?.trim() && !hasMidia) return null
 
-  // Cor de fundo: cliente=surface, Ju(ia)=primary, Assessor(agente)=accent
+  // Cor de fundo: cliente=bubble-client (branco no modo claro, surface-2 no escuro),
+  // Ju(ia)=primary, Assessor(agente)=accent
   const bubbleBg = isCliente
-    ? 'hsl(var(--surface-2))'
+    ? 'hsl(var(--bubble-client))'
     : isAgente
       ? 'hsl(var(--accent))'
       : 'hsl(var(--primary))'
@@ -231,6 +232,10 @@ const ChatBubbleBase: React.FC<ChatBubbleProps> = ({ message }) => {
         sx={{
           position: 'relative',
           maxWidth: '75%',
+          // Largura mínima para mensagens de texto curtas (ex: "oi"): sem isso a bolha encolhe
+          // até o tamanho do texto e o timestamp absoluto (que não influencia a largura) vaza
+          // para fora da bolha à direita, como no WhatsApp que reserva espaço mínimo.
+          minWidth: isMedia || isAudio || isDocumento ? undefined : 62,
           bgcolor: bubbleBg,
           color: bubbleColor,
           borderRadius: isCliente ? '12px 12px 12px 4px' : '12px 12px 4px 12px',
@@ -352,7 +357,7 @@ const ChatBubbleBase: React.FC<ChatBubbleProps> = ({ message }) => {
               alignItems: 'center',
               gap: 1.5,
               cursor: 'pointer',
-              bgcolor: isCliente ? 'hsl(var(--surface))' : 'rgba(255,255,255,0.15)',
+              bgcolor: isCliente ? 'hsl(var(--bubble-client))' : 'rgba(255,255,255,0.15)',
               borderRadius: 1.5,
               px: 1.5,
               py: 1.25,

@@ -3,6 +3,7 @@ package config
 import (
 	"back-end/models"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -42,7 +43,7 @@ func EnviarLembrete(conn *sqlx.DB) {
 			msg += fmt.Sprintf("Mensagem: %s\n", cliente.Mensagem)
 		}
 		//err = EnviarMensagem(os.Getenv("TELEFONE_GERAL"), msg)
-		err = EnviarMensagem("5515981226411", msg)
+		err = EnviarMensagem(os.Getenv("TELEFONE_GERAL"), msg)
 		if err != nil {
 			fmt.Println("[ENVIAR LEMBRETE] Erro ao enviar lembrete: ", err)
 			continue

@@ -120,12 +120,12 @@ func (uc ReclamacaoUseCases) AprovarInquerito(id string, mensagem string) error 
 
 	return nil
 }
-func (uc ReclamacaoUseCases) ColocarEmAnalise(id, data string) error {
+func (uc ReclamacaoUseCases) ColocarEmAnalise(id, data, mensagem string) error {
 	if err := uc.repository.UpdateStatusTipo(id, "em análise", ""); err != nil {
 		return err
 	}
 	if data != "" {
-		if err := uc.repository.CreateAviso(id, data); err != nil {
+		if err := uc.repository.CreateAviso(id, data, mensagem); err != nil {
 			return err
 		}
 	}

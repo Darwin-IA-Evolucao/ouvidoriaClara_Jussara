@@ -15,6 +15,12 @@ type Cliente struct {
 	DataCriacao    time.Time `db:"data_criacao" json:"dataCriacao"`
 }
 
+type ClienteAviso struct {
+	Telefone string `db:"telefone" json:"telefone"`
+	Nome     string `db:"nome" json:"nome"`
+	Mensagem string `db:"mensagem" json:"mensagem"`
+}
+
 type ClienteGelo struct {
 	NomeCliente string `db:"nome" json:"nome_do_cliente,omitempty"`
 	Telefone    string `db:"telefone" json:"telefone_do_cliente,omitempty"`
@@ -26,7 +32,6 @@ type ClienteDadosDTO struct {
 	Nome     string `db:"nome" json:"nome,omitempty"`
 	Telefone string `db:"telefone" json:"telefone,omitempty"`
 }
-
 
 func (c Cliente) String() string {
 	return fmt.Sprintf(

@@ -81,13 +81,14 @@ func (ctrl ReclamacaoController) AprovarInquerito(c *gin.Context) {
 func (ctrl ReclamacaoController) ColocarEmAnalise(c *gin.Context) {
 	// colocar uma data para retomar a reclamação
 	var req struct {
-		Data string `json:"data"`
+		Data     string `json:"data"`
+		Mensagem string `json:"mensagem"`
 	}
 	if err := c.BindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := ctrl.useCase.ColocarEmAnalise(c.Param("id"), req.Data); err != nil {
+	if err := ctrl.useCase.ColocarEmAnalise(c.Param("id"), req.Data, req.Mensagem); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

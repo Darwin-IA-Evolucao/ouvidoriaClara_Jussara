@@ -9,10 +9,11 @@ import (
 )
 
 func VerificarLembrete(conn *sqlx.DB) ([]models.ClienteAviso, error) {
-	const query = `SELECT c.telefone,  c.nome, a.mensagem FROM cliente c 
+	const query = `SELECT DISTINCT ON (r.idreclamacao) c.telefone,  c.nome, a.mensagem FROM cliente c 
 				JOIN reclamacao r ON r.telefone = c.telefone
 				JOIN aviso a ON a.id_reclamacao = r.idreclamacao
-				WHERE a.avisado = false AND a.data BETWEEN NOW() - INTERVAL '1 day' AND NOW()`
+				WHERE a.avisado = false AND a.data BETWEEN NOW() - INTERVAL '1 day' AND NOW()
+				ORDER BY r.idreclamacao, a.data DESC`
 
 	var clientes []models.ClienteAviso
 	err := conn.Select(&clientes, query)

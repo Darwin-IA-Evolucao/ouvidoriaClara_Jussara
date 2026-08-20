@@ -208,7 +208,9 @@ func (repo ReclamacaoRepository) DeleteOcorrencia(id string) error {
 
 // --------------------------------------------------------------------------------------- Aviso
 func (repo ReclamacaoRepository) CreateAviso(idReclamacao, data, mensagem string) error {
-	const query = `INSERT INTO aviso (id_reclamacao, data, mensagem) VALUES ($1, $2, $3)`
+	const query = `INSERT INTO aviso (id_reclamacao, data, mensagem) VALUES ($1, $2, $3)
+					ON CONFLICT (id_reclamacao) WHERE (avisado = false)
+					DO UPDATE SET data = EXCLUDED.data, mensagem = EXCLUDED.mensagem, avisado = false`
 	_, err := repo.connection.Exec(query, idReclamacao, data, mensagem)
 	return err
 }

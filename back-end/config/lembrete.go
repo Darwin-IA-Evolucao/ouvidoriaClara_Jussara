@@ -37,7 +37,9 @@ func EnviarLembrete(conn *sqlx.DB) {
 		msg := "🤝LEMBRETE🤝\n"
 		msg += fmt.Sprintf("Olá! O(a) cliente %s tem uma solicitação com prazo marcado para hoje.\n", cliente.Nome)
 		msg += fmt.Sprintf("Entre em contato pelo número: %s.\n", cliente.Telefone)
-		msg += fmt.Sprintf("Mensagem: %s", cliente.Mensagem)
+		if cliente.Mensagem != "" {
+			msg += fmt.Sprintf("Mensagem: %s\n", cliente.Mensagem)
+		}
 		//err = EnviarMensagem(os.Getenv("TELEFONE_GERAL"), msg)
 		err = EnviarMensagem("5515981226411", msg)
 		if err != nil {

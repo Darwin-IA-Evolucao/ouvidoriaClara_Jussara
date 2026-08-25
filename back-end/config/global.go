@@ -54,6 +54,35 @@ func PadronizaTelefone(telefone string) string {
 	return telefone
 }
 
+func EnviarMensagemReativacao(telefone, mensagem string) error {
+	baseURL := os.Getenv("WEBHOOK_ENVIAR_MENSAGEM_REATIVACAO")
+	client := &http.Client{
+		Timeout: time.Second * 10,
+	}
+
+	data := url.Values{}
+	data.Set("mensagem", mensagem)
+	data.Set("telefone", telefone)
+	data.Set("instance", "ouvidoria_clara_jussara")
+
+	req, err := http.NewRequest("POST", baseURL, strings.NewReader(data.Encode()))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("erro ao enviar requisição: %s", resp.Status)
+	}
+	return nil
+}
 func EnviarMensagem(telefone, mensagem string) error {
 	baseURL := os.Getenv("WEBHOOK_ENVIAR_MENSAGEM")
 	client := &http.Client{
@@ -150,7 +179,7 @@ func CheckInativos1Day(db *sqlx.DB) {
 			msg := "📢 Olá!\n"
 			msg += "Seu atendimento ainda está em aberto há quase 24 horas. Aguardamos sua resposta para dar continuidade à solicitação. Obrigada 😊"
 			telPadronizado := PadronizaTelefone(tel)
-			err := EnviarMensagem(telPadronizado, msg)
+			err := EnviarMensagemReativacao(telPadronizado, msg)
 			if err != nil {
 				fmt.Println("Erro ao enviar notificação para ", telPadronizado, ":", err)
 				continue
@@ -192,7 +221,7 @@ func CheckInativos10Min(db *sqlx.DB) {
 			msg := "📢 Olá!\n"
 			msg += "Seu atendimento ainda está em aberto. Aguardamos sua resposta para dar continuidade à solicitação. Obrigada 😊"
 			telPadronizado := PadronizaTelefone(tel)
-			err := EnviarMensagem(telPadronizado, msg)
+			err := EnviarMensagemReativacao(telPadronizado, msg)
 			if err != nil {
 				fmt.Println("Erro ao enviar notificação para ", telPadronizado, ":", err)
 				continue

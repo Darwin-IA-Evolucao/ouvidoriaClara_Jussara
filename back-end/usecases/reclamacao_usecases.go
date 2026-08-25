@@ -61,7 +61,8 @@ func mensagemStatusCliente(nome, status, motivo string) string {
 	if strings.TrimSpace(motivo) != "" {
 		msg += fmt.Sprintf("Motivo: %s\n\n", motivo)
 	}
-	msg += "Atenciosamente, Gabinete Jussara Fernandes."
+	msg += "Atenciosamente, Gabinete Jussara Fernandes.\n"
+	msg+= "Obs.:*Essa é uma mensagem automática, por gentileza não responder*"
 	return msg
 }
 

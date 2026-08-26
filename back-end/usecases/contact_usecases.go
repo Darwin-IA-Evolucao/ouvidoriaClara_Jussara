@@ -12,7 +12,11 @@ import (
 	"github.com/lib/pq"
 )
 
-const instanceOuvidoria = "ouvidoria_clara_jussara"
+const (
+	instanceOuvidoria = "ouvidoria_clara_jussara"
+	campanhaSite      = "site"
+	tamanhoMaxNome    = 120
+)
 
 type ContatoUseCase struct {
 	repo         repository.ContatoRepo
@@ -74,6 +78,30 @@ func (u *ContatoUseCase) CreateContato(telefone, nome, campanha string) error {
 		return mapContatoInsertErr(err)
 	}
 	return nil
+}
+
+// CreateLeadSite cadastra o lead vindo do site. Se o telefone ja existe, mantem o
+// registro atual sem sobrescrever a campanha de origem.
+func (u *ContatoUseCase) CreateLeadSite(telefone, nome string) error {
+	tel := utils.NormalizeTelefone(telefone)
+	if !utils.TelefoneValido(tel) {
+		return apperror.BadRequest("telefone em formato invalido")
+	}
+	if err := u.ensureCampanha(campanhaSite); err != nil {
+		return err
+	}
+	instance := instanceOuvidoria
+	campanha := campanhaSite
+	nomeVal := strings.TrimSpace(nome)
+	if len(nomeVal) > tamanhoMaxNome {
+		nomeVal = nomeVal[:tamanhoMaxNome]
+	}
+	return u.repo.CreateContatoIfNotExists(&models.Contato{
+		Telefone: tel,
+		Nome:     &nomeVal,
+		Instance: &instance,
+		Campanha: &campanha,
+	})
 }
 
 func (u *ContatoUseCase) ImportContatos(filename string, file io.Reader, campanha string) (*models.ImportContatosResult, error) {

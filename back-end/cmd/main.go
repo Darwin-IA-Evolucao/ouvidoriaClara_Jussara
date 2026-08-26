@@ -4,6 +4,7 @@ import (
 	"back-end/config"
 	"back-end/controllers"
 	"back-end/database"
+	"back-end/middleware"
 	"back-end/repository"
 	"back-end/routes"
 	"back-end/usecases"
@@ -80,12 +81,19 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 	server := gin.Default()
 
+	// Sem isso o Gin confia em qualquer X-Forwarded-For e o rate limit por IP
+	// pode ser burlado trocando o header a cada requisicao.
+	if err := server.SetTrustedProxies([]string{"127.0.0.1", "::1"}); err != nil {
+		panic(err)
+	}
+
 	dbConnection, err := database.ConnectDB()
 	if err != nil {
 		panic(err)
 	}
 
 	server.Use(CORSMiddleware())
+	server.Use(middleware.LimitarBodyPorPrefixo("/public/", 2048))
 	server.Use(CleanJSONMiddleware())
 
 	go config.RelatorioDiario(dbConnection)
@@ -116,5 +124,6 @@ func main() {
 
 	portBack := os.Getenv("PORT")
 	fmt.Println("Servidor rodando na porta: ", portBack)
-	server.Run(":" + portBack)
+	// Escuta apenas no localhost: o acesso externo passa obrigatoriamente pelo Apache.
+	server.Run("127.0.0.1:" + portBack)
 }

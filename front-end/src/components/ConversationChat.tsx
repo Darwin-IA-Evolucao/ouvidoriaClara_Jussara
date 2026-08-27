@@ -245,7 +245,8 @@ const ConversationChat: React.FC<ConversationChatProps> = ({ conversa, onMessage
         </Box>
       </Box>
 
-      {/* Input de mensagem */}
+      {/* Input de mensagem — oculto (mensagens são gerenciadas via WhatsApp/back-end) */}
+      {false && (
       <Box
         sx={{
           p: 1.5,
@@ -297,6 +298,7 @@ const ConversationChat: React.FC<ConversationChatProps> = ({ conversa, onMessage
           {sending ? <CircularProgress size={18} /> : <Send size={18} />}
         </IconButton>
       </Box>
+      )}
     </Box>
   )
 }

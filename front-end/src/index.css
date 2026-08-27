@@ -22,10 +22,11 @@
   /* Chat — fundo da área de mensagens e bolha do cliente (precisam de contraste entre si) */
   --chat-bg: 222 16% 12%;
   --bubble-client: 222 15% 18%;
-  /* Scrollbar custom (topo do kanban) — mesma cor da scrollbar nativa */
-  --scrollbar-thumb: 222 25% 30%;
+  /* Scrollbar thumb — branco suave no dark (contraste ~13:1 sobre o fundo, WCAG 2.2 SC 1.4.11) */
+  --scrollbar-thumb: 0 0% 90%;
 }
 
+html.theme-light,
 body.theme-light {
   --primary: 222 35% 26%;
   --primary-hover: 222 35% 21%;
@@ -47,8 +48,8 @@ body.theme-light {
      como no WhatsApp onde o fundo é beje e a bolha do cliente é branca */
   --chat-bg: 210 20% 93%;
   --bubble-client: 0 0% 100%;
-  /* Scrollbar custom (topo do kanban) — mesma cor da scrollbar nativa */
-  --scrollbar-thumb: 220 13% 80%;
+  /* Scrollbar thumb — preto suave no light (contraste ~14:1 sobre o fundo, WCAG 2.2 SC 1.4.11) */
+  --scrollbar-thumb: 0 0% 15%;
 }
 
 * {
@@ -77,9 +78,20 @@ body.theme-transition * {
   }
 }
 
+/* Scrollbar color padrão CSS — apenas em browsers sem ::-webkit-scrollbar (Firefox).
+   No Chrome 121+ definir scrollbar-color faz o browser ignorar ::-webkit-scrollbar
+   (e seus 6px), mudando o tamanho da scrollbar nativa. Para preservar os 6px no
+   Chrome/Safari, aplicamos scrollbar-color só onde ::-webkit-scrollbar não existe. */
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-color: hsl(var(--scrollbar-thumb)) transparent;
+    scrollbar-width: thin;
+  }
+}
+
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
@@ -91,12 +103,22 @@ body.theme-transition * {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(222 25% 30%);
+  background: hsl(var(--scrollbar-thumb));
   border-radius: 3px;
 }
 
-body.theme-light ::-webkit-scrollbar-thumb {
-  background: hsl(220 13% 80%);
+/* ── Kanban drag-and-drop feedback ─────────────────── */
+/* Coluna drop zone: pulso suave quando um card está sendo arrastado sobre ela.
+   Usa opacity (barato, compositor-only) em vez de filter:brightness (caro, paint). */
+@keyframes kanban-drop-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+
+/* Indicador de borda quando auto-scroll está ativo durante drag */
+@keyframes kanban-edge-glow {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.9; }
 }
 
 /* ── Shared page utilities ───────────────────────── */

@@ -525,46 +525,94 @@ const ReclamacoesPage: React.FC = () => {
   const [CATEGORIAS, setCategorias] = useState<string[]>([])
   const [draggingId, setDraggingId] = useState<number | null>(null)
   const [dragOverCol, setDragOverCol] = useState<string | null>(null)
+  const [scrollEdge, setScrollEdge] = useState<'left' | 'right' | null>(null)
+  const [canScrollLeft, setCanScrollLeft] = useState(false)
+  const [canScrollRight, setCanScrollRight] = useState(false)
   const kanbanRef = useRef<HTMLDivElement>(null)
   const topScrollRef = useRef<HTMLDivElement>(null)
   const topThumbRef = useRef<HTMLDivElement>(null)
+  const bottomScrollRef = useRef<HTMLDivElement>(null)
+  const bottomThumbRef = useRef<HTMLDivElement>(null)
   const headersRef = useRef<HTMLDivElement>(null)
-  const autoScrollRef = useRef<number | null>(null)
+  const autoScrollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const scrollEdgeRef = useRef<'left' | 'right' | null>(null)
+  const isDraggingRef = useRef(false)
+  const dragClientXRef = useRef<number>(0)
+  const dragRectRef = useRef<DOMRect | null>(null)
+  const dragLeaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const globalDragOverRef = useRef<((e: DragEvent) => void) | null>(null)
+
+  // Atualiza se pode rolar pra esquerda/direita (para mostrar/esconder as setas de drag)
+  const updateScrollState = React.useCallback(() => {
+    const container = kanbanRef.current
+    if (!container) return
+    const maxScroll = container.scrollWidth - container.clientWidth
+    setCanScrollLeft(container.scrollLeft > 2)
+    setCanScrollRight(container.scrollLeft < maxScroll - 2)
+  }, [])
+
+  useEffect(() => {
+    const container = kanbanRef.current
+    if (!container) return
+    updateScrollState()
+    // Um único listener de scroll para headers + canScrollLeft/Right.
+    // Antes eram 2 listeners separados (headers sync + updateScrollState),
+    // cada um disparando callback a cada frame de scroll.
+    let lastScrollUpdate = 0
+    const onScroll = () => {
+      // headers sync — sempre (barato, só seta transform via style direto, sem re-render)
+      const headers = headersRef.current
+      if (headers) headers.style.transform = `translateX(${-container.scrollLeft}px)`
+      // canScrollLeft/Right — throttled E pulado durante drag (re-render de 35+ cards mata o FPS)
+      if (isDraggingRef.current) return
+      const now = Date.now()
+      if (now - lastScrollUpdate < 100) return
+      lastScrollUpdate = now
+      updateScrollState()
+    }
+    container.addEventListener('scroll', onScroll, { passive: true })
+    const ro = new ResizeObserver(updateScrollState)
+    ro.observe(container)
+    window.addEventListener('resize', updateScrollState)
+    return () => {
+      container.removeEventListener('scroll', onScroll)
+      ro.disconnect()
+      window.removeEventListener('resize', updateScrollState)
+    }
+  }, [loading, isMobile, updateScrollState])
 
   const stopAutoScroll = () => {
+    if (dragLeaveTimeoutRef.current !== null) {
+      clearTimeout(dragLeaveTimeoutRef.current)
+      dragLeaveTimeoutRef.current = null
+    }
     if (autoScrollRef.current !== null) {
-      cancelAnimationFrame(autoScrollRef.current)
+      clearInterval(autoScrollRef.current)
       autoScrollRef.current = null
+    }
+    if (scrollEdgeRef.current !== null) {
+      scrollEdgeRef.current = null
+      setScrollEdge(null)
     }
   }
 
-  const startAutoScroll = (clientX: number) => {
-    const container = kanbanRef.current
-    if (!container) return
-    const rect = container.getBoundingClientRect()
-    const edge = 80
-    const speed = 15
-    const stop = () => {
-      stopAutoScroll()
-      autoScrollRef.current = null
+  // onKanbanDragOver só cancela o dragLeave pendente — o listener global
+  // em handleDragStart cuida de rastrear o cursor e iniciar/manter o auto-scroll.
+  const onKanbanDragOver = (e: React.DragEvent) => {
+    if (isMobile) return
+    if (dragLeaveTimeoutRef.current !== null) {
+      clearTimeout(dragLeaveTimeoutRef.current)
+      dragLeaveTimeoutRef.current = null
     }
-    if (clientX < rect.left + edge) {
-      const step = () => {
-        window.scrollBy(-speed, 0)
-        autoScrollRef.current = requestAnimationFrame(step)
-      }
-      stopAutoScroll()
-      autoScrollRef.current = requestAnimationFrame(step)
-    } else if (clientX > rect.right - edge) {
-      const step = () => {
-        window.scrollBy(speed, 0)
-        autoScrollRef.current = requestAnimationFrame(step)
-      }
-      stopAutoScroll()
-      autoScrollRef.current = requestAnimationFrame(step)
-    } else {
-      stop()
-    }
+    dragClientXRef.current = e.clientX
+  }
+
+  const onKanbanDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    const nextTarget = e.relatedTarget
+    if (nextTarget instanceof Node && e.currentTarget.contains(nextTarget)) return
+    // NÃO para o auto-scroll aqui — o listener global em handleDragStart cuida disso.
+    // Antes, matar o auto-scroll no dragLeave fazia o kanban parar quando o cursor
+    // ia além da borda visível durante o arraste.
   }
 
   /* dialogs */
@@ -743,37 +791,40 @@ const ReclamacoesPage: React.FC = () => {
     return counts
   }, [rows])
 
-  const filteredRows = filterRows(Array.isArray(rows) ? rows : [], clientesMap, debouncedSearch, dateFrom, dateTo, enderecoFilter, bairroFilter, cidadeFilter, ageMin, ageMax, catFilter, regiaoFilter)
-    .sort((a, b) => new Date(b.dataAtualizacao).getTime() - new Date(a.dataAtualizacao).getTime())
+  const filteredRows = useMemo(() =>
+    filterRows(Array.isArray(rows) ? rows : [], clientesMap, debouncedSearch, dateFrom, dateTo, enderecoFilter, bairroFilter, cidadeFilter, ageMin, ageMax, catFilter, regiaoFilter)
+      .sort((a, b) => new Date(b.dataAtualizacao).getTime() - new Date(a.dataAtualizacao).getTime()),
+    [rows, clientesMap, debouncedSearch, dateFrom, dateTo, enderecoFilter, bairroFilter, cidadeFilter, ageMin, ageMax, catFilter, regiaoFilter]
+  )
 
   useEffect(() => {
     load()
   }, [])
 
-  /* sync scroll horizontal do kanban → headers sticky via transform */
+  /* headers sticky: posição inicial sincronizada com scrollLeft do kanban.
+     O sync durante o scroll agora é feito pelo listener consolidado em updateScrollState. */
   useEffect(() => {
     if (isMobile) return
     const kanban = kanbanRef.current
     const headers = headersRef.current
     if (!kanban || !headers) return
-    const onScroll = () => {
-      headers.style.transform = `translateX(${-kanban.scrollLeft}px)`
-    }
-    onScroll()
-    kanban.addEventListener('scroll', onScroll, { passive: true })
-    return () => kanban.removeEventListener('scroll', onScroll)
-  }, [loading, isMobile, filteredRows])
+    headers.style.transform = `translateX(${-kanban.scrollLeft}px)`
+  }, [loading, isMobile])
 
-  /* scrollbar do topo desenhada via JS: thumb (largura + posição) calculado a partir do kanbanRef real,
-     evitando o bug do Chromium onde overflow-x:auto mede scrollWidth errado em zooms fracionários */
+  /* scrollbars custom (topo + baixo) desenhadas via JS: thumb (largura + posição) calculado a partir
+     do kanbanRef real, evitando o bug do Chromium onde overflow-x:auto mede scrollWidth errado em zooms fracionários.
+     Ambas as scrollbars espelham o mesmo kanban — scroll em uma move a outra. */
   useEffect(() => {
     if (isMobile) return
     const kanban = kanbanRef.current
-    const track = topScrollRef.current
-    const thumb = topThumbRef.current
-    if (!kanban || !track || !thumb) return
+    const topTrack = topScrollRef.current
+    const topThumb = topThumbRef.current
+    const bottomTrack = bottomScrollRef.current
+    const bottomThumb = bottomThumbRef.current
+    if (!kanban || !topTrack || !topThumb) return
 
-    const update = () => {
+    const updateThumb = (track: HTMLDivElement | null, thumb: HTMLDivElement | null) => {
+      if (!track || !thumb) return
       const trackWidth = track.clientWidth
       const { scrollWidth, clientWidth, scrollLeft } = kanban
       if (scrollWidth <= clientWidth) {
@@ -789,11 +840,17 @@ const ReclamacoesPage: React.FC = () => {
       thumb.style.left = `${left}px`
     }
 
+    const update = () => {
+      updateThumb(topTrack, topThumb)
+      updateThumb(bottomTrack, bottomThumb)
+    }
+
     update()
     kanban.addEventListener('scroll', update, { passive: true })
     const ro = new ResizeObserver(update)
     ro.observe(kanban)
-    ro.observe(track)
+    ro.observe(topTrack)
+    if (bottomTrack) ro.observe(bottomTrack)
     window.addEventListener('resize', update)
     window.visualViewport?.addEventListener('resize', update)
     return () => {
@@ -802,7 +859,7 @@ const ReclamacoesPage: React.FC = () => {
       window.removeEventListener('resize', update)
       window.visualViewport?.removeEventListener('resize', update)
     }
-  }, [loading, isMobile, filteredRows])
+  }, [loading, isMobile])
 
   /* equalizar altura dos cards: todos os cards da mesma linha (mesmo índice na página) ficam com a altura do maior */
   useLayoutEffect(() => {
@@ -831,7 +888,7 @@ const ReclamacoesPage: React.FC = () => {
       })
       group.forEach((el) => { el.style.height = `${maxHeight}px` })
     })
-  }, [filteredRows, columnPages, loading, rows])
+  }, [filteredRows, columnPages, loading])
 
   /* re-equalizar alturas ao redimensionar a janela */
   useEffect(() => {
@@ -947,7 +1004,7 @@ const ReclamacoesPage: React.FC = () => {
     setConfirmAction(() => async () => {
       await action()
       setConfirmOpen(false)
-      load()
+      load(true)
     })
     setConfirmTitle(title)
     setConfirmMessage(msg)
@@ -972,7 +1029,7 @@ const ReclamacoesPage: React.FC = () => {
     try {
       await actionDialogConfirm(actionDialogMensagem.trim(), actionDialogData)
       setActionDialogOpen(false)
-      load()
+      load(true)
     } catch (err: any) {
       console.error('Erro ao mover card:', err)
       alert(err?.response?.data?.message || err?.message || 'Erro ao mover ocorrência')
@@ -1112,10 +1169,51 @@ const ReclamacoesPage: React.FC = () => {
   const handleDragStart = (e: React.DragEvent, id: number) => {
     e.dataTransfer.setData('text/plain', String(id))
     e.dataTransfer.effectAllowed = 'move'
+    updateScrollState()
     setDraggingId(id)
+    isDraggingRef.current = true
+    // Cacha o rect do kanban uma vez no início do drag — não chama getBoundingClientRect de novo
+    const container = kanbanRef.current
+    if (container) dragRectRef.current = container.getBoundingClientRect()
+
+    // Listener GLOBAL no document — continua rastreando o cursor mesmo quando
+    // ele sai do kanban (além da borda visível). Antes, só onDragOver do kanban
+    // rastreava, então quando o cursor ia além da borda o auto-scroll parava.
+    const onGlobalDragOver = (ev: DragEvent) => {
+      dragClientXRef.current = ev.clientX
+      if (autoScrollRef.current === null) {
+        const c = kanbanRef.current
+        const rect = dragRectRef.current
+        if (!c || !rect) return
+        autoScrollRef.current = setInterval(() => {
+          const cc = kanbanRef.current
+          const r = dragRectRef.current
+          if (!cc || !r) return
+          const x = dragClientXRef.current
+          const edge = 60
+          let zone: 'left' | 'right' | null = null
+          if (x < r.left + edge) zone = 'left'
+          else if (x > r.right - edge) zone = 'right'
+          if (zone !== scrollEdgeRef.current) {
+            scrollEdgeRef.current = zone
+            setScrollEdge(zone)
+          }
+          if (zone === 'left' && cc.scrollLeft > 0) {
+            cc.scrollLeft -= 25
+          } else if (zone === 'right' && cc.scrollLeft < cc.scrollWidth - cc.clientWidth) {
+            cc.scrollLeft += 25
+          }
+        }, 16)
+      }
+    }
+    document.addEventListener('dragover', onGlobalDragOver)
+    globalDragOverRef.current = onGlobalDragOver
   }
 
-  const handleDragEnd = () => { setDraggingId(null); setDragOverCol(null); stopAutoScroll() }
+  const handleDragEnd = () => {
+    setDraggingId(null); setDragOverCol(null); setScrollEdge(null); scrollEdgeRef.current = null; isDraggingRef.current = false; stopAutoScroll(); updateScrollState()
+    if (globalDragOverRef.current) { document.removeEventListener('dragover', globalDragOverRef.current); globalDragOverRef.current = null }
+  }
 
   const handleDrop = async (e: React.DragEvent, targetCol: string) => {
     e.preventDefault()
@@ -1620,6 +1718,7 @@ const ReclamacoesPage: React.FC = () => {
               gridTemplateColumns: `repeat(${COLUMNS.length}, 300px)`,
               gap: 2,
               px: 0.5,
+              willChange: 'transform',
             }}
           >
             {COLUMNS.map((col) => renderColumnHeader(col, itemsForColumn(filteredRows, col.id)))}
@@ -1667,11 +1766,10 @@ const ReclamacoesPage: React.FC = () => {
           }}
           sx={{
             width: '100%',
-            height: 6,
+            height: 10,
             mb: 1,
             position: 'relative',
-            bgcolor: 'hsl(var(--surface-2))',
-            borderRadius: 3,
+            bgcolor: 'transparent',
             cursor: 'pointer',
             userSelect: 'none',
           }}
@@ -1691,10 +1789,83 @@ const ReclamacoesPage: React.FC = () => {
           />
         </Box>
       )}
+      {/* Wrapper com position:relative para as setas de drag ficarem fixas (overlay)
+          e não rolarem junto com o conteúdo do kanban */}
+      <Box sx={{ position: 'relative' }}>
+        {/* Setas overlay — aparecem durante o drag para indicar que há mais colunas
+            além das visíveis. Ficam fixas na viewport do kanban (não rolam com o conteúdo). */}
+        {!isMobile && (
+          <Box
+            sx={{
+              position: 'absolute',
+              left: 0, top: 0, bottom: 0,
+              width: 48,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 20,
+              pointerEvents: 'none',
+              background: 'linear-gradient(90deg, hsl(var(--surface) / 0.95) 30%, hsl(var(--surface) / 0) 100%)',
+              opacity: draggingId !== null && canScrollLeft ? (scrollEdge === 'left' ? 1 : 0.7) : 0,
+              visibility: draggingId !== null && canScrollLeft ? 'visible' : 'hidden',
+              transform: draggingId !== null && canScrollLeft ? 'translateX(0)' : 'translateX(-8px)',
+              transition: draggingId !== null && canScrollLeft
+                ? 'opacity 180ms cubic-bezier(0.2, 0, 0, 1), transform 180ms cubic-bezier(0.2, 0, 0, 1), visibility 0s'
+                : 'opacity 150ms ease-in, transform 150ms ease-in, visibility 0s linear 150ms',
+            }}
+          >
+            <Box sx={{
+              width: 36, height: 36, borderRadius: '50%',
+              bgcolor: 'hsl(var(--accent))',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+              transform: scrollEdge === 'left' ? 'scale(1.15)' : 'scale(1)',
+              transition: 'transform 0.15s ease',
+              animation: draggingId !== null && canScrollLeft && scrollEdge === 'left' ? 'kanban-edge-glow 0.6s ease-in-out infinite' : 'none',
+              willChange: 'transform, opacity',
+            }}>
+              <ChevronLeft size={22} color="#fff" strokeWidth={2.5} />
+            </Box>
+          </Box>
+        )}
+        {!isMobile && (
+          <Box
+            sx={{
+              position: 'absolute',
+              right: 0, top: 0, bottom: 0,
+              width: 48,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 20,
+              pointerEvents: 'none',
+              background: 'linear-gradient(270deg, hsl(var(--surface) / 0.95) 30%, hsl(var(--surface) / 0) 100%)',
+              opacity: draggingId !== null && canScrollRight ? (scrollEdge === 'right' ? 1 : 0.7) : 0,
+              visibility: draggingId !== null && canScrollRight ? 'visible' : 'hidden',
+              transform: draggingId !== null && canScrollRight ? 'translateX(0)' : 'translateX(8px)',
+              transition: draggingId !== null && canScrollRight
+                ? 'opacity 180ms cubic-bezier(0.2, 0, 0, 1), transform 180ms cubic-bezier(0.2, 0, 0, 1), visibility 0s'
+                : 'opacity 150ms ease-in, transform 150ms ease-in, visibility 0s linear 150ms',
+            }}
+          >
+            <Box sx={{
+              width: 36, height: 36, borderRadius: '50%',
+              bgcolor: 'hsl(var(--accent))',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+              transform: scrollEdge === 'right' ? 'scale(1.15)' : 'scale(1)',
+              transition: 'transform 0.15s ease',
+              animation: draggingId !== null && canScrollRight && scrollEdge === 'right' ? 'kanban-edge-glow 0.6s ease-in-out infinite' : 'none',
+              willChange: 'transform, opacity',
+            }}>
+              <ChevronRight size={22} color="#fff" strokeWidth={2.5} />
+            </Box>
+          </Box>
+        )}
       <Box
         ref={kanbanRef}
-        onDragOver={(e) => { if (!isMobile) startAutoScroll(e.clientX) }}
-        onDragLeave={stopAutoScroll}
+        onDragOver={onKanbanDragOver}
+        onDragLeave={onKanbanDragLeave}
         sx={{
           display: 'grid',
           gridTemplateColumns: isMobile ? '1fr' : `repeat(${COLUMNS.length}, 300px)`,
@@ -1702,10 +1873,17 @@ const ReclamacoesPage: React.FC = () => {
           pb: 2,
           pt: 1,
           px: 0.5,
-          position: 'relative',
           alignItems: 'stretch',
           overflowX: 'auto',
           overflowY: 'clip',
+          // Esconde a scrollbar nativa (substituída pela custom de baixo)
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+          '&::-webkit-scrollbar': { display: 'none' },
+          // Otimização: contain sem 'paint' — paint em container scrollable
+          // força repaint completo a cada scrollLeft programático
+          contain: 'layout style',
+          willChange: 'scroll-position',
         }}
       >
         {COLUMNS.map((col) => {
@@ -1713,18 +1891,21 @@ const ReclamacoesPage: React.FC = () => {
           return (
             <Box
               key={col.id}
-              onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverCol(col.id) }}
-              onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOverCol(null) }}
+              onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; if (dragOverCol !== col.id) setDragOverCol(col.id) }}
+              onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) { if (dragOverCol === col.id) setDragOverCol(null) } }}
               onDrop={(e) => handleDrop(e, col.id)}
               sx={{
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 1.5,
                 transition: 'all 0.2s ease',
+                contain: 'layout style',
                 ...(dragOverCol === col.id && draggingId !== null ? {
                   borderRadius: 2,
-                  boxShadow: `0 0 0 2px ${col.color}40, 0 0 16px ${col.color}20`,
-                  bgcolor: `${col.color}08`,
+                  boxShadow: `0 0 0 2px ${col.color}80, 0 0 24px ${col.color}30, inset 0 0 40px ${col.color}10`,
+                  bgcolor: `${col.color}0A`,
+                  transform: 'scale(1.005)',
+                  animation: 'kanban-drop-pulse 1s ease-in-out infinite',
                 } : {}),
               }}
             >
@@ -1781,9 +1962,12 @@ const ReclamacoesPage: React.FC = () => {
                         bgcolor: 'hsl(var(--surface-2))',
                         border: '1px solid hsl(var(--border))',
                         borderLeft: `3px solid ${cardBorderLeft[getColumnId(row)]}`,
-                        opacity: draggingId === row.id ? 0.4 : 1,
-                        transition: 'all 0.2s ease',
-                        cursor: 'grab',
+                        // Card "levanta" ao ser arrastado: opacidade reduzida + scale + sombra forte
+                        opacity: draggingId === row.id ? 0.35 : 1,
+                        transform: draggingId === row.id ? 'scale(0.96)' : 'none',
+                        boxShadow: draggingId === row.id ? '0 16px 40px rgba(0,0,0,0.4)' : 'none',
+                        transition: draggingId === row.id ? 'none' : 'all 0.2s ease',
+                        cursor: draggingId === row.id ? 'grabbing' : 'grab',
                         minHeight: 360,
                         display: 'flex',
                         flexDirection: 'column',
@@ -1791,8 +1975,8 @@ const ReclamacoesPage: React.FC = () => {
                         '&:hover': {
                           bgcolor: 'hsl(var(--surface-2))',
                           borderColor: 'hsl(var(--primary) / 0.3)',
-                          transform: 'translateY(-2px)',
-                          boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+                          transform: draggingId === row.id ? 'scale(0.96)' : 'translateY(-3px)',
+                          boxShadow: draggingId === row.id ? '0 16px 40px rgba(0,0,0,0.4)' : '0 10px 28px rgba(0,0,0,0.28)',
                         },
                       }}
                     >
@@ -1834,7 +2018,7 @@ const ReclamacoesPage: React.FC = () => {
                         </Box>
                       </Box>
 
-                      <Box sx={{ overflowY: 'auto', flex: 1, minHeight: 0, pr: 0.75, mr: -0.75, '&::-webkit-scrollbar': { width: 4 }, '&::-webkit-scrollbar-track': { background: 'transparent' }, '&::-webkit-scrollbar-thumb': { background: 'hsl(var(--border))', borderRadius: 2 } }}>
+                      <Box sx={{ flex: 1, minHeight: 0, pr: 0.75, mr: -0.75 }}>
                       {/* manual badge centered below name */}
                       {row.ehManual && (
                         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0.5, mb: 0.5 }}>
@@ -1967,6 +2151,66 @@ const ReclamacoesPage: React.FC = () => {
           )
         })}
       </Box>
+      </Box>{/* fecha wrapper position:relative das setas overlay */}
+      {/* scrollbar horizontal de baixo — custom, espelha a do topo (mesmo estilo/cor/tamanho) */}
+      {!isMobile && (
+        <Box
+          ref={bottomScrollRef}
+          onMouseDown={(e) => {
+            const track = e.currentTarget
+            const kanban = kanbanRef.current
+            const thumb = bottomThumbRef.current
+            if (!kanban || !thumb) return
+            const maxScrollLeft = kanban.scrollWidth - kanban.clientWidth
+            if (maxScrollLeft <= 0) return
+            e.preventDefault()
+            const trackRect = track.getBoundingClientRect()
+            const thumbRect = thumb.getBoundingClientRect()
+            const thumbWidth = thumbRect.width
+            const maxThumbLeft = Math.max(1, trackRect.width - thumbWidth)
+            const clickX = e.clientX - trackRect.left
+            const thumbLeft = thumbRect.left - trackRect.left
+            const clickedOnThumb = e.target === thumb
+            const grabOffset = clickedOnThumb ? clickX - thumbLeft : thumbWidth / 2
+            const moveTo = (clientX: number) => {
+              const desiredLeft = (clientX - trackRect.left) - grabOffset
+              const clampedLeft = Math.max(0, Math.min(maxThumbLeft, desiredLeft))
+              kanban.scrollLeft = (clampedLeft / maxThumbLeft) * maxScrollLeft
+            }
+            if (!clickedOnThumb) moveTo(e.clientX)
+            const onMove = (ev: MouseEvent) => moveTo(ev.clientX)
+            const onUp = () => {
+              window.removeEventListener('mousemove', onMove)
+              window.removeEventListener('mouseup', onUp)
+            }
+            window.addEventListener('mousemove', onMove)
+            window.addEventListener('mouseup', onUp)
+          }}
+          sx={{
+            width: '100%',
+            height: 10,
+            mt: 1,
+            position: 'relative',
+            bgcolor: 'transparent',
+            cursor: 'pointer',
+            userSelect: 'none',
+          }}
+        >
+          <Box
+            ref={bottomThumbRef}
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              height: '100%',
+              width: '100%',
+              bgcolor: 'hsl(var(--scrollbar-thumb))',
+              borderRadius: 3,
+              cursor: 'grab',
+            }}
+          />
+        </Box>
+      )}
       </React.Fragment>
       )}
 

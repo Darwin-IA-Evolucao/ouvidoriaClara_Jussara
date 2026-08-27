@@ -225,7 +225,7 @@ const DistributionViewer: React.FC<DistributionViewerProps> = ({ stats, ocorrenc
                 </FormControl>
               </Box>
 
-              <Box sx={{ maxHeight: 220, overflowY: 'auto', mb: 2, pr: 0.5, '&::-webkit-scrollbar': { width: 4 }, '&::-webkit-scrollbar-thumb': { bgcolor: 'hsl(var(--border))', borderRadius: 2 } }}>
+              <Box sx={{ maxHeight: 220, overflowY: 'auto', mb: 2, pr: 0.5, '&::-webkit-scrollbar': { width: 10 }, '&::-webkit-scrollbar-thumb': { bgcolor: 'hsl(var(--scrollbar-thumb))', borderRadius: 3 } }}>
                 {categoriaData.map((c, i) => {
                   const total = categoriaData.reduce((s, x) => s + x.value, 0)
                   const pct = total > 0 ? (c.value / total) * 100 : 0
@@ -290,7 +290,7 @@ const DistributionViewer: React.FC<DistributionViewerProps> = ({ stats, ocorrenc
                 </FormControl>
               </Box>
 
-              <Box sx={{ maxHeight: 220, overflowY: 'auto', mb: 2, pr: 0.5, '&::-webkit-scrollbar': { width: 4 }, '&::-webkit-scrollbar-thumb': { bgcolor: 'hsl(var(--border))', borderRadius: 2 } }}>
+              <Box sx={{ maxHeight: 220, overflowY: 'auto', mb: 2, pr: 0.5, '&::-webkit-scrollbar': { width: 10 }, '&::-webkit-scrollbar-thumb': { bgcolor: 'hsl(var(--scrollbar-thumb))', borderRadius: 3 } }}>
                 {statusData.map((s, i) => {
                   const total = statusData.reduce((sum, x) => sum + x.value, 0)
                   const pct = total > 0 ? (s.value / total) * 100 : 0

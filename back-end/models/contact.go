@@ -41,6 +41,11 @@ type CreateContatoRequest struct {
 	Campanha string `json:"campanha"`
 }
 
+type CreateLeadSiteRequest struct {
+	Telefone string `json:"telefone"`
+	Nome     string `json:"nome"`
+}
+
 type ImportLinhaErro struct {
 	Linha    int    `json:"linha"`
 	Telefone string `json:"telefone"`

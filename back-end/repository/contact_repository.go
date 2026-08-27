@@ -64,6 +64,13 @@ func (r *ContatoRepo) CreateContato(contato *models.Contato) error {
 	return err
 }
 
+func (r *ContatoRepo) CreateContatoIfNotExists(contato *models.Contato) error {
+	const query = `INSERT INTO contatos (telefone, nome, conversation_id, instance, campanha)
+		VALUES ($1, $2, $3, $4, $5) ON CONFLICT (telefone) DO NOTHING`
+	_, err := r.db.Exec(query, contato.Telefone, contato.Nome, contato.ConversationId, contato.Instance, contato.Campanha)
+	return err
+}
+
 func (r *ContatoRepo) SetConversationId(telefone string, conversationId string) error {
 	const query = `UPDATE contatos SET conversation_id = $2 WHERE telefone = $1`
 	_, err := r.db.Exec(query, telefone, conversationId)

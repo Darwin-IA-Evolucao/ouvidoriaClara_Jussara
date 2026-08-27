@@ -89,6 +89,19 @@ func (ctrl *ContatoController) CreateContato(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"message": "contato criado"})
 }
 
+func (ctrl *ContatoController) CreateLeadSite(c *gin.Context) {
+	var request models.CreateLeadSiteRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "requisicao invalida"})
+		return
+	}
+	if err := ctrl.usecase.CreateLeadSite(request.Telefone, request.Nome); err != nil {
+		respondContatoErr(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "ok"})
+}
+
 func (ctrl *ContatoController) ImportContatos(c *gin.Context) {
 	campanha := c.PostForm("campanha")
 	header, err := c.FormFile("file")

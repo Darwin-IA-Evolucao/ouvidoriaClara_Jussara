@@ -95,7 +95,7 @@ func (ctrl *ContatoController) CreateLeadSite(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "requisicao invalida"})
 		return
 	}
-	if err := ctrl.usecase.CreateLeadSite(request.Telefone, request.Nome); err != nil {
+	if err := ctrl.usecase.CreateLeadSite(request.Telefone, request.Nome, request.Campanha); err != nil {
 		respondContatoErr(c, err)
 		return
 	}

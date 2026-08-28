@@ -82,16 +82,20 @@ func (u *ContatoUseCase) CreateContato(telefone, nome, campanha string) error {
 
 // CreateLeadSite cadastra o lead vindo do site. Se o telefone ja existe, mantem o
 // registro atual sem sobrescrever a campanha de origem.
-func (u *ContatoUseCase) CreateLeadSite(telefone, nome string) error {
+func (u *ContatoUseCase) CreateLeadSite(telefone, nome, campanha string) error {
 	tel := utils.NormalizeTelefone(telefone)
 	if !utils.TelefoneValido(tel) {
 		return apperror.BadRequest("telefone em formato invalido")
 	}
-	if err := u.ensureCampanha(campanhaSite); err != nil {
+
+	if campanha == "" {
+		campanha = campanhaSite
+	}
+	
+	if err := u.ensureCampanha(campanha); err != nil {
 		return err
 	}
 	instance := instanceOuvidoria
-	campanha := campanhaSite
 	nomeVal := strings.TrimSpace(nome)
 	if len(nomeVal) > tamanhoMaxNome {
 		nomeVal = nomeVal[:tamanhoMaxNome]

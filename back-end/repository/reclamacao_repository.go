@@ -223,7 +223,7 @@ func (repo ReclamacaoRepository) DesativarAvisos(idReclamacao string) error {
 
 // --------------------------------------------------------------------------------------- Usuario
 func (repo ReclamacaoRepository) GetUsuarioById(id int) (*models.Usuario, error) {
-	const query = `SELECT id, celular, role FROM usuario WHERE id = $1`
+	const query = `SELECT id, celular, role FROM usuarios WHERE id = $1`
 	var usuario models.Usuario
 	err := repo.connection.QueryRow(query, id).Scan(&usuario.ID, &usuario.Celular, &usuario.Role)
 	if err != nil {

@@ -35,12 +35,15 @@ interface ColumnDef {
 const COLUMNS: ColumnDef[] = [
   { id: 'sem-tratativa', label: 'Sem Tratativa', color: '#A1A9B8', headerBg: 'hsl(var(--text-secondary) / 0.12)' },
   { id: 'em-analise', label: 'Em Análise', color: '#62A1D8', headerBg: 'hsl(var(--info) / 0.12)' },
-  { id: 'aprovar-requerimento', label: 'Aprovar como Requerimento', color: '#E89E70', headerBg: 'hsl(var(--accent) / 0.12)' },
-  { id: 'aprovar-indicacao', label: 'Aprovar como Indicação', color: '#66BB80', headerBg: 'hsl(var(--success) / 0.12)' },
-  { id: 'aprovar-causa-animal', label: 'Aprovar como Causa Animal', color: '#B98CE8', headerBg: 'hsl(var(--primary) / 0.12)' },
+  { id: 'aprovar-requerimento', label: 'Concluído como Requerimento', color: '#E89E70', headerBg: 'hsl(var(--accent) / 0.12)' },
+  { id: 'aprovar-indicacao', label: 'Concluído como Indicação', color: '#66BB80', headerBg: 'hsl(var(--success) / 0.12)' },
+  { id: 'aprovar-causa-animal', label: 'Concluído como Causa Animal', color: '#B98CE8', headerBg: 'hsl(var(--primary) / 0.12)' },
   { id: 'desqualificar', label: 'Desqualificar', color: '#D16670', headerBg: 'hsl(var(--error) / 0.12)' },
   { id: 'finalizado', label: 'Finalizado', color: '#5B8FE0', headerBg: 'hsl(var(--info) / 0.12)' },
 ]
+
+/* Colunas visíveis no Kanban — Finalizado fica oculto da UI */
+const VISIBLE_COLUMNS = COLUMNS.filter((c) => c.id !== 'finalizado')
 
 /* ── helpers visuais do modal de detalhes ── */
 const DetailSectionHeader: React.FC<{ icon: React.ElementType; label: string; colorVar?: string }> = ({ icon: Icon, label, colorVar = 'accent' }) => (
@@ -1715,13 +1718,13 @@ const ReclamacoesPage: React.FC = () => {
             ref={headersRef}
             sx={{
               display: 'grid',
-              gridTemplateColumns: `repeat(${COLUMNS.length}, 300px)`,
+              gridTemplateColumns: `repeat(${VISIBLE_COLUMNS.length}, 300px)`,
               gap: 2,
               px: 0.5,
               willChange: 'transform',
             }}
           >
-            {COLUMNS.map((col) => renderColumnHeader(col, itemsForColumn(filteredRows, col.id)))}
+            {VISIBLE_COLUMNS.map((col) => renderColumnHeader(col, itemsForColumn(filteredRows, col.id)))}
           </Box>
         </Box>
       )}
@@ -1868,7 +1871,7 @@ const ReclamacoesPage: React.FC = () => {
         onDragLeave={onKanbanDragLeave}
         sx={{
           display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : `repeat(${COLUMNS.length}, 300px)`,
+          gridTemplateColumns: isMobile ? '1fr' : `repeat(${VISIBLE_COLUMNS.length}, 300px)`,
           gap: 2,
           pb: 2,
           pt: 1,
@@ -1886,7 +1889,7 @@ const ReclamacoesPage: React.FC = () => {
           willChange: 'scroll-position',
         }}
       >
-        {COLUMNS.map((col) => {
+        {VISIBLE_COLUMNS.map((col) => {
           const items = itemsForColumn(filteredRows, col.id)
           return (
             <Box
@@ -2135,7 +2138,7 @@ const ReclamacoesPage: React.FC = () => {
                               }}
                               sx={{ fontSize: 12 }}
                             >
-                              {COLUMNS.filter((c) => c.id !== col.id).map((c) => (
+                              {VISIBLE_COLUMNS.filter((c) => c.id !== col.id).map((c) => (
                                 <MenuItem key={c.id} value={c.id} sx={{ fontSize: 12 }}>{c.label}</MenuItem>
                               ))}
                             </Select>

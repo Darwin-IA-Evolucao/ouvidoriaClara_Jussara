@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import {
   Box, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, Chip, Alert, useMediaQuery, useTheme, Select, MenuItem, Autocomplete, Collapse,
@@ -75,11 +75,17 @@ const ContatosPage: React.FC = () => {
   const [lightboxIsVideo, setLightboxIsVideo] = useState(false)
   const [enderecos, setEnderecos] = useState<Logradouro[]>([])
 
-  const load = useCallback(async () => {
+  const [totalCount, setTotalCount] = useState(0)
+
+  const load = useCallback(async (page: number) => {
     setLoading(true)
     setError(null)
     try {
-      const [data, ocorrencias] = await Promise.all([getAllContatosUnificados(), getAllOcorrencias()])
+      const offset = (page - 1) * ITEMS_PER_PAGE
+      const [data, ocorrencias] = await Promise.all([
+        getAllContatosUnificados(ITEMS_PER_PAGE, offset),
+        getAllOcorrencias(),
+      ])
       const reclamacoesPhones = new Set<string>()
       ;(ocorrencias || []).forEach((o) => reclamacoesPhones.add(o.telefone))
       const contatosWithFlag = data.contatos.map((c) => ({
@@ -87,6 +93,7 @@ const ContatosPage: React.FC = () => {
         hasReclamacao: reclamacoesPhones.has(c.telefone),
       }))
       setContatos(contatosWithFlag)
+      setTotalCount(data.total)
       setSummary({ total: data.total, usados: data.usados, ocupacao: data.ocupacao, limite: data.limite })
     } catch (err: any) {
       setError(err.message || 'Erro ao carregar contatos')
@@ -102,15 +109,13 @@ const ContatosPage: React.FC = () => {
     } catch { /* ignore */ }
   }, [])
 
-  // Guard contra StrictMode double-load no dev (evita 2× requests no mount)
-  const loadedRef = useRef(false)
+  // Carrega a página atual do servidor (paginação server-side)
   useEffect(() => {
-    if (loadedRef.current) return
-    loadedRef.current = true
-    load()
-  }, [load])
+    load(currentPage)
+  }, [currentPage, load])
   useEffect(() => { fetchCategorias().then(setCategorias) }, [])
 
+  // Filtros aplicados sobre a página atual (server-side paginada)
   const filtered = useMemo(() => {
     const start = startDate ? new Date(`${startDate}T00:00:00`) : null
     const end = endDate ? new Date(`${endDate}T23:59:59`) : null
@@ -135,17 +140,14 @@ const ContatosPage: React.FC = () => {
       }
       return true
     })
-    .sort((a, b) => {
-      const da = a.dataCriacao ? new Date(a.dataCriacao).getTime() : 0
-      const db = b.dataCriacao ? new Date(b.dataCriacao).getTime() : 0
-      return db - da
-    })
   }, [contatos, search, filters, startDate, endDate])
 
   useEffect(() => { setCurrentPage(1) }, [filters, search, startDate, endDate])
 
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE)
-  const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
+  // total de páginas baseado no total do servidor, não no tamanho do array local
+  const totalPages = Math.max(1, Math.ceil(totalCount / ITEMS_PER_PAGE))
+  // contatos já vêm paginados do servidor; filtered aplica filtros client-side sobre a página atual
+  const paginated = filtered
   const resetFilters = () => {
     setFilters({ darwin: null, contact: null, gelo: null, reclamacao: null })
     setStartDate('')
@@ -199,7 +201,7 @@ const ContatosPage: React.FC = () => {
       if (editing) await updateCliente(editing.telefone, payload)
       else await createCliente(payload)
       setOpenModal(false)
-      load()
+      load(currentPage)
     } catch (err: any) {
       setError(err.message || 'Erro ao salvar cliente')
     }
@@ -210,7 +212,7 @@ const ContatosPage: React.FC = () => {
     try {
       await deleteCliente(toDelete.telefone)
       setConfirmOpen(false)
-      load()
+      load(currentPage)
     } catch (err: any) {
       setError(err.message || 'Erro ao excluir cliente')
     }
@@ -229,8 +231,8 @@ const ContatosPage: React.FC = () => {
   const columnLabels: Record<string, string> = {
     'pendentes': 'Solicitações Pendentes',
     'em-analise': 'Em Análise',
-    'aprovar-indicacao': 'Aprovado como Indicação',
-    'aprovar-requerimento': 'Aprovado como Requerimento',
+    'aprovar-indicacao': 'Concluído como Indicação',
+    'aprovar-requerimento': 'Concluído como Requerimento',
     'reprovar': 'Reprovado',
   }
 
@@ -682,8 +684,8 @@ const ContatosPage: React.FC = () => {
               <MenuItem value="">Todas colunas</MenuItem>
               <MenuItem value="pendentes">Solicitações Pendentes</MenuItem>
               <MenuItem value="em-analise">Em Análise</MenuItem>
-              <MenuItem value="aprovar-indicacao">Aprovado como Indicação</MenuItem>
-              <MenuItem value="aprovar-requerimento">Aprovado como Requerimento</MenuItem>
+              <MenuItem value="aprovar-indicacao">Concluído como Indicação</MenuItem>
+              <MenuItem value="aprovar-requerimento">Concluído como Requerimento</MenuItem>
               <MenuItem value="reprovar">Reprovado</MenuItem>
             </Select>
             <Select

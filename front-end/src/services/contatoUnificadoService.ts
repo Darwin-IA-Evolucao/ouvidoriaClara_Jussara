@@ -26,11 +26,10 @@ interface ContatosUnificadosResponse {
   ocupacao: string
 }
 
-export async function getAllContatosUnificados(): Promise<{ contatos: ContatoUnificado[]; total: number; usados: number; ocupacao: string; limite: number }> {
-  // Endpoint único server-side: faz join de contatos + cliente + clientesbloqueados + reclamacao.
-  // limit=0 faz o repositório não aplicar LIMIT/OFFSET (retorna todos os registros),
-  // já que o front faz filtros/paginação client-side.
-  const res = await apiGet<ContatosUnificadosResponse>('/contatos-unificados?limit=0&offset=0')
+export async function getAllContatosUnificados(limit = 12, offset = 0): Promise<{ contatos: ContatoUnificado[]; total: number; usados: number; ocupacao: string; limite: number }> {
+  // Paginação server-side: o back-end aplica LIMIT/OFFSET quando limit > 0.
+  // total vem na resposta para o front calcular o número de páginas.
+  const res = await apiGet<ContatosUnificadosResponse>(`/contatos-unificados?limit=${limit}&offset=${offset}`)
 
   const contatos: ContatoUnificado[] = (res.contatos || []).map((c) => ({
     telefone: c.telefone,

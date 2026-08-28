@@ -18,9 +18,9 @@ const STATUS_COLUMN_LABELS: Record<string, string> = {
 }
 
 const TYPE_COLUMN_LABELS: Record<string, string> = {
-  'indicacao': 'Aprovar como Indicação',
-  'requerimento': 'Aprovar como Requerimento',
-  'causa animal': 'Aprovar como Causa Animal',
+  'indicacao': 'Concluído como Indicação',
+  'requerimento': 'Concluído como Requerimento',
+  'causa animal': 'Concluído como Causa Animal',
 }
 
 interface DistributionViewerProps {

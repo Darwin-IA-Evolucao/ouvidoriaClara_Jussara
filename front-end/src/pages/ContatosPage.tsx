@@ -82,17 +82,16 @@ const ContatosPage: React.FC = () => {
     setError(null)
     try {
       const offset = (page - 1) * ITEMS_PER_PAGE
-      const [data, ocorrencias] = await Promise.all([
-        getAllContatosUnificados(ITEMS_PER_PAGE, offset),
-        getAllOcorrencias(),
-      ])
-      const reclamacoesPhones = new Set<string>()
-      ;(ocorrencias || []).forEach((o) => reclamacoesPhones.add(o.telefone))
-      const contatosWithFlag = data.contatos.map((c) => ({
-        ...c,
-        hasReclamacao: reclamacoesPhones.has(c.telefone),
-      }))
-      setContatos(contatosWithFlag)
+      const data = await getAllContatosUnificados(ITEMS_PER_PAGE, offset, {
+        search: search.trim() || undefined,
+        darwin: filters.darwin,
+        leadAtivo: filters.contact,
+        gelo: filters.gelo,
+        reclamacao: filters.reclamacao,
+        inicio: startDate || undefined,
+        fim: endDate || undefined,
+      })
+      setContatos(data.contatos)
       setTotalCount(data.total)
       setSummary({ total: data.total, usados: data.usados, ocupacao: data.ocupacao, limite: data.limite })
     } catch (err: any) {
@@ -100,7 +99,7 @@ const ContatosPage: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [search, filters, startDate, endDate])
 
   const refreshSummary = useCallback(async () => {
     try {
@@ -115,38 +114,13 @@ const ContatosPage: React.FC = () => {
   }, [currentPage, load])
   useEffect(() => { fetchCategorias().then(setCategorias) }, [])
 
-  // Filtros aplicados sobre a página atual (server-side paginada)
-  const filtered = useMemo(() => {
-    const start = startDate ? new Date(`${startDate}T00:00:00`) : null
-    const end = endDate ? new Date(`${endDate}T23:59:59`) : null
-    const term = search.trim().toLowerCase()
-    const digits = search.replace(/\D/g, '')
-    return contatos.filter((c) => {
-      if (term) {
-        const matchName = c.nome.toLowerCase().includes(term)
-        const matchPhone = digits.length > 0 && c.telefone.includes(digits)
-        if (!matchName && !matchPhone) return false
-      }
-      if (filters.darwin !== null && c.darwinAtivo !== filters.darwin) return false
-      if (filters.contact !== null && c.leadAtivo !== filters.contact) return false
-      if (filters.gelo !== null && c.isGelado !== filters.gelo) return false
-      if (filters.reclamacao !== null && c.hasReclamacao !== filters.reclamacao) return false
-      if (start || end) {
-        if (!c.dataCriacao) return false
-        const d = new Date(c.dataCriacao)
-        if (isNaN(d.getTime())) return false
-        if (start && d < start) return false
-        if (end && d > end) return false
-      }
-      return true
-    })
-  }, [contatos, search, filters, startDate, endDate])
+  // Filtros aplicados server-side; contatos já vêm filtrados do backend
+  const filtered = contatos
 
   useEffect(() => { setCurrentPage(1) }, [filters, search, startDate, endDate])
 
-  // total de páginas baseado no total do servidor, não no tamanho do array local
+  // total de páginas baseado no total do servidor (já reflete os filtros)
   const totalPages = Math.max(1, Math.ceil(totalCount / ITEMS_PER_PAGE))
-  // contatos já vêm paginados do servidor; filtered aplica filtros client-side sobre a página atual
   const paginated = filtered
   const resetFilters = () => {
     setFilters({ darwin: null, contact: null, gelo: null, reclamacao: null })
@@ -190,7 +164,7 @@ const ContatosPage: React.FC = () => {
       dataNascimento: c.dataNascimento || '', dataCriacao: c.dataCriacao || '',
     })
     setOpenModal(true)
-    getAllEnderecos().then(setEnderecos).catch(() => setEnderecos([]))
+    getAllEnderecos(0, 0).then((res) => setEnderecos(res.enderecos)).catch(() => setEnderecos([]))
   }
 
   const save = async () => {
@@ -256,8 +230,8 @@ const ContatosPage: React.FC = () => {
     setOcFiltroFim('')
     try {
       const tel = c.telefone.replace(/\D/g, '')
-      const data = await getAllOcorrencias(tel)
-      setOcorrenciaList(Array.isArray(data) ? data : [])
+      const data = await getAllOcorrencias(tel, 0, 0)
+      setOcorrenciaList(Array.isArray(data.ocorrencias) ? data.ocorrencias : [])
     } catch (err) {
       console.error('Erro ao carregar ocorrências:', err)
       setOcorrenciaList([])

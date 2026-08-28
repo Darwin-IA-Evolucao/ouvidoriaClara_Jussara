@@ -58,7 +58,7 @@ const LoginPage: React.FC = () => {
     setLoading(true)
     try {
       const session = await login({ celular, senha })
-      setSession(session)
+      setSession({ ...session, celular })
       navigate('/')
     } catch (err: any) {
       setError(err?.message?.includes('401') || err?.message?.includes('inválid')

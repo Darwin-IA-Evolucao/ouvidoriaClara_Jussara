@@ -39,7 +39,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
   if (isJson) {
     const body = await response.json()
-    if (body && typeof body === 'object' && 'error' in body) {
+    if (body && typeof body === 'object' && 'error' in body && body.error) {
       throw new ApiError(String(body.error), response.status)
     }
     if (body === null || body === undefined) {

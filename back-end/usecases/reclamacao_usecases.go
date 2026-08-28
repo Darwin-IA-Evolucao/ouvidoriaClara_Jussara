@@ -532,6 +532,53 @@ func (uc ReclamacaoUseCases) GetAllOcorrencias(telefone string) ([]models.Ocorre
 	return list, nil
 }
 
+func (uc ReclamacaoUseCases) GetRelatorioSolicitacoes(inicio, fim time.Time) (models.RelatorioSolicitacoes, error) {
+	list, err := uc.repository.GetOcorrenciasPorPeriodo(inicio, fim)
+	if err != nil {
+		return models.RelatorioSolicitacoes{}, apperror.Internal(err.Error())
+	}
+	celulares, err := uc.repository.GetUsuariosCelular()
+	if err != nil {
+		return models.RelatorioSolicitacoes{}, apperror.Internal(err.Error())
+	}
+	grupos := map[int]*models.RelatorioSolicitacaoUsuario{}
+	semUsuario := models.RelatorioSolicitacaoUsuario{Solicitacoes: []models.Ocorrencia{}}
+	ordem := []int{}
+	for _, o := range list {
+		if o.IDUsuario == nil {
+			semUsuario.Solicitacoes = append(semUsuario.Solicitacoes, o)
+			continue
+		}
+		id := *o.IDUsuario
+		if grupos[id] == nil {
+			idCopy := id
+			grupos[id] = &models.RelatorioSolicitacaoUsuario{
+				IDUsuario:    &idCopy,
+				Celular:      celulares[id],
+				Solicitacoes: []models.Ocorrencia{},
+			}
+			ordem = append(ordem, id)
+		}
+		grupos[id].Solicitacoes = append(grupos[id].Solicitacoes, o)
+	}
+	porUsuario := make([]models.RelatorioSolicitacaoUsuario, 0, len(ordem)+1)
+	for _, id := range ordem {
+		g := grupos[id]
+		g.Total = len(g.Solicitacoes)
+		porUsuario = append(porUsuario, *g)
+	}
+	if len(semUsuario.Solicitacoes) > 0 {
+		semUsuario.Total = len(semUsuario.Solicitacoes)
+		porUsuario = append(porUsuario, semUsuario)
+	}
+	return models.RelatorioSolicitacoes{
+		Inicio:     inicio.Format("2006-01-02"),
+		Fim:        fim.Add(-time.Nanosecond).Format("2006-01-02"),
+		Total:      len(list),
+		PorUsuario: porUsuario,
+	}, nil
+}
+
 func (uc ReclamacaoUseCases) GetOcorrenciaById(id string) (models.Ocorrencia, error) {
 	o, err := uc.repository.GetOcorrenciaById(id)
 	if err != nil {

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"strings"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -165,6 +166,50 @@ func (repo ReclamacaoRepository) GetOcorrenciaById(id string) (*models.Ocorrenci
 		return nil, err
 	}
 	return &o, nil
+}
+
+func (repo ReclamacaoRepository) GetOcorrenciasPorPeriodo(inicio, fim time.Time) ([]models.Ocorrencia, error) {
+	const query = `
+		SELECT idreclamacao, telefone, categoria, reclamacao, tipo, status, detalhes, eh_manual, observacao, mensagem_final, telefone_acessor, mensagem, data_criacao, data_atualizacao, id_usuario
+		FROM reclamacao
+		WHERE data_criacao >= $1 AND data_criacao < $2
+		ORDER BY data_criacao DESC`
+	rows, err := repo.connection.Query(query, inicio, fim)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var ocorrencias []models.Ocorrencia
+	for rows.Next() {
+		o, err := scanOcorrencia(rows)
+		if err != nil {
+			return nil, err
+		}
+		ocorrencias = append(ocorrencias, o)
+	}
+	if ocorrencias == nil {
+		ocorrencias = []models.Ocorrencia{}
+	}
+	return ocorrencias, rows.Err()
+}
+
+func (repo ReclamacaoRepository) GetUsuariosCelular() (map[int]string, error) {
+	const query = `SELECT id, celular FROM usuarios`
+	rows, err := repo.connection.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	usuarios := map[int]string{}
+	for rows.Next() {
+		var id int
+		var celular string
+		if err := rows.Scan(&id, &celular); err != nil {
+			return nil, err
+		}
+		usuarios[id] = celular
+	}
+	return usuarios, rows.Err()
 }
 
 func (repo ReclamacaoRepository) UpdateOcorrencia(id string, data models.OcorrenciaData, status string) error {

@@ -145,3 +145,17 @@ type Aviso struct {
 	Data         string `json:"data" db:"data"`
 	Avisado      bool   `json:"avisado" db:"avisado"`
 }
+
+type RelatorioSolicitacaoUsuario struct {
+	IDUsuario    *int         `json:"idUsuario"`
+	Celular      string       `json:"celular"`
+	Total        int          `json:"total"`
+	Solicitacoes []Ocorrencia `json:"solicitacoes"`
+}
+
+type RelatorioSolicitacoes struct {
+	Inicio     string                        `json:"inicio"`
+	Fim        string                        `json:"fim"`
+	Total      int                           `json:"total"`
+	PorUsuario []RelatorioSolicitacaoUsuario `json:"porUsuario"`
+}

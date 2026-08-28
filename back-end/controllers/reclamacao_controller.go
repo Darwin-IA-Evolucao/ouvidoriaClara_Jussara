@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -239,6 +240,36 @@ func (ctrl ReclamacaoController) GetAllOcorrencias(c *gin.Context) {
 		list = []models.Ocorrencia{}
 	}
 	c.IndentedJSON(http.StatusOK, list)
+}
+
+func (ctrl ReclamacaoController) GetRelatorioSolicitacoes(c *gin.Context) {
+	inicioStr := c.Query("inicio")
+	fimStr := c.Query("fim")
+	if inicioStr == "" || fimStr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "inicio e fim são obrigatórios (YYYY-MM-DD)"})
+		return
+	}
+	inicio, err := time.Parse("2006-01-02", inicioStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "inicio inválido"})
+		return
+	}
+	fim, err := time.Parse("2006-01-02", fimStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "fim inválido"})
+		return
+	}
+	relatorio, err := ctrl.useCase.GetRelatorioSolicitacoes(inicio, fim.Add(24*time.Hour))
+	if err != nil {
+		var appErr *apperror.AppError
+		if errors.As(err, &appErr) {
+			c.IndentedJSON(appErr.StatusCode, gin.H{"error": appErr.Message})
+			return
+		}
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.IndentedJSON(http.StatusOK, relatorio)
 }
 
 func (ctrl ReclamacaoController) GetOcorrenciaById(c *gin.Context) {

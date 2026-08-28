@@ -23,6 +23,15 @@ func (ctrl EnderecoController) GetRegiao(c *gin.Context) {
 	c.JSON(http.StatusOK, regiao)
 }
 
+func (ctrl EnderecoController) GetAllRegiao(c *gin.Context) {
+	regioes, err := ctrl.useCase.GetAllRegiao()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, regioes)
+}
+
 func (ctrl EnderecoController) CadastrarEnderecos(c *gin.Context) {
 	var data []models.Endereco
 	if err := c.ShouldBindJSON(&data); err != nil {
@@ -61,24 +70,24 @@ func (ctrl EnderecoController) GetAllEnderecos(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"enderecos": enderecos, "total": total})
 }
-func (ctrl EnderecoController) GetEnderecoById(c *gin.Context){
+func (ctrl EnderecoController) GetEnderecoById(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message":"id deve ser numerico", "error":err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "id deve ser numerico", "error": err.Error()})
 		return
 	}
 	enderecos, err := ctrl.useCase.GetEnderecoById(id)
 	if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"enderecos": enderecos})
 }
 
-func (ctrl EnderecoController) UpdateEndereco(c *gin.Context){
+func (ctrl EnderecoController) UpdateEndereco(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message":"id deve ser numerico", "error":err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "id deve ser numerico", "error": err.Error()})
 		return
 	}
 
@@ -93,10 +102,10 @@ func (ctrl EnderecoController) UpdateEndereco(c *gin.Context){
 	}
 }
 
-func (ctrl EnderecoController) DeleteEndereco(c *gin.Context){
+func (ctrl EnderecoController) DeleteEndereco(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message":"id deve ser numerico", "error":err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "id deve ser numerico", "error": err.Error()})
 		return
 	}
 	if err := ctrl.useCase.DeleteEndereco(id); err != nil {

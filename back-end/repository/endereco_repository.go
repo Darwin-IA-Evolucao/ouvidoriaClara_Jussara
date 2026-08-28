@@ -60,6 +60,12 @@ func (repo EnderecoRepository) DeleteEndereco(id int) error {
 	return err
 }
 
+func (repo EnderecoRepository) GetAllRegiao() ([]string, error) {
+	const query = `SELECT DISTINCT regiao FROM enderecos ORDER BY regiao;`
+	var regioes []string
+	err := repo.connection.Select(&regioes, query)
+	return regioes, err
+}
 func (repo EnderecoRepository) GetRegiaoByLogradouro(logradouro, bairro string) (string, error) {
 	const query = `
 		SELECT 

@@ -188,6 +188,10 @@ func encontraMelhorCorrespondencia(lista []models.Logradouro, termo string, limi
 	return -1, false
 }
 
+func (uc EnderecoUseCases) GetAllRegiao() ([]string, error) {
+	return uc.repository.GetAllRegiao()
+}
+
 func (uc EnderecoUseCases) GetRegiao(input string) string {
 	input = removerAcentos(input)
 	logradouro, bairro := parseEndereco(input)
@@ -257,18 +261,18 @@ func (uc EnderecoUseCases) GetAllEnderecos(limit, offset int) ([]models.Logradou
 func (uc EnderecoUseCases) GetEnderecoById(id int) (*models.Logradouro, error) {
 	return uc.repository.GetEnderecoById(id)
 }
-func (uc EnderecoUseCases) UpdateEndereco(id int, req models.Logradouro) ( error) {
+func (uc EnderecoUseCases) UpdateEndereco(id int, req models.Logradouro) error {
 	endereco, err := uc.repository.GetEnderecoById(id)
 	if err != nil {
 		return err
 	}
-	if req.Bairro != ""{
+	if req.Bairro != "" {
 		endereco.Bairro = req.Bairro
 	}
-	if req.Logradouro != ""{
+	if req.Logradouro != "" {
 		endereco.Logradouro = req.Logradouro
 	}
-	if req.Regiao != ""{
+	if req.Regiao != "" {
 		endereco.Regiao = req.Regiao
 	}
 

@@ -13,4 +13,5 @@ func SetupEnderecoRoutes(router *gin.Engine, enderecoController controllers.Ende
 	router.DELETE("/endereco/:id", enderecoController.DeleteEndereco)
 	router.GET("/enderecos", enderecoController.GetAllEnderecos)
 	router.GET("/endereco/:id", enderecoController.GetEnderecoById)
+	router.GET("/endereco/regiao", enderecoController.GetAllRegiao)
 }

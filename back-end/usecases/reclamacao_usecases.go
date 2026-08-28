@@ -458,6 +458,7 @@ func (uc ReclamacaoUseCases) CreateOcorrencia(request models.OcorrenciaRequest) 
 		Detalhes:   request.DetalhesReclamacao,
 		EhManual:   request.EhManual,
 		Observacao: request.Observacao,
+		IDUsuario:  request.IDUsuario,
 	}
 	regiao := ""
 	if request.Regiao != "" {
@@ -493,6 +494,9 @@ func (uc ReclamacaoUseCases) CreateOcorrencia(request models.OcorrenciaRequest) 
 		//config.EnviarEmail(destinatario, "Nova demanda geral", "text/plain", msg)
 	}
 	data.TelefoneAcessor = telefoneEnvio
+	if !data.EhManual {
+		data.IDUsuario = nil
+	}
 	id, err := uc.repository.CreateOcorrencia(data)
 	if err != nil {
 		return 0, apperror.Internal(err.Error())

@@ -95,11 +95,11 @@ func (repo ReclamacaoRepository) CreateOcorrencia(data models.OcorrenciaData) (i
 		return 0, err
 	}
 	const query = `
-		INSERT INTO reclamacao (telefone, categoria, reclamacao, detalhes, eh_manual, observacao, telefone_acessor)
-		VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7)
+		INSERT INTO reclamacao (telefone, categoria, reclamacao, detalhes, eh_manual, observacao, telefone_acessor, id_usuario)
+		VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7, $8)
 		RETURNING idreclamacao`
 	var id int
-	err = repo.connection.QueryRow(query, data.Telefone, data.Categoria, data.Reclamacao, detalhesJSON, data.EhManual, data.Observacao, data.TelefoneAcessor).Scan(&id)
+	err = repo.connection.QueryRow(query, data.Telefone, data.Categoria, data.Reclamacao, detalhesJSON, data.EhManual, data.Observacao, data.TelefoneAcessor, data.IDUsuario).Scan(&id)
 	return id, err
 }
 

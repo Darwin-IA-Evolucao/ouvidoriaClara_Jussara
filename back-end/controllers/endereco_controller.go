@@ -5,6 +5,7 @@ import (
 	"back-end/usecases"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -63,7 +64,7 @@ func (ctrl EnderecoController) GetAllEnderecos(c *gin.Context) {
 			return
 		}
 	}
-	enderecos, total, err := ctrl.useCase.GetAllEnderecos(limit, offset)
+	enderecos, total, err := ctrl.useCase.GetAllEnderecos(limit, offset, strings.TrimSpace(c.Query("regiao")))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

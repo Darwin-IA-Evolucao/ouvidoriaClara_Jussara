@@ -247,12 +247,12 @@ func (uc EnderecoUseCases) CadastrarEnderecos(enderecos []models.Endereco) error
 	return nil
 }
 
-func (uc EnderecoUseCases) GetAllEnderecos(limit, offset int) ([]models.Logradouro, int, error) {
-	enderecos, err := uc.repository.GetAllEnderecos(limit, offset)
+func (uc EnderecoUseCases) GetAllEnderecos(limit, offset int, regiao string) ([]models.Logradouro, int, error) {
+	enderecos, err := uc.repository.GetAllEnderecos(limit, offset, regiao)
 	if err != nil {
 		return nil, 0, err
 	}
-	total, err := uc.repository.GetCountEnderecos()
+	total, err := uc.repository.GetCountEnderecos(regiao)
 	if err != nil {
 		return nil, 0, err
 	}

@@ -16,23 +16,35 @@ func NewEnderecoRepository(conn *sqlx.DB) EnderecoRepository {
 	return EnderecoRepository{connection: conn}
 }
 
-func (repo EnderecoRepository) GetAllEnderecos(limit, offset int) ([]models.Logradouro, error) {
+func (repo EnderecoRepository) GetAllEnderecos(limit, offset int, regiao string) ([]models.Logradouro, error) {
 	query := `SELECT * FROM enderecos`
+	args := []any{}
+	if regiao != "" {
+		args = append(args, regiao)
+		query += ` WHERE unaccent(LOWER(TRIM(regiao))) = unaccent(LOWER(TRIM($1)))`
+	}
 	if limit > 0 && offset >= 0 {
-		query += fmt.Sprintf(" LIMIT %d OFFSET %d", limit, offset)
+		args = append(args, limit, offset)
+		query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", len(args)-1, len(args))
 	}
 
 	var enderecos []models.Logradouro
-	err := repo.connection.Select(&enderecos, query)
+	err := repo.connection.Select(&enderecos, query, args...)
 	if enderecos == nil {
 		enderecos = []models.Logradouro{}
 	}
 	return enderecos, err
 }
 
-func (repo EnderecoRepository) GetCountEnderecos() (int, error) {
+func (repo EnderecoRepository) GetCountEnderecos(regiao string) (int, error) {
+	query := `SELECT COUNT(*) FROM enderecos`
+	args := []any{}
+	if regiao != "" {
+		args = append(args, regiao)
+		query += ` WHERE unaccent(LOWER(TRIM(regiao))) = unaccent(LOWER(TRIM($1)))`
+	}
 	var count int
-	err := repo.connection.Get(&count, `SELECT COUNT(*) FROM enderecos`)
+	err := repo.connection.Get(&count, query, args...)
 	return count, err
 }
 

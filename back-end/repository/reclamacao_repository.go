@@ -4,6 +4,7 @@ import (
 	"back-end/models"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
@@ -168,13 +169,25 @@ func (repo ReclamacaoRepository) GetOcorrenciaById(id string) (*models.Ocorrenci
 	return &o, nil
 }
 
-func (repo ReclamacaoRepository) GetOcorrenciasPorPeriodo(inicio, fim time.Time) ([]models.Ocorrencia, error) {
-	const query = `
+func (repo ReclamacaoRepository) GetOcorrenciasPorPeriodo(inicio, fim *time.Time) ([]models.Ocorrencia, error) {
+	query := `
 		SELECT idreclamacao, telefone, categoria, reclamacao, tipo, status, detalhes, eh_manual, observacao, mensagem_final, telefone_acessor, mensagem, data_criacao, data_atualizacao, id_usuario
-		FROM reclamacao
-		WHERE data_criacao >= $1 AND data_criacao < $2
-		ORDER BY data_criacao DESC`
-	rows, err := repo.connection.Query(query, inicio, fim)
+		FROM reclamacao`
+	args := []any{}
+	if inicio != nil {
+		args = append(args, *inicio)
+		query += fmt.Sprintf(` WHERE data_criacao >= $%d`, len(args))
+	}
+	if fim != nil {
+		args = append(args, *fim)
+		if inicio != nil {
+			query += fmt.Sprintf(` AND data_criacao < $%d`, len(args))
+		} else {
+			query += fmt.Sprintf(` WHERE data_criacao < $%d`, len(args))
+		}
+	}
+	query += ` ORDER BY data_criacao DESC`
+	rows, err := repo.connection.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}

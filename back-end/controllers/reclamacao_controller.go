@@ -243,23 +243,25 @@ func (ctrl ReclamacaoController) GetAllOcorrencias(c *gin.Context) {
 }
 
 func (ctrl ReclamacaoController) GetRelatorioSolicitacoes(c *gin.Context) {
-	inicioStr := c.Query("inicio")
-	fimStr := c.Query("fim")
-	if inicioStr == "" || fimStr == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "inicio e fim são obrigatórios (YYYY-MM-DD)"})
-		return
+	var inicio, fim *time.Time
+	if inicioStr := c.Query("inicio"); inicioStr != "" {
+		t, err := time.Parse("2006-01-02", inicioStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "inicio inválido"})
+			return
+		}
+		inicio = &t
 	}
-	inicio, err := time.Parse("2006-01-02", inicioStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "inicio inválido"})
-		return
+	if fimStr := c.Query("fim"); fimStr != "" {
+		t, err := time.Parse("2006-01-02", fimStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "fim inválido"})
+			return
+		}
+		t = t.Add(24 * time.Hour)
+		fim = &t
 	}
-	fim, err := time.Parse("2006-01-02", fimStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "fim inválido"})
-		return
-	}
-	relatorio, err := ctrl.useCase.GetRelatorioSolicitacoes(inicio, fim.Add(24*time.Hour))
+	relatorio, err := ctrl.useCase.GetRelatorioSolicitacoes(inicio, fim)
 	if err != nil {
 		var appErr *apperror.AppError
 		if errors.As(err, &appErr) {

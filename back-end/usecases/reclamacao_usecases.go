@@ -532,7 +532,7 @@ func (uc ReclamacaoUseCases) GetAllOcorrencias(telefone string) ([]models.Ocorre
 	return list, nil
 }
 
-func (uc ReclamacaoUseCases) GetRelatorioSolicitacoes(inicio, fim time.Time) (models.RelatorioSolicitacoes, error) {
+func (uc ReclamacaoUseCases) GetRelatorioSolicitacoes(inicio, fim *time.Time) (models.RelatorioSolicitacoes, error) {
 	list, err := uc.repository.GetOcorrenciasPorPeriodo(inicio, fim)
 	if err != nil {
 		return models.RelatorioSolicitacoes{}, apperror.Internal(err.Error())
@@ -571,12 +571,17 @@ func (uc ReclamacaoUseCases) GetRelatorioSolicitacoes(inicio, fim time.Time) (mo
 		semUsuario.Total = len(semUsuario.Solicitacoes)
 		porUsuario = append(porUsuario, semUsuario)
 	}
-	return models.RelatorioSolicitacoes{
-		Inicio:     inicio.Format("2006-01-02"),
-		Fim:        fim.Add(-time.Nanosecond).Format("2006-01-02"),
+	relatorio := models.RelatorioSolicitacoes{
 		Total:      len(list),
 		PorUsuario: porUsuario,
-	}, nil
+	}
+	if inicio != nil {
+		relatorio.Inicio = inicio.Format("2006-01-02")
+	}
+	if fim != nil {
+		relatorio.Fim = fim.Add(-time.Nanosecond).Format("2006-01-02")
+	}
+	return relatorio, nil
 }
 
 func (uc ReclamacaoUseCases) GetOcorrenciaById(id string) (models.Ocorrencia, error) {

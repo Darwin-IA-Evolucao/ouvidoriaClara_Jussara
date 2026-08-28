@@ -3,6 +3,7 @@ package usecases
 import (
 	"back-end/models"
 	"back-end/repository"
+	"time"
 )
 
 type StatsUseCases struct {
@@ -13,27 +14,27 @@ func NewStatsUseCases(repo repository.StatsRepository) StatsUseCases {
 	return StatsUseCases{repository: repo}
 }
 
-func (uc StatsUseCases) GetStats() (*models.Stat, error) {
-	pessoasComReclamacao, numConversas, err := uc.repository.GetPessoas()
+func (uc StatsUseCases) GetStats(inicio, fim *time.Time) (*models.Stat, error) {
+	pessoasComReclamacao, numConversas, err := uc.repository.GetPessoas(inicio, fim)
 	if err != nil {
 		return nil, err
 	}
 	numPessoas := pessoasComReclamacao + numConversas
 
-	statsTipo, err := uc.repository.GetCountByTipo()
+	statsTipo, err := uc.repository.GetCountByTipo(inicio, fim)
 	if err != nil {
 		return nil, err
 	}
-	statsRegiao, err := uc.repository.GetCountByRegiao()
+	statsRegiao, err := uc.repository.GetCountByRegiao(inicio, fim)
 	if err != nil {
 		return nil, err
 	}
-	statsCategoria, err := uc.repository.GetCountByCategoria()
+	statsCategoria, err := uc.repository.GetCountByCategoria(inicio, fim)
 	if err != nil {
 		return nil, err
 	}
 
-	stats, err := uc.repository.GetCountByTipoAndStatus()
+	stats, err := uc.repository.GetCountByTipoAndStatus(inicio, fim)
 	if err != nil {
 		return nil, err
 	}

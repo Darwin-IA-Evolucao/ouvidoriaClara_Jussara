@@ -65,13 +65,14 @@ func (ctrl ReclamacaoController) GetAllReclamacoes(c *gin.Context) {
 
 func (ctrl ReclamacaoController) AprovarInquerito(c *gin.Context) {
 	var req struct {
-		Mensagem string `json:"mensagem"`
+		Mensagem  string `json:"mensagem"`
+		IDUsuario int    `json:"idUsuario"`
 	}
 	if err := c.BindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := ctrl.useCase.AprovarInquerito(c.Param("id"), req.Mensagem); err != nil {
+	if err := ctrl.useCase.AprovarInquerito(c.Param("id"), req.Mensagem, req.IDUsuario); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -81,21 +82,29 @@ func (ctrl ReclamacaoController) AprovarInquerito(c *gin.Context) {
 func (ctrl ReclamacaoController) ColocarEmAnalise(c *gin.Context) {
 	// colocar uma data para retomar a reclamação
 	var req struct {
-		Data     string `json:"data"`
-		Mensagem string `json:"mensagem"`
+		Data      string `json:"data"`
+		Mensagem  string `json:"mensagem"`
+		IDUsuario int    `json:"idUsuario"`
 	}
 	if err := c.BindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := ctrl.useCase.ColocarEmAnalise(c.Param("id"), req.Data, req.Mensagem); err != nil {
+	if err := ctrl.useCase.ColocarEmAnalise(c.Param("id"), req.Data, req.Mensagem, req.IDUsuario); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Inquerito aprovado e enviado com sucesso!"})
 }
 func (ctrl ReclamacaoController) ColocarComoCriado(c *gin.Context) {
-	if err := ctrl.useCase.ColocarComoCriado(c.Param("id")); err != nil {
+	var req struct {
+		IDUsuario int `json:"idUsuario"`
+	}
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := ctrl.useCase.ColocarComoCriado(c.Param("id"), req.IDUsuario); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -104,13 +113,14 @@ func (ctrl ReclamacaoController) ColocarComoCriado(c *gin.Context) {
 
 func (ctrl ReclamacaoController) AprovarRequerimento(c *gin.Context) {
 	var req struct {
-		Mensagem string `json:"mensagem"`
+		Mensagem  string `json:"mensagem"`
+		IDUsuario int    `json:"idUsuario"`
 	}
 	if err := c.BindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := ctrl.useCase.AprovarRequerimento(c.Param("id"), req.Mensagem); err != nil {
+	if err := ctrl.useCase.AprovarRequerimento(c.Param("id"), req.Mensagem, req.IDUsuario); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -127,13 +137,14 @@ func (ctrl ReclamacaoController) AprovarRequerimento(c *gin.Context) {
 
 func (ctrl ReclamacaoController) AprovarComoAmbos(c *gin.Context) {
 	var req struct {
-		Mensagem string `json:"mensagem"`
+		Mensagem  string `json:"mensagem"`
+		IDUsuario int    `json:"idUsuario"`
 	}
 	if err := c.BindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := ctrl.useCase.AprovarComoAmbos(c.Param("id"), req.Mensagem); err != nil {
+	if err := ctrl.useCase.AprovarComoAmbos(c.Param("id"), req.Mensagem, req.IDUsuario); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -142,13 +153,14 @@ func (ctrl ReclamacaoController) AprovarComoAmbos(c *gin.Context) {
 
 func (ctrl ReclamacaoController) ReprovarInquerito(c *gin.Context) {
 	var req struct {
-		Mensagem string `json:"mensagem"`
+		Mensagem  string `json:"mensagem"`
+		IDUsuario int    `json:"idUsuario"`
 	}
 	if err := c.BindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := ctrl.useCase.ReprovarInquerito(c.Param("id"), req.Mensagem); err != nil {
+	if err := ctrl.useCase.ReprovarInquerito(c.Param("id"), req.Mensagem, req.IDUsuario); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -157,13 +169,14 @@ func (ctrl ReclamacaoController) ReprovarInquerito(c *gin.Context) {
 
 func (ctrl ReclamacaoController) AprovarCausaAnimal(c *gin.Context) {
 	var req struct {
-		Mensagem string `json:"mensagem"`
+		Mensagem  string `json:"mensagem"`
+		IDUsuario int    `json:"idUsuario"`
 	}
 	if err := c.BindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := ctrl.useCase.AprovarCausaAnimal(c.Param("id"), req.Mensagem); err != nil {
+	if err := ctrl.useCase.AprovarCausaAnimal(c.Param("id"), req.Mensagem, req.IDUsuario); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -172,13 +185,14 @@ func (ctrl ReclamacaoController) AprovarCausaAnimal(c *gin.Context) {
 
 func (ctrl ReclamacaoController) FinalizarReclamacao(c *gin.Context) {
 	var req struct {
-		Mensagem string `json:"mensagem"`
+		Mensagem  string `json:"mensagem"`
+		IDUsuario int    `json:"idUsuario"`
 	}
 	if err := c.BindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := ctrl.useCase.FinalizarReclamacao(c.Param("id"), req.Mensagem); err != nil {
+	if err := ctrl.useCase.FinalizarReclamacao(c.Param("id"), req.Mensagem, req.IDUsuario); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

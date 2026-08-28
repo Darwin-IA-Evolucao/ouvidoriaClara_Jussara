@@ -6,6 +6,7 @@ type RequestData struct {
 	Telefone   string `json:"telefone" binding:"required"`
 	Categoria  string `json:"categoria" binding:"required"`
 	Regiao     int    `json:"regiao" binding:"required"`
+	IDUsuario  *int   `json:"idUsuario"`
 }
 
 type Inquerito struct {
@@ -15,6 +16,7 @@ type Inquerito struct {
 	Telefone   string `db:"telefone"`
 	Categoria  string `db:"categoria"`
 	Regiao     int    `db:"regiao"`
+	IDUsuario  *int   `db:"id_usuario"`
 }
 
 type Reclamacao struct {
@@ -30,6 +32,7 @@ type Reclamacao struct {
 	Tipo        string             `json:"tipo"` //inquerito ou requerimento
 	Status      string             `json:"status"`
 	Protocolo   *int               `json:"num_protocolo"`
+	IDUsuario   *int               `json:"idUsuario"`
 	Detalhes    DetalhesReclamacao `json:"detalhe"`
 }
 
@@ -45,6 +48,7 @@ type OcorrenciaRequest struct {
 	EhManual              bool   `json:"ehManual"`
 	Observacao            string `json:"observacao"`
 	Regiao                string `json:"regiao"`
+	IDUsuario             *int   `json:"idUsuario"`
 	DetalhesReclamacao
 }
 
@@ -57,6 +61,7 @@ type OcorrenciaData struct {
 	MensagemFinal   string             `json:"mensagemFinal"`
 	Observacao      string             `json:"observacao"`
 	TelefoneAcessor string             `json:"telefoneAcessor"`
+	IDUsuario       *int               `json:"idUsuario"`
 	Detalhes        DetalhesReclamacao `json:"detalhes"`
 }
 
@@ -75,6 +80,7 @@ type Ocorrencia struct {
 	TelefoneAcessor  string             `json:"telefoneAcessor"`
 	DataCriacao      string             `json:"dataCriacao"`
 	DataAtualizacao  string             `json:"dataAtualizacao"`
+	IDUsuario        *int               `json:"idUsuario"`
 }
 
 type OcorrenciaUpdateRequest struct {

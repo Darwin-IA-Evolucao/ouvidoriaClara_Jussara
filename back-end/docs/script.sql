@@ -89,13 +89,18 @@ CREATE TABLE reclamacao (
     categoria TEXT DEFAULT '' NOT NULL,
     reclamacao TEXT DEFAULT '' NOT NULL,
     tipo TEXT DEFAULT '' NOT NULL,
-    status TEXT DEFAULT 'Em análise' NOT NULL,
+    status TEXT DEFAULT 'criado' NOT NULL,
     detalhes JSONB DEFAULT '{}' NOT NULL,
     data_criacao TIMESTAMP DEFAULT now() NOT NULL,
     data_atualizacao TIMESTAMP DEFAULT now() NOT NULL
     solicitacao JSONB DEFAULT '{}' NOT NULL,
+    id_usuario INTEGER NULL REFERENCES usuarios(id);
+
     mensagem TEXT DEFAULT '' NOT NULL
 );
+
+ALTER TABLE reclamacao ADD COLUMN id_usuario INTEGER NULL REFERENCES usuarios(id);
+
 
 CREATE TABLE protocolo (
     idprotocolo SERIAL PRIMARY KEY,

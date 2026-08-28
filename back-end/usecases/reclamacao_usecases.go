@@ -102,12 +102,15 @@ func (uc ReclamacaoUseCases) GetAllReclamacoes() ([]models.Reclamacao, error) {
 	return uc.repository.GetAllReclamacoes()
 }
 
-func (uc ReclamacaoUseCases) AprovarInquerito(id string, mensagem string) error {
+func (uc ReclamacaoUseCases) AprovarInquerito(id string, mensagem string, idUsuario int) error {
 	reclamacao, err := uc.repository.GetReclamacaoById(id)
 	if err != nil {
 		return err
 	}
-	if err := uc.repository.UpdateStatusTipo(id, "aprovado", "indicacao"); err != nil {
+	if reclamacao.IDUsuario != nil && *reclamacao.IDUsuario != idUsuario {
+		return apperror.BadRequest("Você não tem permissão para aprovar esta reclamação")
+	}
+	if err := uc.repository.UpdateStatusTipo(id, "aprovado", "indicacao", &idUsuario); err != nil {
 		return err
 	}
 	if mensagem != "" {
@@ -127,8 +130,15 @@ func (uc ReclamacaoUseCases) AprovarInquerito(id string, mensagem string) error 
 
 	return nil
 }
-func (uc ReclamacaoUseCases) ColocarEmAnalise(id, data, mensagem string) error {
-	if err := uc.repository.UpdateStatusTipo(id, "em análise", ""); err != nil {
+func (uc ReclamacaoUseCases) ColocarEmAnalise(id, data, mensagem string, idUsuario int) error {
+	reclamacao, err := uc.repository.GetReclamacaoById(id)
+	if err != nil {
+		return err
+	}
+	if reclamacao.IDUsuario != nil && *reclamacao.IDUsuario != idUsuario {
+		return apperror.BadRequest("Você não tem permissão para colocar em análise esta reclamação")
+	}
+	if err := uc.repository.UpdateStatusTipo(id, "em análise", "", &idUsuario); err != nil {
 		return err
 	}
 	if data != "" {
@@ -139,8 +149,15 @@ func (uc ReclamacaoUseCases) ColocarEmAnalise(id, data, mensagem string) error {
 
 	return nil
 }
-func (uc ReclamacaoUseCases) ColocarComoCriado(id string) error {
-	if err := uc.repository.UpdateStatusTipo(id, "criado", ""); err != nil {
+func (uc ReclamacaoUseCases) ColocarComoCriado(id string, idUsuario int) error {
+	reclamacao, err := uc.repository.GetReclamacaoById(id)
+	if err != nil {
+		return err
+	}
+	if reclamacao.IDUsuario != nil && *reclamacao.IDUsuario != idUsuario {
+		return apperror.BadRequest("Você não tem permissão para colocar como criado esta reclamação")
+	}
+	if err := uc.repository.UpdateStatusTipo(id, "criado", "", nil); err != nil { //aqui o idUsuario é nil para poder voltar a ter permissão para outros usuarios
 		return err
 	}
 	if err := uc.repository.DesativarAvisos(id); err != nil {
@@ -150,17 +167,21 @@ func (uc ReclamacaoUseCases) ColocarComoCriado(id string) error {
 	return nil
 }
 
-func (uc ReclamacaoUseCases) AprovarRequerimento(id string, mensagem string) error {
-	if err := uc.repository.UpdateStatusTipo(id, "aprovado", "requerimento"); err != nil {
+func (uc ReclamacaoUseCases) AprovarRequerimento(id string, mensagem string, idUsuario int) error {
+	reclamacao, err := uc.repository.GetReclamacaoById(id)
+	if err != nil {
+		return err
+	}
+	if reclamacao.IDUsuario != nil && *reclamacao.IDUsuario != idUsuario {
+		return apperror.BadRequest("Você não tem permissão para aprovar requerimento esta reclamação")
+	}
+	if err := uc.repository.UpdateStatusTipo(id, "aprovado", "requerimento", &idUsuario); err != nil {
 		return err
 	}
 	if err := uc.repository.DesativarAvisos(id); err != nil {
 		return apperror.Internal(fmt.Sprintf("Erro ao desativar avisos: %s", err.Error()))
 	}
-	reclamacao, err := uc.repository.GetReclamacaoById(id)
-	if err != nil {
-		return err
-	}
+
 	if mensagem != "" {
 		msg := mensagemStatusCliente(uc.nomePorTelefone(reclamacao.Telefone), "aprovada", mensagem)
 		err = uc.repository.UpdateMensagem(id, msg)
@@ -190,17 +211,21 @@ func (uc ReclamacaoUseCases) AprovarRequerimento(id string, mensagem string) err
 // 	return nil
 // }
 
-func (uc ReclamacaoUseCases) AprovarComoAmbos(id string, mensagem string) error {
-	if err := uc.repository.UpdateStatusTipo(id, "aprovado", "ambos"); err != nil {
+func (uc ReclamacaoUseCases) AprovarComoAmbos(id string, mensagem string, idUsuario int) error {
+	reclamacao, err := uc.repository.GetReclamacaoById(id)
+	if err != nil {
+		return err
+	}
+	if reclamacao.IDUsuario != nil && *reclamacao.IDUsuario != idUsuario {
+		return apperror.BadRequest("Você não tem permissão para aprovar como ambos esta reclamação")
+	}
+	if err := uc.repository.UpdateStatusTipo(id, "aprovado", "ambos", &idUsuario); err != nil {
 		return err
 	}
 	if err := uc.repository.DesativarAvisos(id); err != nil {
 		return apperror.Internal(fmt.Sprintf("Erro ao desativar avisos: %s", err.Error()))
 	}
-	reclamacao, err := uc.repository.GetReclamacaoById(id)
-	if err != nil {
-		return err
-	}
+
 	msg := mensagemStatusCliente(uc.nomePorTelefone(reclamacao.Telefone), "aprovada", mensagem)
 	err = uc.repository.UpdateMensagem(id, msg)
 	if err != nil {
@@ -245,12 +270,15 @@ func (uc ReclamacaoUseCases) AprovarComoAmbos(id string, mensagem string) error 
 	return nil
 }
 
-func (uc ReclamacaoUseCases) AprovarCausaAnimal(id string, mensagem string) error {
+func (uc ReclamacaoUseCases) AprovarCausaAnimal(id string, mensagem string, idUsuario int) error {
 	reclamacao, err := uc.repository.GetReclamacaoById(id)
 	if err != nil {
 		return err
 	}
-	if err := uc.repository.UpdateStatusTipo(id, "aprovado", "causa animal"); err != nil {
+	if reclamacao.IDUsuario != nil && *reclamacao.IDUsuario != idUsuario {
+		return apperror.BadRequest("Você não tem permissão para aprovar causa animal esta reclamação")
+	}
+	if err := uc.repository.UpdateStatusTipo(id, "aprovado", "causa animal", &idUsuario); err != nil {
 		return err
 	}
 	if err := uc.repository.DesativarAvisos(id); err != nil {
@@ -270,12 +298,15 @@ func (uc ReclamacaoUseCases) AprovarCausaAnimal(id string, mensagem string) erro
 	return nil
 }
 
-func (uc ReclamacaoUseCases) FinalizarReclamacao(id string, mensagem string) error {
+func (uc ReclamacaoUseCases) FinalizarReclamacao(id string, mensagem string, idUsuario int) error {
 	reclamacao, err := uc.repository.GetReclamacaoById(id)
 	if err != nil {
 		return err
 	}
-	if err := uc.repository.UpdateStatusTipo(id, "finalizado", ""); err != nil {
+	if reclamacao.IDUsuario != nil && *reclamacao.IDUsuario != idUsuario {
+		return apperror.BadRequest("Você não tem permissão para finalizar esta reclamação")
+	}
+	if err := uc.repository.UpdateStatusTipo(id, "finalizado", "", &idUsuario); err != nil {
 		return err
 	}
 	if err := uc.repository.DesativarAvisos(id); err != nil {
@@ -293,10 +324,13 @@ func (uc ReclamacaoUseCases) FinalizarReclamacao(id string, mensagem string) err
 
 	return nil
 }
-func (uc ReclamacaoUseCases) ReprovarInquerito(id string, mensagem string) error {
+func (uc ReclamacaoUseCases) ReprovarInquerito(id string, mensagem string, idUsuario int) error {
 	reclamacao, err := uc.repository.GetReclamacaoById(id)
 	if err != nil {
 		return err
+	}
+	if reclamacao.IDUsuario != nil && *reclamacao.IDUsuario != idUsuario {
+		return apperror.BadRequest("Você não tem permissão para reprovar esta reclamação")
 	}
 	if err := uc.repository.UpdateStatus(id, "reprovado"); err != nil {
 		return err

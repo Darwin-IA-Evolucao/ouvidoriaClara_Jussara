@@ -35,9 +35,9 @@ func (repo ReclamacaoRepository) UpdateStatus(id, status string) error {
 	return err
 }
 
-func (repo ReclamacaoRepository) UpdateStatusTipo(id, status, tipo string) error {
-	const query = `UPDATE reclamacao SET status = $1, tipo = $2, data_atualizacao = now() WHERE idreclamacao = $3`
-	_, err := repo.connection.Exec(query, status, tipo, id)
+func (repo ReclamacaoRepository) UpdateStatusTipo(id, status, tipo string, idUsuario *int) error {
+	const query = `UPDATE reclamacao SET status = $1, tipo = $2, id_usuario = $3, data_atualizacao = now() WHERE idreclamacao = $4`
+	_, err := repo.connection.Exec(query, status, tipo, idUsuario, id)
 	return err
 }
 func (repo ReclamacaoRepository) UpdateMensagem(id, mensagem string) error {
@@ -47,7 +47,7 @@ func (repo ReclamacaoRepository) UpdateMensagem(id, mensagem string) error {
 }
 
 func (repo ReclamacaoRepository) GetReclamacaoById(id string) (*models.Ocorrencia, error) {
-	const query = `SELECT idreclamacao, telefone, categoria, reclamacao, tipo, status, detalhes, eh_manual, observacao, mensagem_final, telefone_acessor, mensagem, data_criacao, data_atualizacao FROM reclamacao WHERE idreclamacao = $1`
+	const query = `SELECT idreclamacao, telefone, categoria, reclamacao, tipo, status, detalhes, eh_manual, observacao, mensagem_final, telefone_acessor, mensagem, data_criacao, data_atualizacao, id_usuario FROM reclamacao WHERE idreclamacao = $1`
 	data, err := scanOcorrencia(repo.connection.QueryRow(query, id))
 	if err != nil {
 		return nil, err
@@ -57,7 +57,7 @@ func (repo ReclamacaoRepository) GetReclamacaoById(id string) (*models.Ocorrenci
 
 func (repo ReclamacaoRepository) GetAllReclamacoes() ([]models.Reclamacao, error) {
 	const query = `
-		SELECT r.idreclamacao, r.nome, r.telefone, r.categoria, r.regiao, r.resolvido, r.data, r.reclamacao, r.status, r.tipo, p.numero AS protocolo
+		SELECT r.idreclamacao, r.nome, r.telefone, r.categoria, r.regiao, r.resolvido, r.data, r.reclamacao, r.status, r.tipo, p.numero AS protocolo, r.id_usuario
 		FROM reclamacao r
 		LEFT JOIN protocolo p ON r.idreclamacao = p.idReclamacao
 		ORDER BY data DESC;`
@@ -74,7 +74,7 @@ func (repo ReclamacaoRepository) GetAllReclamacoes() ([]models.Reclamacao, error
 		var protocolo sql.NullInt64
 		if err := rows.Scan(&reclamacao.ID, &reclamacao.Nome, &reclamacao.Telefone, &reclamacao.Categoria,
 			&reclamacao.Regiao, &reclamacao.Resolvido, &reclamacao.DataCriacao, &reclamacao.Reclamacao,
-			&reclamacao.Status, &reclamacao.Tipo, &protocolo); err != nil {
+			&reclamacao.Status, &reclamacao.Tipo, &protocolo, &reclamacao.IDUsuario); err != nil {
 			return nil, err
 		}
 		if protocolo.Valid {
@@ -111,7 +111,7 @@ func scanOcorrencia(row interface {
 	if err := row.Scan(
 		&o.ID, &o.Telefone, &o.Categoria, &o.SituacaoResumida,
 		&o.Tipo, &o.Status, &detalhesJSON, &o.EhManual, &o.Observacao, &o.MensagemFinal, &o.TelefoneAcessor, &o.Mensagem,
-		&o.DataCriacao, &o.DataAtualizacao,
+		&o.DataCriacao, &o.DataAtualizacao, &o.IDUsuario,
 	); err != nil {
 		return o, err
 	}
@@ -126,7 +126,7 @@ func scanOcorrencia(row interface {
 
 func (repo ReclamacaoRepository) GetAllOcorrencias(telefone string) ([]models.Ocorrencia, error) {
 	const baseQuery = `
-		SELECT idreclamacao, telefone, categoria, reclamacao, tipo, status, detalhes, eh_manual, observacao, mensagem_final, telefone_acessor, mensagem, data_criacao, data_atualizacao
+		SELECT idreclamacao, telefone, categoria, reclamacao, tipo, status, detalhes, eh_manual, observacao, mensagem_final, telefone_acessor, mensagem, data_criacao, data_atualizacao, id_usuario
 		FROM reclamacao`
 
 	var rows *sql.Rows
@@ -157,7 +157,7 @@ func (repo ReclamacaoRepository) GetAllOcorrencias(telefone string) ([]models.Oc
 
 func (repo ReclamacaoRepository) GetOcorrenciaById(id string) (*models.Ocorrencia, error) {
 	const query = `
-		SELECT idreclamacao, telefone, categoria, reclamacao, tipo, status, detalhes, eh_manual, observacao, mensagem_final, telefone_acessor, mensagem, data_criacao, data_atualizacao
+		SELECT idreclamacao, telefone, categoria, reclamacao, tipo, status, detalhes, eh_manual, observacao, mensagem_final, telefone_acessor, mensagem, data_criacao, data_atualizacao, id_usuario
 		FROM reclamacao WHERE idreclamacao = $1`
 	row := repo.connection.QueryRow(query, id)
 	o, err := scanOcorrencia(row)

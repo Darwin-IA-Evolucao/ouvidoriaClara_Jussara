@@ -15,11 +15,11 @@ func NewUsuarioUseCases(repo repository.UsuarioRepository) UsuarioUseCases {
 	}
 }
 
-func (usecase UsuarioUseCases) GetUsuarioLogin(usuario models.Usuario) (int, string, bool, error) {
-	id, role, err := usecase.repository.GetUsuarioLogin(usuario)
+func (usecase UsuarioUseCases) GetUsuarioLogin(usuario models.Usuario) (int, string, string, bool, error) {
+	id, role, celular, err := usecase.repository.GetUsuarioLogin(usuario)
 	if err != nil {
-		return 0, "", false, err
+		return 0, "", "", false, err
 	}
 	ehRoot := role == "root"
-	return id, role, ehRoot, nil
+	return id, role, celular, ehRoot, nil
 }

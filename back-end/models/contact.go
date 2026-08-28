@@ -73,6 +73,17 @@ type ContatosUnificados struct {
 	DarwinAtivo    bool    `json:"darwinAtivo" db:"darwin_ativo"`
 	IsGelado       bool    `json:"isGelado" db:"is_gelado"`
 	IsCliente      bool    `json:"isCliente" db:"is_cliente"`
+	HasReclamacao  bool    `json:"hasReclamacao" db:"has_reclamacao"`
+}
+
+type ContatosUnificadosFiltro struct {
+	Search     string
+	Darwin     *bool
+	LeadAtivo  *bool
+	Gelo       *bool
+	Reclamacao *bool
+	Inicio     *time.Time
+	Fim        *time.Time
 }
 
 type ContatosUnificadosResponse struct {

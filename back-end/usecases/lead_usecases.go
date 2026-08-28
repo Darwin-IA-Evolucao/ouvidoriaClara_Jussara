@@ -30,12 +30,12 @@ func (usecase LeadUseCases) GetAllLeads(limit, offset int) ([]models.Contact, er
 	return usecase.repository.GetAllLeads(limit, offset)
 }
 
-func (usecase LeadUseCases) GetAllContatosUnificados(limit, offset int) (*models.ContatosUnificadosResponse, error) {
-	leadsUnificados, err := usecase.repository.GetAllContatosUnificados(limit, offset)
+func (usecase LeadUseCases) GetAllContatosUnificados(limit, offset int, filtro models.ContatosUnificadosFiltro) (*models.ContatosUnificadosResponse, error) {
+	leadsUnificados, err := usecase.repository.GetAllContatosUnificados(limit, offset, filtro)
 	if err != nil {
 		return nil, err
 	}
-	total, err := usecase.repository.GetCountContatos()
+	total, err := usecase.repository.GetCountContatosUnificados(filtro)
 	if err != nil {
 		return nil, err
 	}

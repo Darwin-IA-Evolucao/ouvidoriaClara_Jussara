@@ -2,10 +2,13 @@ package controllers
 
 import (
 	"back-end/config"
+	"back-end/models"
 	"back-end/usecases"
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -101,6 +104,17 @@ func (controller LeadController) GetAllLeads(c *gin.Context) {
 	})
 }
 
+func parseOptionalBool(s string) (*bool, error) {
+	if s == "" {
+		return nil, nil
+	}
+	v, err := strconv.ParseBool(s)
+	if err != nil {
+		return nil, err
+	}
+	return &v, nil
+}
+
 func (controller LeadController) GetAllContatosUnificados(c *gin.Context) {
 	limit, err := strconv.Atoi(c.Query("limit"))
 	if err != nil {
@@ -112,7 +126,45 @@ func (controller LeadController) GetAllContatosUnificados(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "offset invalido"})
 		return
 	}
-	leadsUnificados, err := controller.useCase.GetAllContatosUnificados(limit, offset)
+	filtro := models.ContatosUnificadosFiltro{Search: strings.TrimSpace(c.Query("search"))}
+	filtro.Darwin, err = parseOptionalBool(c.Query("darwin"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "darwin inválido"})
+		return
+	}
+	filtro.LeadAtivo, err = parseOptionalBool(c.Query("leadAtivo"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "leadAtivo inválido"})
+		return
+	}
+	filtro.Gelo, err = parseOptionalBool(c.Query("gelo"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "gelo inválido"})
+		return
+	}
+	filtro.Reclamacao, err = parseOptionalBool(c.Query("reclamacao"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "reclamacao inválido"})
+		return
+	}
+	if inicioStr := c.Query("inicio"); inicioStr != "" {
+		t, err := time.Parse("2006-01-02", inicioStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "inicio inválido"})
+			return
+		}
+		filtro.Inicio = &t
+	}
+	if fimStr := c.Query("fim"); fimStr != "" {
+		t, err := time.Parse("2006-01-02", fimStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "fim inválido"})
+			return
+		}
+		t = t.Add(24 * time.Hour)
+		filtro.Fim = &t
+	}
+	leadsUnificados, err := controller.useCase.GetAllContatosUnificados(limit, offset, filtro)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

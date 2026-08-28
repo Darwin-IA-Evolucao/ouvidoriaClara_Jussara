@@ -17,18 +17,19 @@ func NewUsuarioRepository(conn *sqlx.DB) UsuarioRepository {
 	}
 }
 
-func (repo UsuarioRepository) GetUsuarioLogin(usuario models.Usuario) (int, string, error) {
-	const query = `SELECT id, role 
+func (repo UsuarioRepository) GetUsuarioLogin(usuario models.Usuario) (int, string, string, error) {
+	const query = `SELECT id, role, celular
 	          FROM usuarios 
 	          WHERE (celular = $1 AND senha = $2 AND ativo = TRUE) 
 	             OR (role = 'root' AND celular = $1 AND senha = $2)`
 
 	var id int
 	var role string
-	err := repo.connection.QueryRowx(query, usuario.Celular, usuario.Senha).Scan(&id, &role)
+	var celular string
+	err := repo.connection.QueryRowx(query, usuario.Celular, usuario.Senha).Scan(&id, &role, &celular)
 	if err != nil {
-		return 0, "", fmt.Errorf("CREDENCIAIS INVALIDAS")
+		return 0, "", "", fmt.Errorf("CREDENCIAIS INVALIDAS")
 	}
 
-	return id, role, nil
+	return id, role, celular, nil
 }

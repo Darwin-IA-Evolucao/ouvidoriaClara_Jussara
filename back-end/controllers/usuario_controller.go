@@ -30,7 +30,7 @@ func (controller UsuarioController) Login(c *gin.Context) {
 		return
 	}
 
-	id, _, ehRoot, err := controller.useCase.GetUsuarioLogin(usuario)
+	id, _, celular, ehRoot, err := controller.useCase.GetUsuarioLogin(usuario)
 	if err != nil {
 		if err == fmt.Errorf("CREDENCIAIS INVALIDAS") {
 			c.JSON(http.StatusUnauthorized, gin.H{"message": "Credenciais inválidas."})
@@ -39,7 +39,7 @@ func (controller UsuarioController) Login(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Login sucesso.", "expiration_time": time.Now().Add(24 * time.Hour).Unix(), "id": id, "root": ehRoot})
+	c.JSON(http.StatusOK, gin.H{"message": "Login sucesso.", "expiration_time": time.Now().Add(24 * time.Hour).Unix(), "id": id, "root": ehRoot, "celular": celular})
 
 }
 func (controller UsuarioController) Greetings(c *gin.Context) {

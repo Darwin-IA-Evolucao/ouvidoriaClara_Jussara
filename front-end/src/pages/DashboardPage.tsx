@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { useState, useEffect, useMemo } from 'react'
 import { Typography, Box, TextField, Button, useMediaQuery, useTheme } from '@mui/material'
-import { FileText, Users, TrendingUp, TrendingDown, BarChart3, XCircle, Inbox, Heart, CheckCircle } from 'lucide-react'
+import { FileText, Users, TrendingUp, TrendingDown, BarChart3, XCircle, Inbox, Heart } from 'lucide-react'
 import GlassPanel from '../components/GlassPanel'
 import PageHeader from '../components/PageHeader'
 import { inputSx } from '../utils/inputSx'
@@ -226,21 +226,19 @@ const DashboardPage: React.FC = () => {
     const counts: Record<string, number> = {
       'Sem Tratativa': 0,
       'Em Análise': 0,
-      'Aprovar como Requerimento': 0,
-      'Aprovar como Indicação': 0,
-      'Aprovar como Causa Animal': 0,
+      'Concluído como Requerimento': 0,
+      'Concluído como Indicação': 0,
+      'Concluído como Causa Animal': 0,
       'Desqualificado': 0,
-      'Finalizado': 0,
     }
     for (const o of filteredOcorrencias) {
       const status = o.status.toLowerCase()
       if (status === 'criado') counts['Sem Tratativa']++
       else if (status === 'em análise' || status === 'em analise') counts['Em Análise']++
-      else if (status === 'aprovado' && o.tipo === 'requerimento') counts['Aprovar como Requerimento']++
-      else if (status === 'aprovado' && o.tipo === 'indicacao') counts['Aprovar como Indicação']++
-      else if (status === 'aprovado' && o.tipo === 'causa animal') counts['Aprovar como Causa Animal']++
+      else if (status === 'aprovado' && o.tipo === 'requerimento') counts['Concluído como Requerimento']++
+      else if (status === 'aprovado' && o.tipo === 'indicacao') counts['Concluído como Indicação']++
+      else if (status === 'aprovado' && o.tipo === 'causa animal') counts['Concluído como Causa Animal']++
       else if (status === 'reprovado') counts['Desqualificado']++
-      else if (status === 'finalizado') counts['Finalizado']++
     }
     return Object.entries(counts)
       .map(([name, value]) => ({ name, value }))
@@ -312,15 +310,14 @@ const DashboardPage: React.FC = () => {
 
         {/* Coluna 2 */}
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <StatCard sx={{ flex: 1 }} label="Aprovar como Requerimento" value={filteredOcorrencias.filter((o) => o.status.toLowerCase() === 'aprovado' && o.tipo === 'requerimento').length} icon={FileText} color="#E89E70" />
-          <StatCard sx={{ flex: 1 }} label="Aprovar como Indicação" value={filteredOcorrencias.filter((o) => o.status.toLowerCase() === 'aprovado' && o.tipo === 'indicacao').length} icon={TrendingUp} color="#66BB80" />
-          <StatCard sx={{ flex: 1 }} label="Aprovar como Causa Animal" value={filteredOcorrencias.filter((o) => o.status.toLowerCase() === 'aprovado' && o.tipo === 'causa animal').length} icon={Heart} color="#B98CE8" />
+          <StatCard sx={{ flex: 1 }} label="Concluído como Requerimento" value={filteredOcorrencias.filter((o) => o.status.toLowerCase() === 'aprovado' && o.tipo === 'requerimento').length} icon={FileText} color="#E89E70" />
+          <StatCard sx={{ flex: 1 }} label="Concluído como Indicação" value={filteredOcorrencias.filter((o) => o.status.toLowerCase() === 'aprovado' && o.tipo === 'indicacao').length} icon={TrendingUp} color="#66BB80" />
+          <StatCard sx={{ flex: 1 }} label="Concluído como Causa Animal" value={filteredOcorrencias.filter((o) => o.status.toLowerCase() === 'aprovado' && o.tipo === 'causa animal').length} icon={Heart} color="#B98CE8" />
         </Box>
 
         {/* Coluna 3 */}
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <StatCard sx={{ flex: 1 }} label="Desqualificado" value={filteredOcorrencias.filter((o) => o.status.toLowerCase() === 'reprovado').length} icon={XCircle} color="#D16670" />
-          <StatCard sx={{ flex: 1 }} label="Finalizado" value={filteredOcorrencias.filter((o) => o.status.toLowerCase() === 'finalizado').length} icon={CheckCircle} color="#5B8FE0" />
         </Box>
       </Box>
 

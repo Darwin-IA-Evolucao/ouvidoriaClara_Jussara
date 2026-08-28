@@ -14,13 +14,11 @@ export function setTheme(theme: Theme): void {
 }
 
 export function applyTheme(theme: Theme): void {
+  const root = document.documentElement
   const body = document.body
   body.classList.add('theme-transition')
-  if (theme === 'dark') {
-    body.classList.remove('theme-light')
-  } else {
-    body.classList.add('theme-light')
-  }
+  root.classList.toggle('theme-light', theme === 'light')
+  body.classList.toggle('theme-light', theme === 'light')
   setTimeout(() => body.classList.remove('theme-transition'), 300)
   window.dispatchEvent(new CustomEvent('theme-change', { detail: theme }))
 }

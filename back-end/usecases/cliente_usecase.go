@@ -33,12 +33,19 @@ func (u *ClienteUseCase) GetClienteByTelefone(telefone string) (models.Cliente, 
 	return c, nil
 }
 
-func (u *ClienteUseCase) GetAllClientes(limit, offset int) ([]models.Cliente, error) {
+func (u *ClienteUseCase) GetAllClientes(limit, offset int) ([]models.Cliente, int, error) {
 	list, err := u.repo.GetAllClientes(limit, offset)
 	if err != nil {
-		return nil, apperror.Internal(err.Error())
+		return nil, 0, apperror.Internal(err.Error())
 	}
-	return list, nil
+	total, err := u.repo.GetCountClientes()
+	if err != nil {
+		return nil, 0, apperror.Internal(err.Error())
+	}
+	if list == nil {
+		list = []models.Cliente{}
+	}
+	return list, total, nil
 }
 
 func (u *ClienteUseCase) UpdateCliente(telefone string, c models.Cliente) error {

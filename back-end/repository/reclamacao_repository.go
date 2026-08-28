@@ -126,18 +126,22 @@ func scanOcorrencia(row interface {
 	return o, nil
 }
 
-func (repo ReclamacaoRepository) GetAllOcorrencias(telefone string) ([]models.Ocorrencia, error) {
-	const baseQuery = `
+func (repo ReclamacaoRepository) GetAllOcorrencias(telefone string, limit, offset int) ([]models.Ocorrencia, error) {
+	query := `
 		SELECT idreclamacao, telefone, categoria, reclamacao, tipo, status, detalhes, eh_manual, observacao, mensagem_final, telefone_acessor, mensagem, data_criacao, data_atualizacao, id_usuario
 		FROM reclamacao`
-
-	var rows *sql.Rows
-	var err error
+	args := []any{}
 	if telefone != "" {
-		rows, err = repo.connection.Query(baseQuery+` WHERE telefone = $1 ORDER BY data_criacao DESC`, telefone)
-	} else {
-		rows, err = repo.connection.Query(baseQuery + ` ORDER BY data_criacao DESC`)
+		args = append(args, telefone)
+		query += ` WHERE telefone = $1`
 	}
+	query += ` ORDER BY data_criacao DESC`
+	if limit > 0 && offset >= 0 {
+		args = append(args, limit, offset)
+		query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", len(args)-1, len(args))
+	}
+
+	rows, err := repo.connection.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -155,6 +159,18 @@ func (repo ReclamacaoRepository) GetAllOcorrencias(telefone string) ([]models.Oc
 		ocorrencias = []models.Ocorrencia{}
 	}
 	return ocorrencias, rows.Err()
+}
+
+func (repo ReclamacaoRepository) GetCountOcorrencias(telefone string) (int, error) {
+	query := `SELECT COUNT(*) FROM reclamacao`
+	var count int
+	var err error
+	if telefone != "" {
+		err = repo.connection.Get(&count, query+` WHERE telefone = $1`, telefone)
+	} else {
+		err = repo.connection.Get(&count, query)
+	}
+	return count, err
 }
 
 func (repo ReclamacaoRepository) GetOcorrenciaById(id string) (*models.Ocorrencia, error) {

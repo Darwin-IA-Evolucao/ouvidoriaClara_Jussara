@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -226,7 +227,24 @@ func (ctrl ReclamacaoController) CreateOcorrencia(c *gin.Context) {
 
 func (ctrl ReclamacaoController) GetAllOcorrencias(c *gin.Context) {
 	telefone := c.Query("telefone")
-	list, err := ctrl.useCase.GetAllOcorrencias(telefone)
+	limit := 0
+	offset := 0
+	var err error
+	if s := c.Query("limit"); s != "" {
+		limit, err = strconv.Atoi(s)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "limite invalido"})
+			return
+		}
+	}
+	if s := c.Query("offset"); s != "" {
+		offset, err = strconv.Atoi(s)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "offset invalido"})
+			return
+		}
+	}
+	list, total, err := ctrl.useCase.GetAllOcorrencias(telefone, limit, offset)
 	if err != nil {
 		var appErr *apperror.AppError
 		if errors.As(err, &appErr) {
@@ -239,7 +257,7 @@ func (ctrl ReclamacaoController) GetAllOcorrencias(c *gin.Context) {
 	if list == nil {
 		list = []models.Ocorrencia{}
 	}
-	c.IndentedJSON(http.StatusOK, list)
+	c.IndentedJSON(http.StatusOK, gin.H{"ocorrencias": list, "total": total})
 }
 
 func (ctrl ReclamacaoController) GetRelatorioSolicitacoes(c *gin.Context) {

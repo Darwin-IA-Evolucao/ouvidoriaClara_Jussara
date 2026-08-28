@@ -36,13 +36,30 @@ func (ctrl EnderecoController) CadastrarEnderecos(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Endereço cadastrado com sucesso!"})
 }
 
-func (ctrl EnderecoController) GetAllEnderecos(c *gin.Context){
-	enderecos, err := ctrl.useCase.GetAllEnderecos()
+func (ctrl EnderecoController) GetAllEnderecos(c *gin.Context) {
+	limit := 0
+	offset := 0
+	var err error
+	if s := c.Query("limit"); s != "" {
+		limit, err = strconv.Atoi(s)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "limite invalido"})
+			return
+		}
+	}
+	if s := c.Query("offset"); s != "" {
+		offset, err = strconv.Atoi(s)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "offset invalido"})
+			return
+		}
+	}
+	enderecos, total, err := ctrl.useCase.GetAllEnderecos(limit, offset)
 	if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"enderecos": enderecos})
+	c.JSON(http.StatusOK, gin.H{"enderecos": enderecos, "total": total})
 }
 func (ctrl EnderecoController) GetEnderecoById(c *gin.Context){
 	id, err := strconv.Atoi(c.Param("id"))

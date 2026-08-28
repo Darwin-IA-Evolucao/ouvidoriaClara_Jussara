@@ -41,6 +41,12 @@ func (r *ClienteRepo) GetAllClientes(limit, offset int) ([]models.Cliente, error
 	return list, err
 }
 
+func (r *ClienteRepo) GetCountClientes() (int, error) {
+	var count int
+	err := r.db.Get(&count, `SELECT COUNT(*) FROM cliente`)
+	return count, err
+}
+
 func (r *ClienteRepo) UpdateCliente(telefone string, c models.Cliente) error {
 	const query = `UPDATE cliente SET nome = $1, cidade = $2, endereco = $3, bairro = $4, data_nascimento = $5 WHERE telefone = $6`
 	_, err := r.db.Exec(query, c.Nome, c.Cidade, c.Endereco, c.Bairro, c.DataNascimento, telefone)

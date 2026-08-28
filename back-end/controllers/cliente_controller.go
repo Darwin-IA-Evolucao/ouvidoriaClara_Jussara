@@ -69,7 +69,7 @@ func (ctrl *ClienteController) GetAllClientes(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "offset invalido"})
 		return
 	}
-	list, err := ctrl.usecase.GetAllClientes(limit, offset)
+	list, total, err := ctrl.usecase.GetAllClientes(limit, offset)
 	if err != nil {
 		var appErr *apperror.AppError
 		if errors.As(err, &appErr) {
@@ -79,7 +79,7 @@ func (ctrl *ClienteController) GetAllClientes(c *gin.Context) {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.IndentedJSON(http.StatusOK, list)
+	c.IndentedJSON(http.StatusOK, gin.H{"clientes": list, "total": total})
 }
 
 func (ctrl *ClienteController) UpdateCliente(c *gin.Context) {

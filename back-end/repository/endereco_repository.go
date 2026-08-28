@@ -16,12 +16,24 @@ func NewEnderecoRepository(conn *sqlx.DB) EnderecoRepository {
 	return EnderecoRepository{connection: conn}
 }
 
-func (repo EnderecoRepository) GetAllEnderecos() ([]models.Logradouro, error) {
-	const query = `SELECT * FROM enderecos`
+func (repo EnderecoRepository) GetAllEnderecos(limit, offset int) ([]models.Logradouro, error) {
+	query := `SELECT * FROM enderecos`
+	if limit > 0 && offset >= 0 {
+		query += fmt.Sprintf(" LIMIT %d OFFSET %d", limit, offset)
+	}
 
 	var enderecos []models.Logradouro
 	err := repo.connection.Select(&enderecos, query)
+	if enderecos == nil {
+		enderecos = []models.Logradouro{}
+	}
 	return enderecos, err
+}
+
+func (repo EnderecoRepository) GetCountEnderecos() (int, error) {
+	var count int
+	err := repo.connection.Get(&count, `SELECT COUNT(*) FROM enderecos`)
+	return count, err
 }
 
 func (repo EnderecoRepository) GetEnderecoById(id int) (*models.Logradouro, error) {

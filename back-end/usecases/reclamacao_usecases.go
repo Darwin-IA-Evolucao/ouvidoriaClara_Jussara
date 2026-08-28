@@ -521,15 +521,19 @@ func (uc ReclamacaoUseCases) CreateOcorrencia(request models.OcorrenciaRequest) 
 	return id, nil
 }
 
-func (uc ReclamacaoUseCases) GetAllOcorrencias(telefone string) ([]models.Ocorrencia, error) {
+func (uc ReclamacaoUseCases) GetAllOcorrencias(telefone string, limit, offset int) ([]models.Ocorrencia, int, error) {
 	if telefone != "" {
 		telefone = normalizeTelefone(telefone)
 	}
-	list, err := uc.repository.GetAllOcorrencias(telefone)
+	list, err := uc.repository.GetAllOcorrencias(telefone, limit, offset)
 	if err != nil {
-		return nil, apperror.Internal(err.Error())
+		return nil, 0, apperror.Internal(err.Error())
 	}
-	return list, nil
+	total, err := uc.repository.GetCountOcorrencias(telefone)
+	if err != nil {
+		return nil, 0, apperror.Internal(err.Error())
+	}
+	return list, total, nil
 }
 
 func (uc ReclamacaoUseCases) GetRelatorioSolicitacoes(inicio, fim *time.Time) (models.RelatorioSolicitacoes, error) {

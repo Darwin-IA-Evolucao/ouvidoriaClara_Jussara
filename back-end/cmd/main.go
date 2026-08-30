@@ -83,9 +83,9 @@ func main() {
 
 	// Sem isso o Gin confia em qualquer X-Forwarded-For e o rate limit por IP
 	// pode ser burlado trocando o header a cada requisicao.
-	if err := server.SetTrustedProxies([]string{"*"}); err != nil {
-		panic(err)
-	}
+	// if err := server.SetTrustedProxies([]string{"*"}); err != nil {
+	// 	panic(err)
+	// }
 
 	dbConnection, err := database.ConnectDB()
 	if err != nil {

@@ -2,7 +2,22 @@ import * as React from 'react'
 import { Box, Typography, TextField, InputAdornment, CircularProgress } from '@mui/material'
 import { Search, MessageCircle } from 'lucide-react'
 import { formatPhoneDisplay } from '../utils/phone'
+import { formatRelativeTime, formatDate, toUTCDate } from '../utils/date'
 import type { ConversaResumo } from '../types'
+
+const formatChatDate = (value: string): string => {
+  if (!value) return ''
+  const d = toUTCDate(value)
+  if (isNaN(d.getTime())) return ''
+  const now = new Date()
+  const diffMs = now.getTime() - d.getTime()
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  if (diffDays < 7) return formatRelativeTime(value)
+  if (d.getUTCFullYear() === now.getUTCFullYear()) {
+    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', timeZone: 'UTC' })
+  }
+  return formatDate(value)
+}
 
 interface ConversationListProps {
   conversas: ConversaResumo[]
@@ -139,18 +154,32 @@ const ConversationList: React.FC<ConversationListProps> = ({
                     </Typography>
                   )}
                 </Box>
-                <Typography
-                  sx={{
-                    fontSize: 11.5,
-                    color: 'hsl(var(--text-secondary))',
-                    mt: 0.25,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {conversa.ultimaMensagem || formatPhoneDisplay(conversa.telefone)}
-                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 1, mt: 0.25 }}>
+                  <Typography
+                    sx={{
+                      fontSize: 11.5,
+                      color: 'hsl(var(--text-secondary))',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      flex: 1,
+                    }}
+                  >
+                    {conversa.ultimaMensagem || formatPhoneDisplay(conversa.telefone)}
+                  </Typography>
+                  {conversa.criadoEm && (
+                    <Typography
+                      sx={{
+                        fontSize: 10.5,
+                        color: 'hsl(var(--text-secondary) / 0.7)',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {formatChatDate(conversa.criadoEm)}
+                    </Typography>
+                  )}
+                </Box>
               </Box>
             )
           })

@@ -1,8 +1,11 @@
 import { apiGet, apiPost, apiPut, apiDelete } from '../utils/api'
 import type { Cliente } from '../types'
 
-export async function getAllClientes(): Promise<Cliente[]> {
-  return apiGet<Cliente[]>('/clientes?limit=0&offset=0')
+export async function getAllClientes(limit: number = 0, offset: number = 0): Promise<{ clientes: Cliente[]; total: number }> {
+  const res = await apiGet<{ clientes: Cliente[]; total: number } | Cliente[] | null>(`/clientes?limit=${limit}&offset=${offset}`)
+  if (Array.isArray(res)) return { clientes: res, total: res.length }
+  if (res && Array.isArray(res.clientes)) return { clientes: res.clientes, total: res.total ?? res.clientes.length }
+  return { clientes: [], total: 0 }
 }
 
 export async function getClienteByTelefone(telefone: string): Promise<Cliente> {

@@ -3,6 +3,7 @@ export interface LoginSession {
   expiration_time: number
   root: boolean
   message?: string
+  celular?: string
 }
 
 export interface Usuario {
@@ -145,6 +146,7 @@ export interface Ocorrencia {
   observacao?: string
   dataCriacao: string
   dataAtualizacao: string
+  idUsuario?: number | null
   nomeCliente?: string
   enderecoCliente?: string
   bairroCliente?: string
@@ -187,6 +189,7 @@ export interface OcorrenciaRequest {
   midiasAnimal?: string
   protocoloDenuncia?: string
   regiao?: string
+  idUsuario?: number
 }
 
 export interface OcorrenciaUpdateRequest {

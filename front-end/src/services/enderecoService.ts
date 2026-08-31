@@ -8,9 +8,20 @@ export async function getRegiao(rua: string, bairro?: string): Promise<Logradour
   return apiGet<Logradouro>(`/getRegiao?${params.toString()}`)
 }
 
-export async function getAllEnderecos(): Promise<Logradouro[]> {
-  const res = await apiGet<{ enderecos: Logradouro[] }>('/enderecos')
-  return res.enderecos ?? []
+export async function getAllEnderecos(limit: number = 0, offset: number = 0, regiao?: string): Promise<{ enderecos: Logradouro[]; total: number }> {
+  const params = new URLSearchParams()
+  params.set('limit', String(limit))
+  params.set('offset', String(offset))
+  if (regiao) params.set('regiao', regiao)
+  const res = await apiGet<{ enderecos: Logradouro[]; total?: number } | null>(`/enderecos?${params.toString()}`)
+  if (res && Array.isArray(res.enderecos)) return { enderecos: res.enderecos, total: res.total ?? res.enderecos.length }
+  return { enderecos: [], total: 0 }
+}
+
+export async function getAllRegioes(): Promise<string[]> {
+  const res = await apiGet<string[] | null>('/endereco/regiao')
+  if (Array.isArray(res)) return res
+  return []
 }
 
 export async function cadastrarEnderecos(enderecos: Endereco[]): Promise<void> {

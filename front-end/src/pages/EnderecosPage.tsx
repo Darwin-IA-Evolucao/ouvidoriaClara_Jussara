@@ -11,7 +11,7 @@ import PageHeader from '../components/PageHeader'
 import ConfirmDialog from '../components/ConfirmDialog'
 import PageLoader from '../components/PageLoader'
 import { inputSx, dialogSx } from '../utils/inputSx'
-import { getAllEnderecos, createEndereco, updateEndereco, deleteEndereco } from '../services/enderecoService'
+import { getAllEnderecos, getAllRegioes, createEndereco, updateEndereco, deleteEndereco } from '../services/enderecoService'
 import type { Logradouro } from '../types'
 
 const REGIOES = ['Centro', 'Zona Sul', 'Zona Norte', 'Zona Leste', 'Zona Oeste', 'Zona Industrial']
@@ -20,12 +20,14 @@ const ITEMS_PER_PAGE = 12
 
 const EnderecosPage: React.FC = () => {
   const [enderecos, setEnderecos] = useState<Logradouro[]>([])
+  const [totalCount, setTotalCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [filtroRegiao, setFiltroRegiao] = useState('')
   const [page, setPage] = useState(0)
   const [pageInput, setPageInput] = useState('')
+  const [regioes, setRegioes] = useState<string[]>([])
 
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Logradouro | null>(null)
@@ -35,47 +37,44 @@ const EnderecosPage: React.FC = () => {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [toDelete, setToDelete] = useState<Logradouro | null>(null)
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (targetPage: number = page) => {
     setLoading(true)
     setError(null)
     try {
-      const data = await getAllEnderecos()
-      setEnderecos(data)
+      const offset = targetPage * ITEMS_PER_PAGE
+      const [res, regioesRes] = await Promise.all([
+        getAllEnderecos(ITEMS_PER_PAGE, offset, filtroRegiao || undefined),
+        getAllRegioes(),
+      ])
+      setEnderecos(res.enderecos)
+      setTotalCount(res.total)
+      setRegioes(regioesRes)
     } catch (err: any) {
       setError(err.message || 'Erro ao carregar endereços')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [page, filtroRegiao])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { load(page) }, [page, load])
 
-  const regioesDisponiveis = useMemo(() => {
-    const set = new Set<string>()
-    enderecos.forEach((e) => { if (e.regiao) set.add(e.regiao) })
-    return Array.from(set).sort()
-  }, [enderecos])
+  // Resetar para página 0 quando mudar o filtro de região
+  useEffect(() => { setPage(0) }, [filtroRegiao])
+
+  const regioesDisponiveis = regioes
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase()
+    if (!term) return enderecos
     return enderecos.filter((e) => {
-      if (filtroRegiao && e.regiao !== filtroRegiao) return false
-      if (term) {
-        const matchLog = e.logradouro?.toLowerCase().includes(term)
-        const matchBairro = e.bairro?.toLowerCase().includes(term)
-        const matchRegiao = e.regiao?.toLowerCase().includes(term)
-        return matchLog || matchBairro || matchRegiao
-      }
-      return true
+      const matchLog = e.logradouro?.toLowerCase().includes(term)
+      const matchBairro = e.bairro?.toLowerCase().includes(term)
+      const matchRegiao = e.regiao?.toLowerCase().includes(term)
+      return matchLog || matchBairro || matchRegiao
     })
-  }, [enderecos, search, filtroRegiao])
+  }, [enderecos, search])
 
-  const paged = useMemo(() => {
-    const start = page * ITEMS_PER_PAGE
-    return filtered.slice(start, start + ITEMS_PER_PAGE)
-  }, [filtered, page])
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE))
+  const totalPages = Math.max(1, Math.ceil(totalCount / ITEMS_PER_PAGE))
 
   const openCreate = () => {
     setEditing(null)
@@ -103,7 +102,7 @@ const EnderecosPage: React.FC = () => {
         await createEndereco(form)
       }
       setModalOpen(false)
-      await load()
+      await load(page)
     } catch (err: any) {
       setFormError(err.message || 'Erro ao salvar endereço')
     }
@@ -115,7 +114,7 @@ const EnderecosPage: React.FC = () => {
       await deleteEndereco(toDelete.id)
       setConfirmOpen(false)
       setToDelete(null)
-      await load()
+      await load(page)
     } catch (err: any) {
       setError(err.message || 'Erro ao excluir endereço')
       setConfirmOpen(false)
@@ -130,7 +129,7 @@ const EnderecosPage: React.FC = () => {
         <PageHeader title="Endereços" />
         <Typography color="error" sx={{ textAlign: 'center' }}>{error}</Typography>
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-          <Button onClick={load} variant="contained" sx={{ textTransform: 'none' }}>Tentar novamente</Button>
+          <Button onClick={() => load(page)} variant="contained" sx={{ textTransform: 'none' }}>Tentar novamente</Button>
         </Box>
       </Box>
     )
@@ -211,7 +210,7 @@ const EnderecosPage: React.FC = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {paged.map((e) => (
+                {filtered.map((e) => (
                   <TableRow
                     key={e.id}
                     sx={{

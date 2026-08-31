@@ -19,6 +19,7 @@ interface ContatosUnificadosResponse {
     darwinAtivo: boolean
     isGelado: boolean
     isCliente: boolean
+    hasReclamacao: boolean
   }>
   total: number
   limite: number
@@ -26,10 +27,34 @@ interface ContatosUnificadosResponse {
   ocupacao: string
 }
 
-export async function getAllContatosUnificados(limit = 12, offset = 0): Promise<{ contatos: ContatoUnificado[]; total: number; usados: number; ocupacao: string; limite: number }> {
-  // Paginação server-side: o back-end aplica LIMIT/OFFSET quando limit > 0.
-  // total vem na resposta para o front calcular o número de páginas.
-  const res = await apiGet<ContatosUnificadosResponse>(`/contatos-unificados?limit=${limit}&offset=${offset}`)
+export interface FiltroContatosUnificados {
+  search?: string
+  darwin?: boolean | null
+  leadAtivo?: boolean | null
+  gelo?: boolean | null
+  reclamacao?: boolean | null
+  inicio?: string
+  fim?: string
+}
+
+export async function getAllContatosUnificados(
+  limit = 12,
+  offset = 0,
+  filtro?: FiltroContatosUnificados,
+): Promise<{ contatos: ContatoUnificado[]; total: number; usados: number; ocupacao: string; limite: number }> {
+  const params = new URLSearchParams()
+  params.set('limit', String(limit))
+  params.set('offset', String(offset))
+  if (filtro) {
+    if (filtro.search) params.set('search', filtro.search)
+    if (filtro.darwin !== null && filtro.darwin !== undefined) params.set('darwin', String(filtro.darwin))
+    if (filtro.leadAtivo !== null && filtro.leadAtivo !== undefined) params.set('leadAtivo', String(filtro.leadAtivo))
+    if (filtro.gelo !== null && filtro.gelo !== undefined) params.set('gelo', String(filtro.gelo))
+    if (filtro.reclamacao !== null && filtro.reclamacao !== undefined) params.set('reclamacao', String(filtro.reclamacao))
+    if (filtro.inicio) params.set('inicio', filtro.inicio)
+    if (filtro.fim) params.set('fim', filtro.fim)
+  }
+  const res = await apiGet<ContatosUnificadosResponse>(`/contatos-unificados?${params.toString()}`)
 
   const contatos: ContatoUnificado[] = (res.contatos || []).map((c) => ({
     telefone: c.telefone,
@@ -46,7 +71,7 @@ export async function getAllContatosUnificados(limit = 12, offset = 0): Promise<
     darwinAtivo: c.darwinAtivo,
     isGelado: c.isGelado,
     isCliente: c.isCliente,
-    hasReclamacao: false, // preenchido pelo caller via getAllOcorrencias
+    hasReclamacao: c.hasReclamacao,
   }))
 
   return {

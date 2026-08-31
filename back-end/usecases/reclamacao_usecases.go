@@ -228,6 +228,44 @@ func (uc ReclamacaoUseCases) AprovarRequerimento(id string, mensagem string, idU
 	return nil
 }
 
+func (uc ReclamacaoUseCases) AprovarOutros(id string, mensagem string, idUsuario int) error {
+	reclamacao, err := uc.repository.GetReclamacaoById(id)
+	if err != nil {
+		return err
+	}
+	usuario, err := uc.repository.GetUsuarioById(idUsuario)
+	if err != nil {
+		return err
+	}
+	idUsuarioPtr := &idUsuario
+	if usuario.Role == "root" {
+		idUsuarioPtr = nil
+	}
+	if reclamacao.IDUsuario != nil && *reclamacao.IDUsuario != idUsuario && usuario.Role != "root" {
+		return apperror.BadRequest("Você não tem permissão para aprovar outros esta reclamação")
+	}
+	if err := uc.repository.UpdateStatusTipo(id, "aprovado", "outros", idUsuarioPtr); err != nil {
+		return err
+	}
+	if err := uc.repository.DesativarAvisos(id); err != nil {
+		return apperror.Internal(fmt.Sprintf("Erro ao desativar avisos: %s", err.Error()))
+	}
+
+	if mensagem != "" {
+		msg := mensagemStatusCliente(uc.nomePorTelefone(reclamacao.Telefone), "aprovada", mensagem)
+		err = uc.repository.UpdateMensagem(id, msg)
+		if err != nil {
+			return err
+		}
+		err = config.EnviarMensagem(reclamacao.Telefone, msg)
+		if err != nil {
+			return apperror.Internal(fmt.Sprintf("Erro ao enviar mensagem de aprovação como outros: %s", err.Error()))
+		}
+	}
+
+	return nil
+}
+
 // func (uc ReclamacaoUseCases) AprovarOficio(id string) error {
 // 	if err := uc.repository.UpdateStatusTipo(id, "aprovado", "ofício"); err != nil {
 // 		return err

@@ -185,6 +185,21 @@ func (ctrl ReclamacaoController) AprovarCausaAnimal(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Causa animal aprovada com sucesso!"})
 }
 
+func (ctrl ReclamacaoController) AprovarOutros(c *gin.Context) {
+	var req struct {
+		Mensagem  string `json:"mensagem"`
+		IDUsuario int    `json:"idUsuario"`
+	}
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := ctrl.useCase.AprovarOutros(c.Param("id"), req.Mensagem, req.IDUsuario); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Outros aprovado com sucesso!"})
+}
 func (ctrl ReclamacaoController) FinalizarReclamacao(c *gin.Context) {
 	var req struct {
 		Mensagem  string `json:"mensagem"`

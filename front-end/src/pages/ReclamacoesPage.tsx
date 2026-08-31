@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react'
 import {
-  Autocomplete, Box, CircularProgress, IconButton, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Typography, MenuItem, useMediaQuery, useTheme, FormControl, InputLabel, Select, Collapse,
+  Autocomplete, Box, CircularProgress, IconButton, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Typography, MenuItem, useMediaQuery, useTheme, FormControl, InputLabel, Select, Collapse, Snackbar, Alert as MuiAlert, Portal,
 } from '@mui/material'
 import {
   CheckCircle, ChevronDown, ChevronLeft, ChevronRight, FileText, Plus, Trash2, X, Pencil, Tag, Calendar, Video, Inbox, Download,
@@ -19,6 +19,7 @@ import { formatPhoneDisplay, normalizeTelefone } from '../utils/phone'
 import { uploadMidia } from '../services/midiaService'
 import { formatDate, toUTCDate } from '../utils/date'
 import { fetchCategorias, formatCategoryName } from '../utils/categories'
+import { getSession } from '../utils/session'
 import { statusDisplay } from '../components/StatusChip'
 import KanbanSkeleton from '../components/KanbanSkeleton'
 import type { Ocorrencia, OcorrenciaRequest, Cliente, Logradouro } from '../types'
@@ -522,6 +523,14 @@ function filterRows(
 const ReclamacoesPage: React.FC = () => {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const session = getSession()
+  const idUsuario = session?.id ?? 0
+  const isRoot = session?.root ?? false
+
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'error' | 'warning' | 'info' | 'success' }>({ open: false, message: '', severity: 'error' })
+  const showSnackbar = (message: string, severity: 'error' | 'warning' | 'info' | 'success' = 'error') => {
+    setSnackbar({ open: true, message, severity })
+  }
 
   const [rows, setRows] = useState<Ocorrencia[]>([])
   const [loading, setLoading] = useState(true)
@@ -943,15 +952,19 @@ const ReclamacoesPage: React.FC = () => {
 
   const load = (silent = false) => {
     if (!silent) setLoading(true)
-    Promise.all([getAllOcorrencias(), getAllClientes()])
-      .then(([ocorrencias, clientes]) => {
+    Promise.all([getAllOcorrencias(undefined, 0, 0), getAllClientes(0, 0)])
+      .then(([ocRes, cliRes]) => {
         const map: Record<string, Cliente> = {}
-        ;(clientes || []).forEach((c) => { map[c.telefone] = c })
+        ;(cliRes.clientes || []).forEach((c) => { map[c.telefone] = c })
         setClientesMap(map)
-        setRows(Array.isArray(ocorrencias) ? ocorrencias : [])
+        setRows(Array.isArray(ocRes.ocorrencias) ? ocRes.ocorrencias : [])
         setLoading(false)
       })
-      .catch(() => setLoading(false))
+      .catch((err) => {
+        console.error('Erro ao carregar solicitações:', err)
+        if (!silent) showSnackbar('Erro ao carregar solicitações')
+        setLoading(false)
+      })
   }
 
   const UPLOAD_BASE_URL = (import.meta.env.VITE_UPLOAD_BASE_URL as string | undefined) || 'https://vereadorajussara.ouvidoria.darwinsistema.com.br'
@@ -981,7 +994,7 @@ const ReclamacoesPage: React.FC = () => {
       URL.revokeObjectURL(blobUrl)
     } catch (err) {
       console.error('Erro ao baixar mídia:', err)
-      alert('Erro ao baixar mídia')
+      showSnackbar('Erro ao baixar mídia')
     }
   }
 
@@ -993,7 +1006,7 @@ const ReclamacoesPage: React.FC = () => {
 
   useEffect(() => {
     if (createOpen || editOpen) {
-      getAllEnderecos().then(setEnderecos).catch(() => setEnderecos([]))
+      getAllEnderecos(0, 0).then((res) => setEnderecos(res.enderecos)).catch(() => setEnderecos([]))
     }
   }, [createOpen, editOpen])
 
@@ -1026,7 +1039,6 @@ const ReclamacoesPage: React.FC = () => {
 
   const handleActionDialogConfirm = async () => {
     if (!actionDialogConfirm) return
-    if (!actionDialogMensagem.trim()) return
     if (actionDialogRequiresDate && !actionDialogData) return
     setActionDialogSubmitting(true)
     try {
@@ -1035,13 +1047,17 @@ const ReclamacoesPage: React.FC = () => {
       load(true)
     } catch (err: any) {
       console.error('Erro ao mover card:', err)
-      alert(err?.response?.data?.message || err?.message || 'Erro ao mover ocorrência')
+      showSnackbar('Você não tem permissão para mover essa reclamação')
     } finally {
       setActionDialogSubmitting(false)
     }
   }
 
   const openEdit = (row: Ocorrencia) => {
+    if (!isRoot && row.idUsuario != null && row.idUsuario !== idUsuario) {
+      showSnackbar('Você não tem permissão para editar essa reclamação')
+      return
+    }
     setEditRow(row)
     const d = row.detalhes || {}
     setEditForm({
@@ -1126,6 +1142,7 @@ const ReclamacoesPage: React.FC = () => {
       ...createForm,
       telefone: normalizeTelefone(createForm.telefone),
       conheceTutor: createForm.conheceTutor,
+      idUsuario,
     }
     await createOcorrencia(payload)
     setCreateOpen(false)
@@ -1232,11 +1249,11 @@ const ReclamacoesPage: React.FC = () => {
     /* Sem tratativa: direto, sem mensagem */
     if (targetCol === 'sem-tratativa') {
       try {
-        await colocarComoCriado(row.id)
+        await colocarComoCriado(row.id, idUsuario)
         load(true)
       } catch (err: any) {
         console.error('Erro ao mover card:', err)
-        alert(err?.response?.data?.message || err?.message || 'Erro ao mover ocorrência')
+        showSnackbar('Você não tem permissão para mover essa reclamação')
       }
       return
     }
@@ -1247,27 +1264,27 @@ const ReclamacoesPage: React.FC = () => {
 
     if (targetCol === 'em-analise') {
       openActionDialog(title, true, async (mensagem, data) => {
-        await colocarEmAnalise(row.id, data, mensagem)
+        await colocarEmAnalise(row.id, data, mensagem, idUsuario)
       })
     } else if (targetCol === 'aprovar-indicacao') {
       openActionDialog(title, false, async (mensagem) => {
-        await aprovarInquerito(row.id, mensagem)
+        await aprovarInquerito(row.id, mensagem, idUsuario)
       })
     } else if (targetCol === 'aprovar-requerimento') {
       openActionDialog(title, false, async (mensagem) => {
-        await aprovarRequerimento(row.id, mensagem)
+        await aprovarRequerimento(row.id, mensagem, idUsuario)
       })
     } else if (targetCol === 'aprovar-causa-animal') {
       openActionDialog(title, false, async (mensagem) => {
-        await aprovarCausaAnimal(row.id, mensagem)
+        await aprovarCausaAnimal(row.id, mensagem, idUsuario)
       })
     } else if (targetCol === 'desqualificar') {
       openActionDialog(title, false, async (mensagem) => {
-        await reprovarInquerito(row.id, mensagem)
+        await reprovarInquerito(row.id, mensagem, idUsuario)
       })
     } else if (targetCol === 'finalizado') {
       openActionDialog(title, false, async (mensagem) => {
-        await finalizarReclamacao(row.id, mensagem)
+        await finalizarReclamacao(row.id, mensagem, idUsuario)
       })
     }
   }
@@ -1278,7 +1295,7 @@ const ReclamacoesPage: React.FC = () => {
     if (sourceCol === targetCol) return
 
     if (targetCol === 'sem-tratativa') {
-      doAction(() => colocarComoCriado(row.id), 'Enviar para Sem Tratativa', `Confirmar envio #${row.id} para Sem Tratativa?`)
+      doAction(() => colocarComoCriado(row.id, idUsuario), 'Enviar para Sem Tratativa', `Confirmar envio #${row.id} para Sem Tratativa?`)
       return
     }
 
@@ -1287,27 +1304,27 @@ const ReclamacoesPage: React.FC = () => {
 
     if (targetCol === 'em-analise') {
       openActionDialog(title, true, async (mensagem, data) => {
-        await colocarEmAnalise(row.id, data, mensagem)
+        await colocarEmAnalise(row.id, data, mensagem, idUsuario)
       })
     } else if (targetCol === 'aprovar-indicacao') {
       openActionDialog(title, false, async (mensagem) => {
-        await aprovarInquerito(row.id, mensagem)
+        await aprovarInquerito(row.id, mensagem, idUsuario)
       })
     } else if (targetCol === 'aprovar-requerimento') {
       openActionDialog(title, false, async (mensagem) => {
-        await aprovarRequerimento(row.id, mensagem)
+        await aprovarRequerimento(row.id, mensagem, idUsuario)
       })
     } else if (targetCol === 'aprovar-causa-animal') {
       openActionDialog(title, false, async (mensagem) => {
-        await aprovarCausaAnimal(row.id, mensagem)
+        await aprovarCausaAnimal(row.id, mensagem, idUsuario)
       })
     } else if (targetCol === 'desqualificar') {
       openActionDialog(title, false, async (mensagem) => {
-        await reprovarInquerito(row.id, mensagem)
+        await reprovarInquerito(row.id, mensagem, idUsuario)
       })
     } else if (targetCol === 'finalizado') {
       openActionDialog(title, false, async (mensagem) => {
-        await finalizarReclamacao(row.id, mensagem)
+        await finalizarReclamacao(row.id, mensagem, idUsuario)
       })
     }
   }
@@ -1718,7 +1735,7 @@ const ReclamacoesPage: React.FC = () => {
             ref={headersRef}
             sx={{
               display: 'grid',
-              gridTemplateColumns: `repeat(${VISIBLE_COLUMNS.length}, 300px)`,
+              gridTemplateColumns: `repeat(${VISIBLE_COLUMNS.length}, minmax(300px, 1fr))`,
               gap: 2,
               px: 0.5,
               willChange: 'transform',
@@ -1871,7 +1888,7 @@ const ReclamacoesPage: React.FC = () => {
         onDragLeave={onKanbanDragLeave}
         sx={{
           display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : `repeat(${VISIBLE_COLUMNS.length}, 300px)`,
+          gridTemplateColumns: isMobile ? '1fr' : `repeat(${VISIBLE_COLUMNS.length}, minmax(300px, 1fr))`,
           gap: 2,
           pb: 2,
           pt: 1,
@@ -2010,9 +2027,11 @@ const ReclamacoesPage: React.FC = () => {
                           )}
                         </Box>
                         <Box sx={{ display: 'flex', gap: 0.5 }}>
+                          {(isRoot || row.idUsuario == null || row.idUsuario === idUsuario) && (
                           <Tooltip title="Editar">
                             <IconButton size="small" onClick={() => openEdit(row)} sx={{ color: 'hsl(var(--accent))', bgcolor: 'hsl(var(--accent) / 0.12)', borderRadius: '50%', width: 28, height: 28, '&:hover': { bgcolor: 'hsl(var(--accent) / 0.2)' } }}><Pencil size={14} /></IconButton>
                           </Tooltip>
+                          )}
                           {false && (
                           <Tooltip title="Excluir">
                             <IconButton size="small" onClick={() => doAction(() => deleteOcorrencia(row.id), 'Excluir Solicitação', `Confirmar exclusão #${row.id}?`)} sx={{ color: 'hsl(var(--error))', bgcolor: 'hsl(var(--error) / 0.12)', borderRadius: '50%', width: 28, height: 28, '&:hover': { bgcolor: 'hsl(var(--error) / 0.2)' } }}><Trash2 size={14} /></IconButton>
@@ -2240,12 +2259,12 @@ const ReclamacoesPage: React.FC = () => {
             fullWidth
             multiline
             minRows={3}
-            label={actionDialogRequiresDate ? 'Lembrete interno' : 'Motivo (enviado ao cidadão)'}
+            label={actionDialogRequiresDate ? 'Lembrete interno' : 'Motivo (enviado ao cidadão) — opcional'}
             variant="filled"
             value={actionDialogMensagem}
             onChange={(e) => setActionDialogMensagem(e.target.value)}
             sx={inputSx}
-            placeholder={actionDialogRequiresDate ? 'Digite um lembrete para acompanhar esta solicitação...' : 'Digite o motivo da decisão (será incluído na mensagem enviada ao cidadão)...'}
+            placeholder={actionDialogRequiresDate ? 'Digite um lembrete para acompanhar esta solicitação...' : 'Digite o motivo da decisão (será incluído na mensagem enviada ao cidadão). Deixe em branco para não enviar mensagem...'}
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -2253,10 +2272,10 @@ const ReclamacoesPage: React.FC = () => {
           <Button
             onClick={handleActionDialogConfirm}
             variant="contained"
-            disabled={!actionDialogMensagem.trim() || (actionDialogRequiresDate && !actionDialogData) || actionDialogSubmitting}
+            disabled={(actionDialogRequiresDate && !actionDialogData) || actionDialogSubmitting}
             sx={{ background: 'hsl(var(--primary))', textTransform: 'none', borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
           >
-            {actionDialogSubmitting ? <CircularProgress size={20} sx={{ color: '#fff' }} /> : 'Confirmar e Enviar'}
+            {actionDialogSubmitting ? <CircularProgress size={20} sx={{ color: '#fff' }} /> : 'Confirmar'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -2671,6 +2690,32 @@ const ReclamacoesPage: React.FC = () => {
           <Button onClick={saveCreate} variant="contained" sx={{ background: 'hsl(var(--primary))', textTransform: 'none', borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>Salvar</Button>
         </DialogActions>
       </Dialog>
+
+      <Portal>
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={5000}
+          onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+          sx={{ position: 'fixed', zIndex: 9999, bottom: 24 }}
+        >
+          <MuiAlert
+            onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+            severity={snackbar.severity}
+            variant="filled"
+            sx={{
+              borderRadius: 2,
+              fontWeight: 600,
+              fontSize: 13,
+              alignItems: 'center',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
+              '& .MuiAlert-icon': { fontSize: 20 },
+            }}
+          >
+            {snackbar.message}
+          </MuiAlert>
+        </Snackbar>
+      </Portal>
 
     </Box>
   )

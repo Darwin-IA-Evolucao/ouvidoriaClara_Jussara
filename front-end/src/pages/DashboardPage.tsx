@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Typography, Box, TextField, Button, useMediaQuery, useTheme } from '@mui/material'
 import { FileText, Users, TrendingUp, TrendingDown, BarChart3, XCircle, Inbox, Heart } from 'lucide-react'
 import GlassPanel from '../components/GlassPanel'
@@ -7,11 +7,10 @@ import PageHeader from '../components/PageHeader'
 import { inputSx } from '../utils/inputSx'
 import { getStats } from '../services/statsService'
 import { getAllOcorrencias } from '../services/reclamacaoService'
-import { getAllContatos } from '../services/contatoService'
 import { toUTCDate } from '../utils/date'
 import DistributionViewer from '../components/DistributionViewer'
 import PageLoader from '../components/PageLoader'
-import type { Stat, Ocorrencia, Contato } from '../types'
+import type { Stat, Ocorrencia } from '../types'
 
 interface TrendInfo {
   direction: 'up' | 'down' | 'neutral'
@@ -75,23 +74,57 @@ const DashboardPage: React.FC = () => {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const [stats, setStats] = useState<Stat | null>(null)
+  const [prevStats, setPrevStats] = useState<Stat | null>(null)
   const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([])
-  const [contatos, setContatos] = useState<Contato[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
 
+  // Carga inicial: stats sem filtro + todas as ocorrências (para Kanban cards e DistributionViewer)
   useEffect(() => {
-    Promise.all([getStats(), getAllOcorrencias(), getAllContatos()])
-      .then(([s, o, c]) => {
+    Promise.all([getStats(), getAllOcorrencias(undefined, 0, 0)])
+      .then(([s, o]) => {
         setStats(s)
-        setOcorrencias(o || [])
-        setContatos(c || [])
+        setOcorrencias(o.ocorrencias || [])
       })
       .catch(() => setError('Erro ao carregar estatísticas'))
       .finally(() => setLoading(false))
   }, [])
+
+  // Quando as datas mudam: buscar stats filtradas do servidor (rápido)
+  // + stats do período anterior para trends
+  const fetchFilteredStats = useCallback(async (inicio: string, fim: string) => {
+    try {
+      const [curr, prev] = await Promise.all([
+        getStats(inicio, fim),
+        (async () => {
+          const start = new Date(`${inicio}T00:00:00`)
+          const end = new Date(`${fim}T23:59:59`)
+          const durationMs = end.getTime() - start.getTime()
+          const prevEnd = new Date(start.getTime() - 1)
+          const prevStart = new Date(prevEnd.getTime() - durationMs)
+          const prevInicio = prevStart.toISOString().slice(0, 10)
+          const prevFim = prevEnd.toISOString().slice(0, 10)
+          return getStats(prevInicio, prevFim)
+        })(),
+      ])
+      setStats(curr)
+      setPrevStats(prev)
+    } catch {
+      // mantém stats anteriores se falhar
+    }
+  }, [])
+
+  useEffect(() => {
+    if (startDate && endDate) {
+      fetchFilteredStats(startDate, endDate)
+    } else if (!startDate && !endDate) {
+      // Sem filtro: recarregar stats sem filtro
+      getStats().then(setStats).catch(() => {})
+      setPrevStats(null)
+    }
+  }, [startDate, endDate, fetchFilteredStats])
 
   const dateRange = useMemo(() => {
     const start = startDate ? new Date(`${startDate}T00:00:00`) : null
@@ -111,85 +144,19 @@ const DashboardPage: React.FC = () => {
     })
   }, [ocorrencias, dateRange])
 
-  const filteredContatos = useMemo(() => {
-    if (!dateRange.start && !dateRange.end) return contatos
-    return contatos.filter((c) => {
-      if (!c.data_criacao) return false
-      const d = toUTCDate(c.data_criacao)
-      if (isNaN(d.getTime())) return false
-      if (dateRange.start && d < dateRange.start) return false
-      if (dateRange.end && d > dateRange.end) return false
-      return true
-    })
-  }, [contatos, dateRange])
-
-  const computedStats = useMemo<Stat | null>(() => {
-    if (!stats) return null
-    const hasFilter = Boolean(startDate || endDate)
-    if (!hasFilter) return stats
-
-    const totalReclamacoes = filteredOcorrencias.length
-    const totalIndicacoes = filteredOcorrencias.filter((o) => o.tipo === 'indicacao').length
-    const totalRequerimentos = filteredOcorrencias.filter((o) => o.tipo === 'requerimento').length
-    const percIndicacao = totalReclamacoes > 0 ? (totalIndicacoes / totalReclamacoes) * 100 : 0
-    const percRequerimento = totalReclamacoes > 0 ? (totalRequerimentos / totalReclamacoes) * 100 : 0
-    const reclamacoesTelefones = new Set(filteredOcorrencias.map((o) => o.telefone))
-    const contatosTelefones = new Set(filteredContatos.map((c) => c.telefone))
-    const allTelefones = new Set([...reclamacoesTelefones, ...contatosTelefones])
-    const numPessoas = allTelefones.size
-
-    const regiaoMap: Record<string, number> = {}
-    for (const o of filteredOcorrencias) {
-      const regiao = o.detalhes?.regiao || 'Sem Região Definida'
-      regiaoMap[regiao] = (regiaoMap[regiao] || 0) + 1
-    }
-    const regioes = Object.entries(regiaoMap).map(([regiao, qtdRegiao]) => ({ regiao, qtdRegiao }))
-
-    const categoriaMap: Record<string, number> = {}
-    for (const o of filteredOcorrencias) {
-      const cat = o.categoria || 'Sem Categoria'
-      categoriaMap[cat] = (categoriaMap[cat] || 0) + 1
-    }
-    const categorias = Object.entries(categoriaMap).map(([categoria, qtdCategoria]) => ({ categoria, qtdCategoria }))
-
-    return {
-      ...stats,
-      numReclamacoes: totalReclamacoes,
-      totalIndicacoes,
-      totalRequerimentos,
-      percIndicacao,
-      percRequerimento,
-      numPessoas,
-      regioes,
-      categorias,
-      indicacoesAprovadas: totalIndicacoes,
-      requerimentosAprovados: totalRequerimentos,
-    }
-  }, [stats, filteredOcorrencias, filteredContatos, startDate, endDate])
+  // Stats do servidor já vêm filtrados por data; usar diretamente
+  const computedStats = stats
 
   const trends = useMemo<{ reclamacoes: TrendInfo | null; indicacoes: TrendInfo | null; requerimentos: TrendInfo | null; pessoas: TrendInfo | null; reprovadas: TrendInfo | null }>(() => {
-    const hasFilter = Boolean(startDate && endDate)
-    if (!hasFilter) return { reclamacoes: null, indicacoes: null, requerimentos: null, pessoas: null, reprovadas: null }
+    if (!prevStats || !startDate || !endDate) {
+      return { reclamacoes: null, indicacoes: null, requerimentos: null, pessoas: null, reprovadas: null }
+    }
 
     const start = new Date(`${startDate}T00:00:00`)
     const end = new Date(`${endDate}T23:59:59`)
     const durationMs = end.getTime() - start.getTime()
     const prevEnd = new Date(start.getTime() - 1)
     const prevStart = new Date(prevEnd.getTime() - durationMs)
-
-    const prevOcorrencias = ocorrencias.filter((o) => {
-      if (!o.dataCriacao) return false
-      const d = toUTCDate(o.dataCriacao)
-      if (isNaN(d.getTime())) return false
-      return d >= prevStart && d <= prevEnd
-    })
-
-    const prevContatos = contatos.filter((c) => {
-      if (!c.data_criacao) return false
-      const d = toUTCDate(c.data_criacao)
-      if (isNaN(d.getTime())) return false
-      return d >= prevStart && d <= prevEnd
-    })
 
     const fmtShort = (d: Date) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', timeZone: 'UTC' })
     const prevLabel = `${fmtShort(prevStart)}–${fmtShort(prevEnd)}`
@@ -201,26 +168,24 @@ const DashboardPage: React.FC = () => {
       return { direction: pct > 0 ? 'up' : 'down', percent: Math.abs(pct), prevLabel }
     }
 
-    const currReclamacoes = filteredOcorrencias.length
-    const currIndicacoes = filteredOcorrencias.filter((o) => o.tipo === 'indicacao').length
-    const currRequerimentos = filteredOcorrencias.filter((o) => o.tipo === 'requerimento').length
-    const currPessoas = new Set([...filteredOcorrencias.map((o) => o.telefone), ...filteredContatos.map((c) => c.telefone)]).size
-    const currReprovadas = filteredOcorrencias.filter((o) => o.status.toLowerCase() === 'reprovado').length
+    const currReclamacoes = stats?.numReclamacoes ?? 0
+    const currIndicacoes = stats?.totalIndicacoes ?? 0
+    const currRequerimentos = stats?.totalRequerimentos ?? 0
+    const currPessoas = stats?.numPessoas ?? 0
 
-    const prevReclamacoes = prevOcorrencias.length
-    const prevIndicacoes = prevOcorrencias.filter((o) => o.tipo === 'indicacao').length
-    const prevRequerimentos = prevOcorrencias.filter((o) => o.tipo === 'requerimento').length
-    const prevPessoas = new Set([...prevOcorrencias.map((o) => o.telefone), ...prevContatos.map((c) => c.telefone)]).size
-    const prevReprovadas = prevOcorrencias.filter((o) => o.status.toLowerCase() === 'reprovado').length
+    const prevReclamacoes = prevStats.numReclamacoes ?? 0
+    const prevIndicacoes = prevStats.totalIndicacoes ?? 0
+    const prevRequerimentos = prevStats.totalRequerimentos ?? 0
+    const prevPessoas = prevStats.numPessoas ?? 0
 
     return {
       reclamacoes: calcTrend(currReclamacoes, prevReclamacoes),
       indicacoes: calcTrend(currIndicacoes, prevIndicacoes),
       requerimentos: calcTrend(currRequerimentos, prevRequerimentos),
       pessoas: calcTrend(currPessoas, prevPessoas),
-      reprovadas: calcTrend(currReprovadas, prevReprovadas),
+      reprovadas: null, // back-end não retorna reprovados por período no /stats
     }
-  }, [filteredOcorrencias, filteredContatos, ocorrencias, contatos, startDate, endDate])
+  }, [stats, prevStats, startDate, endDate])
 
   const kanbanData = (() => {
     const counts: Record<string, number> = {
@@ -317,7 +282,7 @@ const DashboardPage: React.FC = () => {
 
         {/* Coluna 3 */}
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <StatCard sx={{ flex: 1 }} label="Desqualificado" value={filteredOcorrencias.filter((o) => o.status.toLowerCase() === 'reprovado').length} icon={XCircle} color="#D16670" />
+          <StatCard sx={{ flex: 1, justifyContent: 'center' }} label="Desqualificado" value={filteredOcorrencias.filter((o) => o.status.toLowerCase() === 'reprovado').length} icon={XCircle} color="#D16670" />
         </Box>
       </Box>
 

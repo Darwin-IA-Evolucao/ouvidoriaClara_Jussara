@@ -13,9 +13,10 @@ import {
   X,
   MapPin,
   MessageCircle,
+  User,
 } from 'lucide-react'
 import { getTheme, toggleTheme } from '../utils/theme'
-import { clearSession } from '../utils/session'
+import { clearSession, getSession } from '../utils/session'
 import type { Theme } from '../utils/theme'
 
 const navItems = [
@@ -34,6 +35,7 @@ const Navbar: React.FC = () => {
   const navigate = useNavigate()
   const [theme, setThemeState] = useState<Theme>(getTheme())
   const [mobileOpen, setMobileOpen] = useState(false)
+  const session = getSession()
 
   useEffect(() => {
     const body = document.body
@@ -178,6 +180,33 @@ const Navbar: React.FC = () => {
           flexShrink: 0,
           marginLeft: 'auto',
         }}>
+          {/* Usuário logado */}
+          <div
+            title={session ? `Usuário #${session.id}${session.root ? ' (Admin)' : ''}${session.celular ? ` — ${session.celular}` : ''}` : 'Não logado'}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '6px 10px',
+              borderRadius: 8,
+              background: 'hsl(var(--surface-2))',
+              fontSize: 12,
+              fontWeight: 600,
+              color: 'hsl(var(--text-primary))',
+              cursor: 'default',
+              whiteSpace: 'nowrap',
+              maxWidth: 180,
+            }}
+          >
+            <User size={15} style={{ color: 'hsl(var(--accent))', flexShrink: 0 }} />
+            <span style={{
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}>
+              {session?.root ? 'Admin' : session?.celular ? session.celular : `#${session?.id ?? '?'}`}
+            </span>
+          </div>
+
           <button
             onClick={handleToggleTheme}
             aria-label="Alternar tema"

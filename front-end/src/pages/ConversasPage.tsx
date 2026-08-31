@@ -32,15 +32,16 @@ const ConversasPage: React.FC = () => {
     listAbortRef.current = controller
     try {
       // Busca conversas e clientes em paralelo
-      const [data, clientes] = await Promise.all([
+      const [data, clientesRes] = await Promise.all([
         listConversas(),
-        getAllClientes().catch(() => [] as Cliente[]),
+        getAllClientes(0, 0).catch(() => ({ clientes: [] as Cliente[], total: 0 })),
       ])
       if (controller.signal.aborted) return
 
       // Mapa telefone → nome do cliente
       const clientesMap = new Map<string, string>()
-      ;(clientes || []).forEach((c) => {
+      const clientesList = Array.isArray(clientesRes?.clientes) ? clientesRes.clientes : []
+      clientesList.forEach((c) => {
         if (c.nome) clientesMap.set(c.telefone, c.nome)
       })
       clientesMapRef.current = clientesMap
@@ -52,7 +53,7 @@ const ConversasPage: React.FC = () => {
       const isNomeValido = (n: string | undefined | null): boolean =>
         !!n && n.trim() !== '' && n.trim() !== '?' && n.trim() !== 'null'
 
-      const enriched = (data || []).map((c) => ({
+      const enriched = (Array.isArray(data) ? data : []).map((c) => ({
         ...c,
         nome: isNomeValido(clientesMap.get(c.telefone))
           ? clientesMap.get(c.telefone)!

@@ -7,7 +7,10 @@ import type { ConversaResumo, HistoricoChatResponse, MensagemChat } from '../typ
  * ordenadas pela última mensagem.
  */
 export async function listConversas(): Promise<ConversaResumo[]> {
-  return apiGet<ConversaResumo[]>('/chat')
+  const res = await apiGet<ConversaResumo[] | { conversas?: ConversaResumo[] } | null>('/chat')
+  if (Array.isArray(res)) return res
+  if (res && Array.isArray(res.conversas)) return res.conversas
+  return []
 }
 
 /**

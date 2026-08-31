@@ -125,6 +125,6 @@ func main() {
 	portBack := os.Getenv("PORT")
 	fmt.Println("Servidor rodando na porta: ", portBack)
 	// Escuta apenas no localhost: o acesso externo passa obrigatoriamente pelo Apache.
-	//server.Run("127.0.0.1:" + portBack)
-	server.Run(":" + portBack)
+	server.Run("127.0.0.1:" + portBack)
+	//server.Run(":" + portBack)
 }

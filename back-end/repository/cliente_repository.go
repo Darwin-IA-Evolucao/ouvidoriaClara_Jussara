@@ -25,7 +25,7 @@ func (r *ClienteRepo) CreateCliente(c models.Cliente) (string, error) {
 }
 
 func (r *ClienteRepo) GetClienteByTelefone(telefone string) (models.Cliente, error) {
-	const query = `SELECT telefone, nome, cidade, endereco, bairro, data_nascimento, data_criacao FROM cliente WHERE telefone = $1`
+	const query = `SELECT telefone, nome, cidade, endereco, bairro, COALESCE(data_nascimento, '') AS data_nascimento, data_criacao FROM cliente WHERE telefone = $1`
 	var c models.Cliente
 	err := r.db.Get(&c, query, telefone)
 	return c, err
@@ -60,10 +60,7 @@ func (r *ClienteRepo) DeleteCliente(telefone string) error {
 }
 
 func (r *ClienteRepo) ClienteExiste(telefoneCliente string) (bool, *models.Cliente, error) {
-	const query = `SELECT * FROM cliente WHERE telefone = $1`
-
-	var cliente models.Cliente
-	err := r.db.Get(&cliente, query, telefoneCliente)
+	cliente, err := r.GetClienteByTelefone(telefoneCliente)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return false, nil, nil

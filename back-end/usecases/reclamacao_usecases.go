@@ -457,7 +457,8 @@ func (uc ReclamacaoUseCases) ReprovarInquerito(id string, mensagem string, idUsu
 //------------------------------------------------------------------------------------------ new
 
 func (uc ReclamacaoUseCases) CreateOcorrencia(request models.OcorrenciaRequest) (int, error) {
-	if request.Telefone == "" {
+	request.Telefone = normalizeTelefone(request.Telefone)
+	if request.Telefone == "" || request.Telefone == "55" {
 		return 0, apperror.BadRequest("Telefone obrigatório")
 	}
 
@@ -486,8 +487,9 @@ func (uc ReclamacaoUseCases) CreateOcorrencia(request models.OcorrenciaRequest) 
 		}
 		cliente = &clienteReq
 	}
-
-	request.Telefone = normalizeTelefone(request.Telefone)
+	if cliente == nil {
+		return 0, apperror.Internal("Cliente não encontrado")
+	}
 
 	data := models.OcorrenciaData{
 		Telefone:   request.Telefone,
@@ -532,7 +534,7 @@ func (uc ReclamacaoUseCases) CreateOcorrencia(request models.OcorrenciaRequest) 
 		//config.EnviarEmail(destinatario, "Nova demanda geral", "text/plain", msg)
 	}
 	data.TelefoneAcessor = telefoneEnvio
-	if !data.EhManual {
+	if !data.EhManual || (data.IDUsuario != nil && *data.IDUsuario <= 0) {
 		data.IDUsuario = nil
 	}
 	id, err := uc.repository.CreateOcorrencia(data)

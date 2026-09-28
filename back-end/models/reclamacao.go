@@ -159,3 +159,14 @@ type RelatorioSolicitacoes struct {
 	Total      int                           `json:"total"`
 	PorUsuario []RelatorioSolicitacaoUsuario `json:"porUsuario"`
 }
+
+type OcorrenciaPorCidade struct {
+	Cidade    string         `json:"cidade"`
+	Categoria map[string]int `json:"categoria"`
+	Total     int            `json:"total"`
+}
+
+type OcorrenciaPorCategoria struct {
+	Categoria string `json:"categoria" db:"categoria"`
+	Total     int    `json:"total" db:"total"`
+}

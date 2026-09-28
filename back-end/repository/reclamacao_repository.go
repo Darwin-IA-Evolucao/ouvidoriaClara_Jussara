@@ -222,6 +222,85 @@ func (repo ReclamacaoRepository) GetOcorrenciasPorPeriodo(inicio, fim *time.Time
 	return ocorrencias, rows.Err()
 }
 
+func (repo ReclamacaoRepository) GetOcorrenciasPorCidade(inicio, fim *time.Time) ([]models.OcorrenciaPorCidade, error) {
+	query := `
+		SELECT
+			COALESCE(NULLIF(TRIM(cl.cidade), ''), 'Sem cidade') AS cidade,
+			LOWER(COALESCE(NULLIF(TRIM(r.categoria), ''), 'sem categoria')) AS categoria,
+			COUNT(*) AS total
+		FROM reclamacao r
+		LEFT JOIN cliente cl ON cl.telefone = r.telefone`
+	args := []any{}
+	if inicio != nil {
+		args = append(args, *inicio)
+		query += fmt.Sprintf(` WHERE r.data_criacao >= $%d`, len(args))
+	}
+	if fim != nil {
+		args = append(args, *fim)
+		if inicio != nil {
+			query += fmt.Sprintf(` AND r.data_criacao < $%d`, len(args))
+		} else {
+			query += fmt.Sprintf(` WHERE r.data_criacao < $%d`, len(args))
+		}
+	}
+	query += ` GROUP BY 1, 2 ORDER BY 1, 2`
+
+	type linha struct {
+		Cidade    string `db:"cidade"`
+		Categoria string `db:"categoria"`
+		Total     int    `db:"total"`
+	}
+	var linhas []linha
+	if err := repo.connection.Select(&linhas, query, args...); err != nil {
+		return nil, err
+	}
+
+	idx := map[string]int{}
+	result := []models.OcorrenciaPorCidade{}
+	for _, l := range linhas {
+		i, ok := idx[l.Cidade]
+		if !ok {
+			i = len(result)
+			idx[l.Cidade] = i
+			result = append(result, models.OcorrenciaPorCidade{
+				Cidade:    l.Cidade,
+				Categoria: map[string]int{},
+			})
+		}
+		result[i].Categoria[l.Categoria] = l.Total
+		result[i].Total += l.Total
+	}
+	return result, nil
+}
+
+func (repo ReclamacaoRepository) GetOcorrenciasPorCategoria(inicio, fim *time.Time) ([]models.OcorrenciaPorCategoria, error) {
+	query := `
+		SELECT
+			COALESCE(NULLIF(TRIM(categoria), ''), 'sem categoria') AS categoria,
+			COUNT(*) AS total
+		FROM reclamacao`
+	args := []any{}
+	if inicio != nil {
+		args = append(args, *inicio)
+		query += fmt.Sprintf(` WHERE data_criacao >= $%d`, len(args))
+	}
+	if fim != nil {
+		args = append(args, *fim)
+		if inicio != nil {
+			query += fmt.Sprintf(` AND data_criacao < $%d`, len(args))
+		} else {
+			query += fmt.Sprintf(` WHERE data_criacao < $%d`, len(args))
+		}
+	}
+	query += ` GROUP BY 1 ORDER BY total DESC, categoria`
+	list := []models.OcorrenciaPorCategoria{}
+	err := repo.connection.Select(&list, query, args...)
+	if list == nil {
+		list = []models.OcorrenciaPorCategoria{}
+	}
+	return list, err
+}
+
 func (repo ReclamacaoRepository) GetUsuariosCelular() (map[int]string, error) {
 	const query = `SELECT id, celular FROM usuarios`
 	rows, err := repo.connection.Query(query)

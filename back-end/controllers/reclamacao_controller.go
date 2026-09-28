@@ -307,6 +307,69 @@ func (ctrl ReclamacaoController) GetRelatorioSolicitacoes(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, relatorio)
 }
 
+func (ctrl ReclamacaoController) GetOcorrenciasPorCidade(c *gin.Context) {
+	var inicio, fim *time.Time
+	if inicioStr := c.Query("inicio"); inicioStr != "" {
+		t, err := time.Parse("2006-01-02", inicioStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "inicio inválido"})
+			return
+		}
+		inicio = &t
+	}
+	if fimStr := c.Query("fim"); fimStr != "" {
+		t, err := time.Parse("2006-01-02", fimStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "fim inválido"})
+			return
+		}
+		t = t.Add(24 * time.Hour)
+		fim = &t
+	}
+	list, err := ctrl.useCase.GetOcorrenciasPorCidade(inicio, fim)
+	if err != nil {
+		var appErr *apperror.AppError
+		if errors.As(err, &appErr) {
+			c.IndentedJSON(appErr.StatusCode, gin.H{"error": appErr.Message})
+			return
+		}
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.IndentedJSON(http.StatusOK, list)
+}
+
+func (ctrl ReclamacaoController) GetOcorrenciasPorCategoria(c *gin.Context) {
+	var inicio, fim *time.Time
+	if inicioStr := c.Query("inicio"); inicioStr != "" {
+		t, err := time.Parse("2006-01-02", inicioStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "inicio inválido"})
+			return
+		}
+		inicio = &t
+	}
+	if fimStr := c.Query("fim"); fimStr != "" {
+		t, err := time.Parse("2006-01-02", fimStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "fim inválido"})
+			return
+		}
+		t = t.Add(24 * time.Hour)
+		fim = &t
+	}
+	list, err := ctrl.useCase.GetOcorrenciasPorCategoria(inicio, fim)
+	if err != nil {
+		var appErr *apperror.AppError
+		if errors.As(err, &appErr) {
+			c.IndentedJSON(appErr.StatusCode, gin.H{"error": appErr.Message})
+			return
+		}
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.IndentedJSON(http.StatusOK, list)
+}
 func (ctrl ReclamacaoController) GetOcorrenciaById(c *gin.Context) {
 	o, err := ctrl.useCase.GetOcorrenciaById(c.Param("id"))
 	if err != nil {

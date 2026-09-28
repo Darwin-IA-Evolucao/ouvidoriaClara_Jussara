@@ -628,6 +628,22 @@ func (uc ReclamacaoUseCases) GetRelatorioSolicitacoes(inicio, fim *time.Time) (m
 	return relatorio, nil
 }
 
+func (uc ReclamacaoUseCases) GetOcorrenciasPorCidade(inicio, fim *time.Time) ([]models.OcorrenciaPorCidade, error) {
+	list, err := uc.repository.GetOcorrenciasPorCidade(inicio, fim)
+	if err != nil {
+		return nil, apperror.Internal(err.Error())
+	}
+	return list, nil
+}
+
+func (uc ReclamacaoUseCases) GetOcorrenciasPorCategoria(inicio, fim *time.Time) ([]models.OcorrenciaPorCategoria, error) {
+	list, err := uc.repository.GetOcorrenciasPorCategoria(inicio, fim)
+	if err != nil {
+		return nil, apperror.Internal(err.Error())
+	}
+	return list, nil
+}
+
 func (uc ReclamacaoUseCases) GetOcorrenciaById(id string) (models.Ocorrencia, error) {
 	o, err := uc.repository.GetOcorrenciaById(id)
 	if err != nil {

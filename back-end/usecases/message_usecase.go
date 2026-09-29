@@ -183,11 +183,11 @@ func (u *MensagemUseCase) AddMensagem(addMensagem *models.AddMensagem) error {
 			mensagem += fmt.Sprintf("- instancia: %s\n", addMensagem.Instance)
 			mensagem += fmt.Sprintf("- contatos: %d\n", countContatos)
 			mensagem += fmt.Sprintf("- plano: %d", planoAtual)
-			err := config.EnviarMensagem(avisoPlano.TelefoneRicardo, mensagem)
+			err := config.EnviarMensagem(avisoPlano.TelefoneRicardo, mensagem, "Limite Plano")
 			if err != nil {
 				return fmt.Errorf("erro ao enviar mensagem de plano atingido: %w", err)
 			}
-			err = config.EnviarMensagem(avisoPlano.TelefoneLeo, mensagem)
+			err = config.EnviarMensagem(avisoPlano.TelefoneLeo, mensagem, "Limite Plano")
 			if err != nil {
 				return fmt.Errorf("erro ao enviar mensagem de plano atingido: %w", err)
 			}
@@ -354,7 +354,7 @@ func (u *MensagemUseCase) EnviarMensagemAgente(telefone, conteudo string) (*mode
 		return nil, fmt.Errorf("erro ao desligar a IA: %w", err)
 	}
 
-	if err := config.EnviarMensagem(u.padronizaTelefone(telefone), conteudo); err != nil {
+	if err := config.EnviarMensagem(u.padronizaTelefone(telefone), conteudo, "Mensagem Humano"); err != nil {
 		return nil, fmt.Errorf("erro ao enviar mensagem: %w", err)
 	}
 

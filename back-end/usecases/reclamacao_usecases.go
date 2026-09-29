@@ -57,12 +57,18 @@ func (uc ReclamacaoUseCases) GetCategorias() []string {
 
 func mensagemStatusCliente(nome, status, motivo string) string {
 	nome = strings.TrimSpace(nome)
-	msg := fmt.Sprintf("Olá %s sua solicitação foi %s\n\n", nome, status)
+
+	msg := fmt.Sprintf(
+		"Olá %s, sua solicitação foi %s",
+		nome,
+		status,
+	)
+
 	if strings.TrimSpace(motivo) != "" {
-		msg += fmt.Sprintf("Motivo: %s\n\n", motivo)
+		msg += fmt.Sprintf(" • Motivo: %s", motivo)
 	}
-	msg += "Atenciosamente, Gabinete Jussara Fernandes.\n\n"
-	msg += "Obs.:*Essa é uma mensagem automática, por gentileza não responder, caso queira entrar em contato com a equipe, utilize o canal de comunicação: (15) 99104-6908*"
+
+	msg += " • Atenciosamente, Gabinete Professora Dorinha. • Obs.: Essa é uma mensagem automática, por gentileza não responder."
 
 	return msg
 }
@@ -128,7 +134,7 @@ func (uc ReclamacaoUseCases) AprovarInquerito(id string, mensagem string, idUsua
 		if err != nil {
 			return err
 		}
-		err = config.EnviarMensagem(reclamacao.Telefone, msg)
+		err = config.EnviarMensagem(reclamacao.Telefone, msg, "Aprovada")
 		if err != nil {
 			return apperror.Internal(fmt.Sprintf("Erro ao enviar mensagem de aprovação de inquerito: %s", err.Error()))
 		}
@@ -219,7 +225,7 @@ func (uc ReclamacaoUseCases) AprovarRequerimento(id string, mensagem string, idU
 		if err != nil {
 			return err
 		}
-		err = config.EnviarMensagem(reclamacao.Telefone, msg)
+		err = config.EnviarMensagem(reclamacao.Telefone, msg, "Aprovada")
 		if err != nil {
 			return apperror.Internal(fmt.Sprintf("Erro ao enviar mensagem de aprovação de requerimento: %s", err.Error()))
 		}
@@ -257,7 +263,7 @@ func (uc ReclamacaoUseCases) AprovarOutros(id string, mensagem string, idUsuario
 		if err != nil {
 			return err
 		}
-		err = config.EnviarMensagem(reclamacao.Telefone, msg)
+		err = config.EnviarMensagem(reclamacao.Telefone, msg, "Aprovada")
 		if err != nil {
 			return apperror.Internal(fmt.Sprintf("Erro ao enviar mensagem de aprovação como outros: %s", err.Error()))
 		}
@@ -308,7 +314,7 @@ func (uc ReclamacaoUseCases) AprovarComoAmbos(id string, mensagem string, idUsua
 	if err != nil {
 		return err
 	}
-	err = config.EnviarMensagem(reclamacao.Telefone, msg)
+	err = config.EnviarMensagem(reclamacao.Telefone, msg, "Aprovada")
 	if err != nil {
 		return apperror.Internal(fmt.Sprintf("Erro ao enviar mensagem de aprovação de requerimento: %s", err.Error()))
 	}
@@ -375,7 +381,7 @@ func (uc ReclamacaoUseCases) AprovarCausaAnimal(id string, mensagem string, idUs
 		if err != nil {
 			return err
 		}
-		err = config.EnviarMensagem(reclamacao.Telefone, msg)
+		err = config.EnviarMensagem(reclamacao.Telefone, msg, "Aprovada")
 		if err != nil {
 			return apperror.Internal(fmt.Sprintf("Erro ao enviar mensagem de aprovação de causa animal: %s", err.Error()))
 		}
@@ -410,7 +416,7 @@ func (uc ReclamacaoUseCases) FinalizarReclamacao(id string, mensagem string, idU
 	if err != nil {
 		return err
 	}
-	err = config.EnviarMensagem(reclamacao.Telefone, msg)
+	err = config.EnviarMensagem(reclamacao.Telefone, msg, "Finalizada")
 	if err != nil {
 		return apperror.Internal(fmt.Sprintf("Erro ao enviar mensagem de finalização de reclamacao: %s", err.Error()))
 	}
@@ -445,7 +451,7 @@ func (uc ReclamacaoUseCases) ReprovarInquerito(id string, mensagem string, idUsu
 		if err != nil {
 			return err
 		}
-		err = config.EnviarMensagem(reclamacao.Telefone, msg)
+		err = config.EnviarMensagem(reclamacao.Telefone, msg, "Reprovada")
 		if err != nil {
 			return apperror.Internal(fmt.Sprintf("Erro ao enviar mensagem de reprovação de inquerito: %s", err.Error()))
 		}
@@ -545,7 +551,7 @@ func (uc ReclamacaoUseCases) CreateOcorrencia(request models.OcorrenciaRequest) 
 	if !data.EhManual {
 		msg := uc.GerarMensagemNovaOcorrencia(*cliente, data)
 
-		config.EnviarMensagem(telefoneEnvio, msg)
+		config.EnviarMensagem(telefoneEnvio, msg, "Nova Ocorrência")
 		if data.Detalhes.MidiasAnimal != "" {
 			midias := strings.Split(data.Detalhes.MidiasAnimal, ",")
 
@@ -838,89 +844,102 @@ func (uc *ReclamacaoUseCases) GerarMensagemEmail(cliente models.Cliente, ocorren
 	return msg.String()
 }
 
+// func (uc *ReclamacaoUseCases) GerarMensagemNovaOcorrencia(cliente models.Cliente, ocorrencia models.OcorrenciaData) string {
+// 	var msg strings.Builder
+
+// 	addCampo := func(emoji, titulo, valor string) {
+// 		if strings.TrimSpace(valor) != "" {
+// 			msg.WriteString(fmt.Sprintf("%s *%s:* %s\n", emoji, titulo, valor))
+// 		}
+// 	}
+
+// 	dataTime, err := time.Parse("2006-01-02", cliente.DataNascimento)
+// 	if err != nil {
+// 		fmt.Println("erro ao gerar card nova ocorrencia: ", err)
+// 		return ""
+// 	}
+// 	dataNascimento := dataTime.Format("02/01/2006")
+
+// 	msg.WriteString("📋 *NOVA OCORRÊNCIA* 📋\n\n")
+
+// 	// =========================
+// 	// CLIENTE
+// 	// =========================
+// 	msg.WriteString("👤 *DADOS DO CLIENTE*\n")
+
+// 	addCampo("🪪", "Nome", cliente.Nome)
+// 	addCampo("📱", "Telefone", config.FormatarTelefone(cliente.Telefone))
+// 	addCampo("🎂", "Data de Nascimento", dataNascimento)
+// 	addCampo("🏙️", "Cidade", cliente.Cidade)
+// 	addCampo("🏠", "Endereço", cliente.Endereco)
+// 	addCampo("📍", "Bairro", cliente.Bairro)
+
+// 	msg.WriteString("\n")
+
+// 	// =========================
+// 	// OCORRÊNCIA
+// 	// =========================
+// 	msg.WriteString("🚨 *DADOS DA OCORRÊNCIA*\n")
+
+// 	addCampo("📂", "Categoria", ocorrencia.Categoria)
+// 	addCampo("📝", "Reclamação", ocorrencia.Reclamacao)
+// 	addCampo("🗺️", "Região", ocorrencia.Regiao)
+
+// 	d := ocorrencia.Detalhes
+
+// 	// Maus-tratos
+// 	addCampo("📌", "Endereço da Ocorrência", d.EnderecoOcorrencia)
+// 	addCampo("👨‍👩‍👧", "Conhece o Tutor", d.ConheceTutor)
+// 	addCampo("🐾", "Condições do Animal", d.CondicoesAnimal)
+// 	addCampo("🔁", "Frequência dos Maus-tratos", d.FrequenciaMausTratos)
+
+// 	// Animal
+// 	addCampo("🐶", "Nome do Animal", d.NomeAnimal)
+// 	addCampo("🦴", "Espécie", d.EspecieAnimal)
+// 	addCampo("⏳", "Idade", d.IdadeAnimal)
+// 	addCampo("⚧️", "Sexo", d.SexoAnimal)
+// 	addCampo("📍", "Bairro do Animal", d.BairroAnimal)
+// 	addCampo("🙋", "Responsável", d.NomeResponsavelAnimal)
+// 	addCampo("☎️", "Telefone do Responsável", config.FormatarTelefone(d.TelefoneResponsavelAnimal))
+// 	addCampo("📖", "Histórico do Animal", d.HistoricoAnimal)
+
+// 	// Saúde
+// 	addCampo("💳", "Possui CadÚnico", d.TemCadUnico)
+// 	addCampo("🛟", "Protetor Independente", d.EhProtetorIndependente)
+// 	addCampo("🏥", "Situação do Animal", d.SituacaoAnimal)
+
+// 	// Castração
+// 	addCampo("💕", "Quando Cruzou", d.QuandoCruzou)
+// 	addCampo("🩺", "Informações de Saúde", d.InfoSaudeAnimal)
+
+// 	// Denúncia
+// 	addCampo("📣", "Detalhes da Denúncia", d.DetalhesDenuncia)
+
+// 	// Silvestres
+// 	addCampo("⏰", "Tempo no Local", d.TempoAnimalLocal)
+// 	addCampo("🩹", "Ferimentos", d.FerimentosAnimal)
+// 	addCampo("🚑", "Providências Tomadas", d.ProvidenciasAnimal)
+
+// 	// Comuns
+// 	addCampo("📸", "Mídias", d.MidiasAnimal)
+// 	addCampo("📑", "Protocolo", d.ProtocoloDenuncia)
+
+// 	if d.Regiao != "" && d.Regiao != ocorrencia.Regiao {
+// 		addCampo("🌎", "Região Informada", d.Regiao)
+// 	}
+
+// 	return msg.String()
+// }
+
 func (uc *ReclamacaoUseCases) GerarMensagemNovaOcorrencia(cliente models.Cliente, ocorrencia models.OcorrenciaData) string {
-	var msg strings.Builder
+	msg := fmt.Sprintf(
+		"Cliente: %s • Telefone: %s • Cidade: %s • Categoria: %s • Reclamação: %s",
+		cliente.Nome,
+		config.FormatarTelefone(cliente.Telefone),
+		cliente.Cidade,
+		ocorrencia.Categoria,
+		ocorrencia.Reclamacao,
+	)
 
-	addCampo := func(emoji, titulo, valor string) {
-		if strings.TrimSpace(valor) != "" {
-			msg.WriteString(fmt.Sprintf("%s *%s:* %s\n", emoji, titulo, valor))
-		}
-	}
-
-	dataTime, err := time.Parse("2006-01-02", cliente.DataNascimento)
-	if err != nil {
-		fmt.Println("erro ao gerar card nova ocorrencia: ", err)
-		return ""
-	}
-	dataNascimento := dataTime.Format("02/01/2006")
-
-	msg.WriteString("📋 *NOVA OCORRÊNCIA* 📋\n\n")
-
-	// =========================
-	// CLIENTE
-	// =========================
-	msg.WriteString("👤 *DADOS DO CLIENTE*\n")
-
-	addCampo("🪪", "Nome", cliente.Nome)
-	addCampo("📱", "Telefone", config.FormatarTelefone(cliente.Telefone))
-	addCampo("🎂", "Data de Nascimento", dataNascimento)
-	addCampo("🏙️", "Cidade", cliente.Cidade)
-	addCampo("🏠", "Endereço", cliente.Endereco)
-	addCampo("📍", "Bairro", cliente.Bairro)
-
-	msg.WriteString("\n")
-
-	// =========================
-	// OCORRÊNCIA
-	// =========================
-	msg.WriteString("🚨 *DADOS DA OCORRÊNCIA*\n")
-
-	addCampo("📂", "Categoria", ocorrencia.Categoria)
-	addCampo("📝", "Reclamação", ocorrencia.Reclamacao)
-	addCampo("🗺️", "Região", ocorrencia.Regiao)
-
-	d := ocorrencia.Detalhes
-
-	// Maus-tratos
-	addCampo("📌", "Endereço da Ocorrência", d.EnderecoOcorrencia)
-	addCampo("👨‍👩‍👧", "Conhece o Tutor", d.ConheceTutor)
-	addCampo("🐾", "Condições do Animal", d.CondicoesAnimal)
-	addCampo("🔁", "Frequência dos Maus-tratos", d.FrequenciaMausTratos)
-
-	// Animal
-	addCampo("🐶", "Nome do Animal", d.NomeAnimal)
-	addCampo("🦴", "Espécie", d.EspecieAnimal)
-	addCampo("⏳", "Idade", d.IdadeAnimal)
-	addCampo("⚧️", "Sexo", d.SexoAnimal)
-	addCampo("📍", "Bairro do Animal", d.BairroAnimal)
-	addCampo("🙋", "Responsável", d.NomeResponsavelAnimal)
-	addCampo("☎️", "Telefone do Responsável", config.FormatarTelefone(d.TelefoneResponsavelAnimal))
-	addCampo("📖", "Histórico do Animal", d.HistoricoAnimal)
-
-	// Saúde
-	addCampo("💳", "Possui CadÚnico", d.TemCadUnico)
-	addCampo("🛟", "Protetor Independente", d.EhProtetorIndependente)
-	addCampo("🏥", "Situação do Animal", d.SituacaoAnimal)
-
-	// Castração
-	addCampo("💕", "Quando Cruzou", d.QuandoCruzou)
-	addCampo("🩺", "Informações de Saúde", d.InfoSaudeAnimal)
-
-	// Denúncia
-	addCampo("📣", "Detalhes da Denúncia", d.DetalhesDenuncia)
-
-	// Silvestres
-	addCampo("⏰", "Tempo no Local", d.TempoAnimalLocal)
-	addCampo("🩹", "Ferimentos", d.FerimentosAnimal)
-	addCampo("🚑", "Providências Tomadas", d.ProvidenciasAnimal)
-
-	// Comuns
-	addCampo("📸", "Mídias", d.MidiasAnimal)
-	addCampo("📑", "Protocolo", d.ProtocoloDenuncia)
-
-	if d.Regiao != "" && d.Regiao != ocorrencia.Regiao {
-		addCampo("🌎", "Região Informada", d.Regiao)
-	}
-
-	return msg.String()
+	return msg
 }

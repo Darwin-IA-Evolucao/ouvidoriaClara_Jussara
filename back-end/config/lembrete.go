@@ -26,6 +26,7 @@ func AtualizarAviso(conn *sqlx.DB) error {
 	_, err := conn.Exec(query)
 	return err
 }
+
 func EnviarLembrete(conn *sqlx.DB) {
 	clientes, err := VerificarLembrete(conn)
 	if err != nil {
@@ -36,14 +37,16 @@ func EnviarLembrete(conn *sqlx.DB) {
 	// Enviar lembrete para cada cliente
 	for _, cliente := range clientes {
 		fmt.Printf("[ENVIAR LEMBRETE] Enviando lembrete sobre a reclamação do cliente: %s - %s\n", cliente.Telefone, cliente.Nome)
-		msg := "🤝LEMBRETE🤝\n"
-		msg += fmt.Sprintf("Olá! O(a) cliente %s tem uma solicitação com prazo marcado para hoje.\n", cliente.Nome)
-		msg += fmt.Sprintf("Entre em contato pelo número: %s.\n", cliente.Telefone)
+		msg := fmt.Sprintf(
+			"Cliente: %s • Prazo: hoje • Telefone: %s",
+			cliente.Nome,
+			cliente.Telefone,
+		)
 		if cliente.Mensagem != "" {
 			msg += fmt.Sprintf("Mensagem: %s\n", cliente.Mensagem)
 		}
 		//err = EnviarMensagem(os.Getenv("TELEFONE_GERAL"), msg)
-		err = EnviarMensagem(os.Getenv("TELEFONE_GERAL"), msg)
+		err = EnviarMensagem(os.Getenv("TELEFONE_GERAL"), msg, "Lembrete")
 		if err != nil {
 			fmt.Println("[ENVIAR LEMBRETE] Erro ao enviar lembrete: ", err)
 			continue
@@ -56,7 +59,6 @@ func EnviarLembrete(conn *sqlx.DB) {
 		return
 	}
 }
-
 func EnviarLembreteNoHorario(conn *sqlx.DB) {
 	for {
 		now := time.Now()

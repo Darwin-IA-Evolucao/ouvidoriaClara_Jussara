@@ -83,7 +83,7 @@ func EnviarMensagemReativacao(telefone, mensagem string) error {
 	}
 	return nil
 }
-func EnviarMensagem(telefone, mensagem string) error {
+func EnviarMensagem(telefone, mensagem, status string) error {
 	baseURL := os.Getenv("WEBHOOK_ENVIAR_MENSAGEM")
 	client := &http.Client{
 		Timeout: time.Second * 10,
@@ -93,6 +93,7 @@ func EnviarMensagem(telefone, mensagem string) error {
 	data.Set("mensagem", mensagem)
 	data.Set("telefone", telefone)
 	data.Set("instance", "ouvidoria_clara_jussara")
+	data.Set("status", status)
 
 	req, err := http.NewRequest("POST", baseURL, strings.NewReader(data.Encode()))
 	if err != nil {
@@ -245,7 +246,7 @@ func FormataValor(valor int) float64 {
 	return float64(valor)
 }
 
-func EnviarRelatorio(telefone, mensagem string) error {
+func EnviarRelatorio(telefone, mensagem, status string) error {
 	baseURL := os.Getenv("WEBHOOK_ENVIAR_RELATORIO")
 	client := &http.Client{
 		Timeout: time.Second * 10,
@@ -255,6 +256,7 @@ func EnviarRelatorio(telefone, mensagem string) error {
 	data.Set("mensagem", mensagem)
 	data.Set("telefone", telefone)
 	data.Set("instance", "relatorioDarwin")
+	data.Set("status", status)
 
 	req, err := http.NewRequest("POST", baseURL, strings.NewReader(data.Encode()))
 	if err != nil {

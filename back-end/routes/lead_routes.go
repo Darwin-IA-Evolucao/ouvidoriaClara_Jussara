@@ -11,4 +11,5 @@ func SetupLeadRoutes(router *gin.Engine, leadController controllers.LeadControll
 	router.PUT("/leads/ativar/:telefone", leadController.AtivarLead)
 	router.GET("/leads", leadController.GetAllLeads)
 	router.GET("/contatos-unificados", leadController.GetAllContatosUnificados)
+	router.GET("/contatos-unificados/resumo", leadController.GetResumoContatosUnificados)
 }

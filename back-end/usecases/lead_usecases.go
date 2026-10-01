@@ -53,6 +53,10 @@ func (usecase LeadUseCases) GetAllContatosUnificados(limit, offset int, filtro m
 	}, nil
 }
 
+func (usecase LeadUseCases) GetResumoContatosUnificados(filtro models.ContatosUnificadosFiltro) (models.ContatosUnificadosResumo, error) {
+	return usecase.repository.GetResumoContatosUnificados(filtro)
+}
+
 func (usecase LeadUseCases) GetCountContatosAtivos() (int, error) {
 	return usecase.repository.GetCountContatosAtivos()
 }

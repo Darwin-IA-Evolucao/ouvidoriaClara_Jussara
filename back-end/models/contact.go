@@ -94,3 +94,9 @@ type ContatosUnificadosResponse struct {
 	Usados             int                  `json:"usados"`
 	Ocupacao           string               `json:"ocupacao"`
 }
+
+type ContatosUnificadosResumo struct {
+	Total         int            `json:"total" db:"total"`
+	TotalAtivos   int            `json:"totalAtivos" db:"total_ativos"`
+	DddHistograma map[string]int `json:"dddHistograma" db:"-"`
+}

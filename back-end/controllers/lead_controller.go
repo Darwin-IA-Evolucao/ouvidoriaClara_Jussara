@@ -171,3 +171,30 @@ func (controller LeadController) GetAllContatosUnificados(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, leadsUnificados)
 }
+
+func (controller LeadController) GetResumoContatosUnificados(c *gin.Context) {
+	filtro := models.ContatosUnificadosFiltro{}
+	if inicioStr := c.Query("inicio"); inicioStr != "" {
+		t, err := time.Parse("2006-01-02", inicioStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "inicio inválido"})
+			return
+		}
+		filtro.Inicio = &t
+	}
+	if fimStr := c.Query("fim"); fimStr != "" {
+		t, err := time.Parse("2006-01-02", fimStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "fim inválido"})
+			return
+		}
+		t = t.Add(24 * time.Hour)
+		filtro.Fim = &t
+	}
+	resumo, err := controller.useCase.GetResumoContatosUnificados(filtro)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, resumo)
+}

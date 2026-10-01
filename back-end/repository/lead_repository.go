@@ -164,6 +164,38 @@ func (repo LeadRepository) GetCountContatosUnificados(filtro models.ContatosUnif
 	return count, nil
 }
 
+func (repo LeadRepository) GetResumoContatosUnificados(filtro models.ContatosUnificadosFiltro) (models.ContatosUnificadosResumo, error) {
+	where, args := repo.filtroContatosUnificados(filtro)
+	from := contatosUnificadosFrom
+
+	var resumo models.ContatosUnificadosResumo
+	countQuery := `SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE c.ativo) AS total_ativos ` + from + where
+	if err := repo.connection.Get(&resumo, countQuery, args...); err != nil {
+		return models.ContatosUnificadosResumo{}, err
+	}
+
+	histQuery := `
+		SELECT ddd, COUNT(*) AS count FROM (
+			SELECT LEFT(CASE WHEN digits LIKE '55%' AND LENGTH(digits) > 11
+				THEN SUBSTRING(digits FROM 3) ELSE digits END, 2) AS ddd
+			FROM (SELECT regexp_replace(c.telefone, '\D', '', 'g') AS digits ` + from + where + `) t
+			WHERE LENGTH(digits) >= 10
+		) s
+		GROUP BY 1`
+	var rows []struct {
+		DDD   string `db:"ddd"`
+		Count int    `db:"count"`
+	}
+	if err := repo.connection.Select(&rows, histQuery, args...); err != nil {
+		return models.ContatosUnificadosResumo{}, err
+	}
+	resumo.DddHistograma = make(map[string]int, len(rows))
+	for _, row := range rows {
+		resumo.DddHistograma[row.DDD] = row.Count
+	}
+	return resumo, nil
+}
+
 func (repo LeadRepository) GetCountContatosAtivos() (int, error) {
 	const query = `SELECT COUNT(*) FROM contatos WHERE ativo = true`
 

@@ -96,7 +96,7 @@ func (u *ClienteUseCase) CreateClienteDify(cliente *models.Cliente) error {
 func validarCampos(campos ...string) bool {
 	for _, campo := range campos {
 		s := strings.TrimSpace(strings.ToLower(campo))
-		if s == "" || s == "none" || strings.Contains(s, "não") {
+		if s == "" || strings.ToLower(s) == "none" || strings.Contains(strings.ToLower(s), "não") || strings.ToLower(s) == "n/a" || strings.ToLower(s) == "null" {
 			return false
 		}
 	}

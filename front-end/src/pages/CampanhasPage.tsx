@@ -502,25 +502,30 @@ const CampanhasPage: React.FC = () => {
           >
             Contatos por liderança
           </Typography>
-          <Box sx={{ width: '100%', height: 300 }}>
+          <Box sx={{ width: '100%', height: isMobile ? Math.max(280, chartData.length * 40) : 300 }}>
             <ResponsiveContainer>
-              <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 48 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+              <BarChart
+                data={chartData}
+                layout={isMobile ? 'vertical' : 'horizontal'}
+                margin={{ top: 8, right: isMobile ? 24 : 8, left: 0, bottom: isMobile ? 8 : 48 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={!isMobile} horizontal={isMobile} />
                 <XAxis
-                  dataKey="nome"
-                  tick={{ fill: 'hsl(var(--text-secondary))', fontSize: 11 }}
-                  interval={0}
-                  angle={-25}
-                  textAnchor="end"
-                  height={60}
-                />
-                <YAxis
+                  type={isMobile ? 'number' : 'category'}
+                  dataKey={isMobile ? undefined : 'nome'}
                   allowDecimals={false}
                   tick={{ fill: 'hsl(var(--text-secondary))', fontSize: 11 }}
-                  width={36}
+                  {...(isMobile ? {} : { interval: 0, angle: -25, textAnchor: 'end' as const, height: 60 })}
+                />
+                <YAxis
+                  type={isMobile ? 'category' : 'number'}
+                  dataKey={isMobile ? 'nome' : undefined}
+                  allowDecimals={false}
+                  tick={{ fill: 'hsl(var(--text-secondary))', fontSize: 11 }}
+                  width={isMobile ? 110 : 36}
                 />
                 <Tooltip content={<ChartTooltip />} cursor={{ fill: 'hsl(var(--primary) / 0.08)' }} />
-                <Bar dataKey="contatos" radius={[6, 6, 0, 0]} maxBarSize={48}>
+                <Bar dataKey="contatos" radius={isMobile ? [0, 6, 6, 0] : [6, 6, 0, 0]} maxBarSize={isMobile ? 22 : 48}>
                   {chartData.map((_, i) => (
                     <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />
                   ))}

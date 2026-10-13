@@ -1,5 +1,5 @@
 import { apiGet, apiPost, apiPut, apiDelete } from '../utils/api'
-import type { Ocorrencia, OcorrenciaRequest, OcorrenciaUpdateRequest } from '../types'
+import type { Ocorrencia, OcorrenciaRequest, OcorrenciaUpdateRequest, OcorrenciaPorCidade } from '../types'
 
 export async function aprovarInquerito(id: number, mensagem: string, idUsuario: number): Promise<void> {
   await apiPost<void>(`/aprovar/${id}`, { mensagem, idUsuario })
@@ -21,8 +21,8 @@ export async function reprovarInquerito(id: number, mensagem: string, idUsuario:
   await apiPost<void>(`/reprovar/${id}`, { mensagem, idUsuario })
 }
 
-export async function finalizarReclamacao(id: number, mensagem: string, idUsuario: number): Promise<void> {
-  await apiPost<void>(`/finalizar/${id}`, { mensagem, idUsuario })
+export async function aprovarOutros(id: number, mensagem: string, idUsuario: number): Promise<void> {
+  await apiPost<void>(`/aprovar/outros/${id}`, { mensagem, idUsuario })
 }
 
 export async function colocarEmAnalise(id: number, data: string, mensagem: string, idUsuario: number): Promise<void> {
@@ -42,6 +42,15 @@ export async function getAllOcorrencias(telefone?: string, limit: number = 0, of
   if (Array.isArray(res)) return { ocorrencias: res, total: res.length }
   if (res && Array.isArray(res.ocorrencias)) return { ocorrencias: res.ocorrencias, total: res.total ?? res.ocorrencias.length }
   return { ocorrencias: [], total: 0 }
+}
+
+export async function getOcorrenciasPorCidade(inicio?: string, fim?: string): Promise<OcorrenciaPorCidade[]> {
+  const params = new URLSearchParams()
+  if (inicio) params.set('inicio', inicio)
+  if (fim) params.set('fim', fim)
+  const qs = params.toString()
+  const res = await apiGet<OcorrenciaPorCidade[] | null>(`/ocorrencias/cidades${qs ? `?${qs}` : ''}`)
+  return Array.isArray(res) ? res : []
 }
 
 export async function getOcorrenciaById(id: number): Promise<Ocorrencia> {

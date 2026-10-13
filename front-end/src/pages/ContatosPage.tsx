@@ -15,10 +15,11 @@ import { inputSx, dialogSx } from '../utils/inputSx'
 import {
   getAllContatosUnificados,
   getLeadsSummary,
-  ligarRobo, desligarRobo, createCliente, updateCliente, deleteCliente,
+  ligarRobo, desligarRobo, createCliente, updateCliente, deleteCliente, desativarLead,
 } from '../services/contatoUnificadoService'
 import { formatPhoneDisplay } from '../utils/phone'
-import { formatDate } from '../utils/date'
+import { isNA, displayField, editValue } from '../utils/display'
+import { formatDate, toUTCDate } from '../utils/date'
 import { getDadosCliente } from '../services/clienteService'
 import { getAllOcorrencias } from '../services/reclamacaoService'
 import { getAllEnderecos } from '../services/enderecoService'
@@ -48,7 +49,8 @@ const ContatosPage: React.FC = () => {
   const [summary, setSummary] = useState({ total: 0, usados: 0, ocupacao: '0/0', limite: 0 })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [search, setSearch] = useState('')
+  const [searchNome, setSearchNome] = useState('')
+  const [searchTelefone, setSearchTelefone] = useState('')
   const [filters, setFilters] = useState<FilterState>({ darwin: null, contact: null, gelo: null, reclamacao: null })
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
@@ -60,12 +62,12 @@ const ContatosPage: React.FC = () => {
   const [form, setForm] = useState<Cliente>({ telefone: '', nome: '', cidade: '', endereco: '', bairro: '', dataNascimento: '', dataCriacao: '' })
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [toDelete, setToDelete] = useState<ContatoUnificado | null>(null)
+  const [inativarTarget, setInativarTarget] = useState<ContatoUnificado | null>(null)
   const [ocorrenciaDialogOpen, setOcorrenciaDialogOpen] = useState(false)
   const [ocorrenciaList, setOcorrenciaList] = useState<Ocorrencia[]>([])
   const [ocorrenciaLoading, setOcorrenciaLoading] = useState(false)
   const [ocorrenciaContact, setOcorrenciaContact] = useState<ContatoUnificado | null>(null)
   const [ocFiltroStatus, setOcFiltroStatus] = useState('')
-  const [ocFiltroTipo, setOcFiltroTipo] = useState('')
   const [ocFiltroCategoria, setOcFiltroCategoria] = useState('')
   const [categorias, setCategorias] = useState<string[]>([])
   const [filtrosAbertos, setFiltrosAbertos] = useState(false)
@@ -82,29 +84,46 @@ const ContatosPage: React.FC = () => {
     setError(null)
     try {
       const offset = (page - 1) * ITEMS_PER_PAGE
-      const data = await getAllContatosUnificados(ITEMS_PER_PAGE, offset, {
-        search: search.trim() || undefined,
+      const phoneDigits = searchTelefone.replace(/\D/g, '')
+      const nomeTerm = searchNome.trim()
+      // Telefone preenchido → busca TODOS os matches do server (limit=0) e filtra
+      // nome client-side sobre o conjunto completo: AND exato entre os campos e
+      // paginação correta. Só nome → paginação server-side normal.
+      const fetchAll = phoneDigits !== ''
+      const data = await getAllContatosUnificados(fetchAll ? 0 : ITEMS_PER_PAGE, fetchAll ? 0 : offset, {
+        search: phoneDigits || nomeTerm || undefined,
         darwin: filters.darwin,
-        leadAtivo: filters.contact,
+        leadAtivo: filters.contact ?? true,
         gelo: filters.gelo,
         reclamacao: filters.reclamacao,
         inicio: startDate || undefined,
         fim: endDate || undefined,
       })
-      setContatos(data.contatos)
-      setTotalCount(data.total)
-      setSummary({ total: data.total, usados: data.usados, ocupacao: data.ocupacao, limite: data.limite })
+      let pageItems = data.contatos
+      let total = data.total
+      if (fetchAll) {
+        const nl = nomeTerm.toLowerCase()
+        const matches = data.contatos.filter((c) =>
+          c.telefone.replace(/\D/g, '').includes(phoneDigits) &&
+          (!nl || (c.nome ?? '').toLowerCase().includes(nl)))
+        total = matches.length
+        pageItems = matches.slice(offset, offset + ITEMS_PER_PAGE)
+      }
+      setContatos(pageItems)
+      setTotalCount(total)
+      setSummary({ total, usados: data.usados, ocupacao: data.ocupacao, limite: data.limite })
     } catch (err: any) {
       setError(err.message || 'Erro ao carregar contatos')
     } finally {
       setLoading(false)
     }
-  }, [search, filters, startDate, endDate])
+  }, [searchNome, searchTelefone, filters, startDate, endDate])
 
   const refreshSummary = useCallback(async () => {
     try {
       const data = await getLeadsSummary()
-      setSummary(data)
+      // total do /leads inclui inativos — preserva o total filtrado do último load()
+      setSummary((prev) => ({ ...prev, usados: data.usados, ocupacao: data.ocupacao, limite: data.limite }))
     } catch { /* ignore */ }
   }, [])
 
@@ -114,19 +133,27 @@ const ContatosPage: React.FC = () => {
   }, [currentPage, load])
   useEffect(() => { fetchCategorias().then(setCategorias) }, [])
 
-  // Filtros aplicados server-side; contatos já vêm filtrados do backend
+  // Sem telefone: filtrados server-side. Com telefone: página já vem fatiada
+  // em load() após o AND client-side de nome+telefone. Inativados não voltam
+  // do servidor (leadAtivo=true na query) → páginas sempre cheias.
   const filtered = contatos
 
-  useEffect(() => { setCurrentPage(1) }, [filters, search, startDate, endDate])
+  useEffect(() => { setCurrentPage(1) }, [filters, searchNome, searchTelefone, startDate, endDate])
 
   // total de páginas baseado no total do servidor (já reflete os filtros)
   const totalPages = Math.max(1, Math.ceil(totalCount / ITEMS_PER_PAGE))
   const paginated = filtered
+
+  // filtro pode reduzir o nº de páginas abaixo da atual
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages)
+  }, [totalPages, currentPage])
   const resetFilters = () => {
     setFilters({ darwin: null, contact: null, gelo: null, reclamacao: null })
     setStartDate('')
     setEndDate('')
-    setSearch('')
+    setSearchNome('')
+    setSearchTelefone('')
   }
 
   const handleToggleDarwin = async (c: ContatoUnificado, targetState: boolean) => {
@@ -192,22 +219,43 @@ const ContatosPage: React.FC = () => {
     }
   }
 
+  const handleConfirmInativar = async () => {
+    if (!inativarTarget) return
+    const tel = inativarTarget.telefone
+    setActionLoading((p) => ({ ...p, [tel]: true }))
+    try {
+      await desativarLead(tel)
+      setInativarTarget(null)
+      await load(currentPage)
+    } catch (err: any) {
+      setError(err.message || 'Erro ao inativar contato')
+    } finally {
+      setActionLoading((p) => { const n = { ...p }; delete n[tel]; return n })
+    }
+  }
+
   const getColumnId = (o: Ocorrencia): string => {
     if (o.status === 'reprovado') return 'reprovar'
     if (o.status === 'aprovado') {
+      if (o.tipo === 'indicacao' || o.tipo === 'ambos') return 'aprovar-indicacao'
       if (o.tipo === 'requerimento') return 'aprovar-requerimento'
-      return 'aprovar-indicacao'
+      if (o.tipo === 'causa animal') return 'aprovar-causa-animal'
+      if (o.tipo === 'outros') return 'aprovar-outros'
+      return 'aprovado' // tipo não reconhecido pelo CRM — tag neutra, não mente
     }
     if (o.status === 'em análise') return 'em-analise'
     return 'pendentes'
   }
 
   const columnLabels: Record<string, string> = {
-    'pendentes': 'Solicitações Pendentes',
+    'pendentes': 'Sem Tratativa',
     'em-analise': 'Em Análise',
     'aprovar-indicacao': 'Concluído como Indicação',
     'aprovar-requerimento': 'Concluído como Requerimento',
-    'reprovar': 'Reprovado',
+    'aprovar-causa-animal': 'Concluído como Causa Animal',
+    'aprovar-outros': 'Concluído (Outros)',
+    'reprovar': 'Desqualificado',
+    'aprovado': 'Aprovado',
   }
 
   const columnColors: Record<string, string> = {
@@ -215,6 +263,8 @@ const ContatosPage: React.FC = () => {
     'em-analise': '#62A1D8',
     'aprovar-indicacao': '#66BB80',
     'aprovar-requerimento': '#E89E70',
+    'aprovar-causa-animal': '#B98CE8',
+    'aprovar-outros': '#5B8FE0',
     'reprovar': '#D16670',
   }
 
@@ -224,7 +274,6 @@ const ContatosPage: React.FC = () => {
     setOcorrenciaLoading(true)
     setOcorrenciaList([])
     setOcFiltroStatus('')
-    setOcFiltroTipo('')
     setOcFiltroCategoria('')
     setOcFiltroInicio('')
     setOcFiltroFim('')
@@ -244,11 +293,10 @@ const ContatosPage: React.FC = () => {
     if (!Array.isArray(ocorrenciaList)) return []
     return ocorrenciaList.filter((o) => {
       if (ocFiltroStatus && getColumnId(o) !== ocFiltroStatus) return false
-      if (ocFiltroTipo && o.tipo !== ocFiltroTipo) return false
       if (ocFiltroCategoria && o.categoria !== ocFiltroCategoria) return false
       if (ocFiltroInicio || ocFiltroFim) {
         if (!o.dataCriacao) return false
-        const d = new Date(o.dataCriacao)
+        const d = toUTCDate(o.dataCriacao)
         if (isNaN(d.getTime())) return false
         if (ocFiltroInicio) {
           const start = new Date(`${ocFiltroInicio}T00:00:00`)
@@ -261,7 +309,7 @@ const ContatosPage: React.FC = () => {
       }
       return true
     })
-  }, [ocorrenciaList, ocFiltroStatus, ocFiltroTipo, ocFiltroCategoria, ocFiltroInicio, ocFiltroFim])
+  }, [ocorrenciaList, ocFiltroStatus, ocFiltroCategoria, ocFiltroInicio, ocFiltroFim])
 
   const detalhesArr = (d: DetalhesReclamacao): { label: string; value: string }[] => {
     const arr: { label: string; value: string }[] = []
@@ -359,9 +407,9 @@ const ContatosPage: React.FC = () => {
                   size="small"
                   label="De"
                   InputLabelProps={{ shrink: true }}
-                  inputProps={{ style: { textAlign: isMobile ? 'center' : 'left' } }}
+                  inputProps={{ style: { textAlign: isMobile ? 'center' : 'left' }, max: endDate || undefined }}
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  onChange={(e) => { const v = e.target.value; setStartDate(v && endDate && v > endDate ? endDate : v) }}
                   sx={{ ...inputSx, minWidth: 150 }}
                 />
                 <TextField
@@ -369,9 +417,9 @@ const ContatosPage: React.FC = () => {
                   size="small"
                   label="Até"
                   InputLabelProps={{ shrink: true }}
-                  inputProps={{ style: { textAlign: isMobile ? 'center' : 'left' } }}
+                  inputProps={{ style: { textAlign: isMobile ? 'center' : 'left' }, min: startDate || undefined }}
                   value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
+                  onChange={(e) => { const v = e.target.value; setEndDate(v && startDate && v < startDate ? startDate : v) }}
                   sx={{ ...inputSx, minWidth: 150 }}
                 />
               </Box>
@@ -386,7 +434,7 @@ const ContatosPage: React.FC = () => {
               </Box>
             </Box>
 
-            {/* filter: search by name or phone */}
+            {/* filter: search by name and phone */}
             <Box
               sx={{
                 display: 'grid',
@@ -406,18 +454,26 @@ const ContatosPage: React.FC = () => {
                 }}
               >
                 <TextField
-                  label="Buscar nome ou telefone"
+                  label="Nome"
                   size="small"
                   inputProps={{ style: { textAlign: isMobile ? 'center' : 'left' } }}
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  sx={{ ...inputSx, minWidth: 220 }}
+                  value={searchNome}
+                  onChange={(e) => setSearchNome(e.target.value)}
+                  sx={{ ...inputSx, minWidth: 180 }}
+                />
+                <TextField
+                  label="Telefone"
+                  size="small"
+                  inputProps={{ inputMode: 'numeric', style: { textAlign: isMobile ? 'center' : 'left' } }}
+                  value={searchTelefone}
+                  onChange={(e) => setSearchTelefone(e.target.value)}
+                  sx={{ ...inputSx, minWidth: 160 }}
                 />
               </Box>
               <Box sx={{ display: 'flex', justifyContent: { xs: 'center', md: 'flex-start' }, alignItems: 'center' }}>
                 <Button
                   size="small"
-                  onClick={() => setSearch('')}
+                  onClick={() => { setSearchNome(''); setSearchTelefone('') }}
                   sx={{ color: 'hsl(var(--text-secondary))', textTransform: 'none', borderRadius: 2, width: isMobile ? '100%' : undefined }}
                 >
                   Limpar Filtros
@@ -473,7 +529,7 @@ const ContatosPage: React.FC = () => {
             <Users size={20} color="hsl(var(--accent))" />
             <Typography variant="h5" sx={{ color: 'hsl(var(--text-primary))', fontWeight: 700 }}>{summary.total}</Typography>
           </Box>
-          <Typography variant="caption" sx={{ display: 'block', textAlign: 'center', color: 'hsl(var(--text-secondary))', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Total de Contatos</Typography>
+          <Typography variant="caption" sx={{ display: 'block', textAlign: 'center', color: 'hsl(var(--text-secondary))', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Contatos Ativos</Typography>
         </GlassPanel>
       </Box>
 
@@ -500,7 +556,7 @@ const ContatosPage: React.FC = () => {
               }}>
                 <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, cursor: 'pointer' }} onClick={() => openEdit(c)}>
-                    <Typography sx={{ color: 'hsl(var(--text-primary))', fontWeight: 700, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 180 }}>{c.nome}</Typography>
+                    <Typography sx={{ color: 'hsl(var(--text-primary))', fontWeight: 700, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 180 }}>{displayField(c.nome)}</Typography>
                     {c.isGelado && <Snowflake size={14} color="#60a5fa" />}
                   </Box>
                   <Box
@@ -540,6 +596,18 @@ const ContatosPage: React.FC = () => {
                     <Button size="small" disabled={isLoading} onClick={() => handleToggleDarwin(c, true)} sx={{ textTransform: 'none', fontSize: 11, fontWeight: 600, borderRadius: 999, py: 0.5, ...(c.darwinAtivo ? { background: 'hsl(var(--primary) / 0.15)', color: 'hsl(var(--accent))', border: '1px solid hsl(var(--accent) / 0.5)', boxShadow: 'none' } : { border: '1px solid hsl(var(--border))', color: 'hsl(var(--text-secondary))' }) }}>Darwin IA Ativado</Button>
                     <Button size="small" disabled={isLoading} onClick={() => handleToggleDarwin(c, false)} sx={{ textTransform: 'none', fontSize: 11, fontWeight: 600, borderRadius: 999, py: 0.5, ...(!c.darwinAtivo ? { background: 'hsl(var(--primary) / 0.15)', color: 'hsl(var(--accent))', border: '1px solid hsl(var(--accent) / 0.5)', boxShadow: 'none' } : { border: '1px solid hsl(var(--border))', color: 'hsl(var(--text-secondary))' }) }}>Darwin IA Desligado</Button>
                   </Box>
+                  <Button
+                    size="small"
+                    disabled={isLoading}
+                    onClick={() => setInativarTarget(c)}
+                    sx={{
+                      textTransform: 'none', fontSize: 11, fontWeight: 600, borderRadius: 999, py: 0.5,
+                      border: '1px solid hsl(var(--border))', color: 'hsl(var(--error))',
+                      '&:hover': { bgcolor: 'hsl(var(--error) / 0.08)', border: '1px solid hsl(var(--error) / 0.4)' },
+                    }}
+                  >
+                    Inativar
+                  </Button>
                 </Box>
               </Box>
             )
@@ -584,8 +652,8 @@ const ContatosPage: React.FC = () => {
         <DialogTitle sx={{ color: 'hsl(var(--accent))', fontWeight: 700 }}>{editing ? 'Editar Cliente' : 'Novo Cliente'}</DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
           <TextField label="Telefone" value={form.telefone} onChange={(e) => setForm({ ...form, telefone: e.target.value })} onBlur={handleTelefoneBlur} variant="filled" sx={inputSx} disabled={!!editing} inputProps={{ autoComplete: 'off' }} />
-          <TextField label="Nome" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} variant="filled" sx={inputSx} inputProps={{ autoComplete: 'off' }} />
-          <TextField label="Cidade" value={form.cidade} onChange={(e) => setForm({ ...form, cidade: e.target.value })} variant="filled" sx={inputSx} inputProps={{ autoComplete: 'off' }} />
+          <TextField label="Nome" value={editValue(form.nome)} onChange={(e) => setForm({ ...form, nome: e.target.value })} variant="filled" sx={inputSx} placeholder="Não informado" inputProps={{ autoComplete: 'off' }} />
+          <TextField label="Cidade" value={editValue(form.cidade)} onChange={(e) => setForm({ ...form, cidade: e.target.value })} variant="filled" sx={inputSx} placeholder="Não informado" inputProps={{ autoComplete: 'off' }} />
           <Autocomplete
             fullWidth
             freeSolo
@@ -595,10 +663,10 @@ const ContatosPage: React.FC = () => {
             clearOnBlur={false}
             handleHomeEndKeys
             options={enderecos.map((e) => e.logradouro)}
-            value={form.endereco}
+            value={editValue(form.endereco)}
             onInputChange={(_, v) => setForm({ ...form, endereco: v ?? '' })}
             onChange={(_, v) => setForm({ ...form, endereco: v ?? '' })}
-            renderInput={(params) => <TextField {...params} label="Endereço" variant="filled" sx={inputSx} />}
+            renderInput={(params) => <TextField {...params} label="Endereço" variant="filled" sx={inputSx} placeholder="Não informado" />}
             sx={{ '& .MuiAutocomplete-root': { width: '100%' } }}
           />
           <Autocomplete
@@ -610,10 +678,10 @@ const ContatosPage: React.FC = () => {
             clearOnBlur={false}
             handleHomeEndKeys
             options={[...new Set(enderecos.map((e) => e.bairro))].sort()}
-            value={form.bairro}
+            value={editValue(form.bairro)}
             onInputChange={(_, v) => setForm({ ...form, bairro: v ?? '' })}
             onChange={(_, v) => setForm({ ...form, bairro: v ?? '' })}
-            renderInput={(params) => <TextField {...params} label="Bairro" variant="filled" sx={inputSx} />}
+            renderInput={(params) => <TextField {...params} label="Bairro" variant="filled" sx={inputSx} placeholder="Não informado" />}
             sx={{ '& .MuiAutocomplete-root': { width: '100%' } }}
           />
           <TextField label="Data de Nascimento" fullWidth type="date" value={form.dataNascimento} onChange={(e) => setForm({ ...form, dataNascimento: e.target.value })} variant="filled" sx={inputSx} InputLabelProps={{ shrink: true }} inputProps={{ autoComplete: 'off' }} />
@@ -634,15 +702,25 @@ const ContatosPage: React.FC = () => {
       <ConfirmDialog
         open={confirmOpen}
         title="Excluir Cliente"
-        message={`Confirmar exclusão de ${toDelete?.nome}?`}
+        message={`Confirmar exclusão de ${displayField(toDelete?.nome)}?`}
         onConfirm={confirmDelete}
         onCancel={() => setConfirmOpen(false)}
         destructive
       />
 
+      <ConfirmDialog
+        open={!!inativarTarget}
+        title="Inativar contato"
+        message={`Inativar ${displayField(inativarTarget?.nome)}? O contato vai desaparecer da aba Contatos como um todo. Isso não afeta a IA: se o contato enviar mensagem primeiro, a conversa continua normalmente.`}
+        confirmLabel="Inativar"
+        onConfirm={handleConfirmInativar}
+        onCancel={() => setInativarTarget(null)}
+        destructive
+      />
+
       <Dialog open={ocorrenciaDialogOpen} onClose={() => setOcorrenciaDialogOpen(false)} maxWidth="md" fullWidth PaperProps={{ sx: dialogSx }}>
         <DialogTitle sx={{ color: 'hsl(var(--accent))', fontWeight: 700 }}>
-          Ocorrências de {ocorrenciaContact?.nome || formatPhoneDisplay(ocorrenciaContact?.telefone || '')}
+          Ocorrências de {(!isNA(ocorrenciaContact?.nome) && ocorrenciaContact?.nome) || formatPhoneDisplay(ocorrenciaContact?.telefone || '')}
         </DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
           {/* Filtros */}
@@ -655,25 +733,14 @@ const ContatosPage: React.FC = () => {
               onChange={(e) => setOcFiltroStatus(e.target.value)}
               sx={{ fontSize: 12, minWidth: 130, ...inputSx }}
             >
-              <MenuItem value="">Todas colunas</MenuItem>
-              <MenuItem value="pendentes">Solicitações Pendentes</MenuItem>
+              <MenuItem value="">Todos os Status</MenuItem>
+              <MenuItem value="pendentes">Sem Tratativa</MenuItem>
               <MenuItem value="em-analise">Em Análise</MenuItem>
               <MenuItem value="aprovar-indicacao">Concluído como Indicação</MenuItem>
               <MenuItem value="aprovar-requerimento">Concluído como Requerimento</MenuItem>
-              <MenuItem value="reprovar">Reprovado</MenuItem>
-            </Select>
-            <Select
-              size="small"
-              variant="filled"
-              value={ocFiltroTipo}
-              displayEmpty
-              onChange={(e) => setOcFiltroTipo(e.target.value)}
-              sx={{ fontSize: 12, minWidth: 130, ...inputSx }}
-            >
-              <MenuItem value="">Todos tipos</MenuItem>
-              <MenuItem value="indicacao">Indicação</MenuItem>
-              <MenuItem value="requerimento">Requerimento</MenuItem>
-              <MenuItem value="ambos">Ambos</MenuItem>
+              <MenuItem value="aprovar-causa-animal">Concluído como Causa Animal</MenuItem>
+              <MenuItem value="aprovar-outros">Concluído (Outros)</MenuItem>
+              <MenuItem value="reprovar">Desqualificado</MenuItem>
             </Select>
             <Select
               size="small"
@@ -688,9 +755,9 @@ const ContatosPage: React.FC = () => {
                 <MenuItem key={cat} value={cat}>{formatCategoryName(cat)}</MenuItem>
               ))}
             </Select>
-            <TextField type="date" size="small" variant="filled" label="De" InputLabelProps={{ shrink: true }} value={ocFiltroInicio} onChange={(e) => setOcFiltroInicio(e.target.value)} sx={{ ...inputSx, minWidth: 120 }} />
-            <TextField type="date" size="small" variant="filled" label="Até" InputLabelProps={{ shrink: true }} value={ocFiltroFim} onChange={(e) => setOcFiltroFim(e.target.value)} sx={{ ...inputSx, minWidth: 120 }} />
-            <Button size="small" onClick={() => { setOcFiltroStatus(''); setOcFiltroTipo(''); setOcFiltroCategoria(''); setOcFiltroInicio(''); setOcFiltroFim('') }} sx={{ color: 'hsl(var(--text-secondary))', textTransform: 'none', fontSize: 11 }}>Limpar</Button>
+            <TextField type="date" size="small" variant="filled" label="De" InputLabelProps={{ shrink: true }} inputProps={{ max: ocFiltroFim || undefined }} value={ocFiltroInicio} onChange={(e) => { const v = e.target.value; setOcFiltroInicio(v && ocFiltroFim && v > ocFiltroFim ? ocFiltroFim : v) }} sx={{ ...inputSx, minWidth: 120 }} />
+            <TextField type="date" size="small" variant="filled" label="Até" InputLabelProps={{ shrink: true }} inputProps={{ min: ocFiltroInicio || undefined }} value={ocFiltroFim} onChange={(e) => { const v = e.target.value; setOcFiltroFim(v && ocFiltroInicio && v < ocFiltroInicio ? ocFiltroInicio : v) }} sx={{ ...inputSx, minWidth: 120 }} />
+            <Button size="small" onClick={() => { setOcFiltroStatus(''); setOcFiltroCategoria(''); setOcFiltroInicio(''); setOcFiltroFim('') }} sx={{ color: 'hsl(var(--text-secondary))', textTransform: 'none', fontSize: 11 }}>Limpar</Button>
           </Box>
 
           {/* Resultado */}
@@ -736,7 +803,7 @@ const ContatosPage: React.FC = () => {
                   <Box>
                     <Typography sx={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'hsl(var(--text-secondary))', mb: 0.3 }}>Situação Resumida</Typography>
                     <Typography sx={{ fontSize: 12, color: 'hsl(var(--text-primary))', lineHeight: 1.5 }}>
-                      {o.situacaoResumida}
+                      {displayField(o.situacaoResumida)}
                     </Typography>
                   </Box>
                 )}
@@ -747,17 +814,17 @@ const ContatosPage: React.FC = () => {
                     {campos.map((c) => (
                       <Box key={c.label} sx={{ display: 'flex', flexDirection: 'column' }}>
                         <Typography sx={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'hsl(var(--text-secondary) / 0.7)', fontWeight: 600 }}>{c.label}</Typography>
-                        <Typography sx={{ fontSize: 12, color: 'hsl(var(--text-primary))', lineHeight: 1.3 }}>{c.value}</Typography>
+                        <Typography sx={{ fontSize: 12, color: 'hsl(var(--text-primary))', lineHeight: 1.3 }}>{displayField(c.value)}</Typography>
                       </Box>
                     ))}
                   </Box>
                 )}
 
                 {/* Mídias */}
-                {o.detalhes.midiasAnimal && (
+                {o.detalhes.midiasAnimal && o.detalhes.midiasAnimal.split(',').some((u) => u.trim() !== '' && !isNA(u.trim())) && (
                   <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', pt: 0.5, borderTop: '1px solid hsl(var(--border))' }}>
                     <Typography sx={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'hsl(var(--text-secondary) / 0.7)', fontWeight: 600, width: '100%' }}>Mídias</Typography>
-                    {o.detalhes.midiasAnimal.split(',').map((url, i) => {
+                    {o.detalhes.midiasAnimal.split(',').filter((url) => { const t = url.trim(); return t !== '' && !isNA(t) }).map((url, i) => {
                       const u = url.trim()
                       const isImage = /\.(jpeg|jpg|png|gif|webp|bmp|svg|heic|heif)$/i.test(u)
                       const isVideo = /\.(mp4|webm|ogg|mov|avi|mkv)$/i.test(u)
@@ -789,13 +856,13 @@ const ContatosPage: React.FC = () => {
                 {o.observacao && (
                   <Box sx={{ pt: 0.5, borderTop: '1px solid hsl(var(--border))' }}>
                     <Typography sx={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'hsl(var(--text-secondary) / 0.7)', fontWeight: 600 }}>Observação</Typography>
-                    <Typography sx={{ fontSize: 12, color: 'hsl(var(--text-primary))', lineHeight: 1.4, fontStyle: 'italic' }}>{o.observacao}</Typography>
+                    <Typography sx={{ fontSize: 12, color: 'hsl(var(--text-primary))', lineHeight: 1.4, fontStyle: 'italic' }}>{displayField(o.observacao)}</Typography>
                   </Box>
                 )}
                 {o.mensagemFinal && (
                   <Box>
                     <Typography sx={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'hsl(var(--text-secondary) / 0.7)', fontWeight: 600 }}>Mensagem Final</Typography>
-                    <Typography sx={{ fontSize: 12, color: 'hsl(var(--text-primary))', lineHeight: 1.4 }}>{o.mensagemFinal}</Typography>
+                    <Typography sx={{ fontSize: 12, color: 'hsl(var(--text-primary))', lineHeight: 1.4 }}>{displayField(o.mensagemFinal)}</Typography>
                   </Box>
                 )}
 

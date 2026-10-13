@@ -9,6 +9,7 @@ import {
   religarIa,
 } from '../services/difyService'
 import { formatPhoneDisplay } from '../utils/phone'
+import { isNA } from '../utils/display'
 import type { ConversaResumo, MensagemChat } from '../types'
 
 interface ConversationChatProps {
@@ -316,7 +317,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ conversa, iaLigada, onReligarIa
   // Nome: tabela cliente > nome do backend > vazio (mostra só telefone)
   // O backend pode retornar "?" quando o nome não existe — tratamos como vazio
   const isNomeValido = (n: string | undefined | null): boolean =>
-    !!n && n.trim() !== '' && n.trim() !== '?' && n.trim() !== 'null'
+    !!n && n.trim() !== '' && n.trim() !== '?' && n.trim() !== 'null' && !isNA(n)
   const nomeCliente = clientesMap?.get(conversa.telefone)
   const nome = isNomeValido(nomeCliente) ? nomeCliente! : isNomeValido(conversa.nome) ? conversa.nome : ''
   return (

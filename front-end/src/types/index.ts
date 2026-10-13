@@ -95,6 +95,12 @@ export interface ContatoUnificado {
   dataCriacao?: string
 }
 
+export interface OcorrenciaPorCidade {
+  cidade: string
+  categoria: Record<string, number>
+  total: number
+}
+
 export interface Protocolo {
   idProtocolo: number
   idReclamacao: number

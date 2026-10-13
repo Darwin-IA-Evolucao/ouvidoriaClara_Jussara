@@ -22,6 +22,7 @@ func SetupReclamacaoRoutes(router *gin.Engine, reclamacaoController controllers.
 	//router.GET("/reclamacoes", reclamacaoController.GetAllReclamacoes)
 
 	router.POST("/ocorrencia", reclamacaoController.CreateOcorrencia)
+	router.POST("/ocorrencia/outra-cidade", reclamacaoController.CreateOcorrenciaOutraCidade)
 	router.GET("/ocorrencias", reclamacaoController.GetAllOcorrencias)
 	router.GET("/ocorrencias/relatorio", reclamacaoController.GetRelatorioSolicitacoes)
 	router.GET("/ocorrencias/cidades", reclamacaoController.GetOcorrenciasPorCidade)

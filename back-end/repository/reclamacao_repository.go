@@ -105,6 +105,20 @@ func (repo ReclamacaoRepository) CreateOcorrencia(data models.OcorrenciaData) (i
 	return id, err
 }
 
+func (repo ReclamacaoRepository) CreateOcorrenciaComStatus(data models.OcorrenciaData, status, tipo string) (int, error) {
+	detalhesJSON, err := json.Marshal(data.Detalhes)
+	if err != nil {
+		return 0, err
+	}
+	const query = `
+		INSERT INTO reclamacao (telefone, categoria, reclamacao, tipo, status, detalhes, eh_manual, observacao, telefone_acessor, id_usuario)
+		VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, $10)
+		RETURNING idreclamacao`
+	var id int
+	err = repo.connection.QueryRow(query, data.Telefone, data.Categoria, data.Reclamacao, tipo, status, detalhesJSON, data.EhManual, data.Observacao, data.TelefoneAcessor, data.IDUsuario).Scan(&id)
+	return id, err
+}
+
 func scanOcorrencia(row interface {
 	Scan(dest ...any) error
 }) (models.Ocorrencia, error) {

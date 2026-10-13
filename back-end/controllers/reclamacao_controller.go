@@ -240,6 +240,25 @@ func (ctrl ReclamacaoController) CreateOcorrencia(c *gin.Context) {
 	c.IndentedJSON(http.StatusCreated, gin.H{"message": "Ocorrência registrada com sucesso", "id": id})
 }
 
+func (ctrl ReclamacaoController) CreateOcorrenciaOutraCidade(c *gin.Context) {
+	var req models.OcorrenciaRequest
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Formato inválido.", "error": err.Error()})
+		return
+	}
+	id, err := ctrl.useCase.CreateOcorrenciaOutraCidade(req)
+	if err != nil {
+		var appErr *apperror.AppError
+		if errors.As(err, &appErr) {
+			c.IndentedJSON(appErr.StatusCode, gin.H{"error": appErr.Message})
+			return
+		}
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.IndentedJSON(http.StatusCreated, gin.H{"message": "Ocorrência registrada como concluída", "id": id})
+}
+
 func (ctrl ReclamacaoController) GetAllOcorrencias(c *gin.Context) {
 	telefone := c.Query("telefone")
 	limit := 0

@@ -567,6 +567,62 @@ func (uc ReclamacaoUseCases) CreateOcorrencia(request models.OcorrenciaRequest) 
 	return id, nil
 }
 
+func cidadeEhSorocaba(cidade string) bool {
+	return strings.Contains(strings.ToLower(strings.TrimSpace(cidade)), "sorocaba")
+}
+
+func (uc ReclamacaoUseCases) CreateOcorrenciaOutraCidade(request models.OcorrenciaRequest) (int, error) {
+	request.Telefone = normalizeTelefone(request.Telefone)
+	if request.Telefone == "" || request.Telefone == "55" {
+		return 0, apperror.BadRequest("Telefone obrigatório")
+	}
+
+	cidade := strings.TrimSpace(request.CidadeCliente)
+	cidadeLower := strings.ToLower(cidade)
+	if cidade == "" || cidadeLower == "n/a" || cidadeLower == "null" || cidadeLower == "não informado" {
+		return 0, apperror.BadRequest("Cidade obrigatória")
+	}
+	if cidadeEhSorocaba(cidade) {
+		return 0, apperror.BadRequest("Cidade é Sorocaba")
+	}
+
+	existe, _, err := uc.clienteUC.ClienteExiste(request.Telefone)
+	if err != nil {
+		return 0, apperror.NotFound("Erro ao verificar cliente existe")
+	}
+	if !existe {
+		nome := strings.TrimSpace(request.NomeCliente)
+		nascimento := strings.TrimSpace(request.DataNascimentoCliente)
+		if nome == "" || nascimento == "" {
+			return 0, apperror.BadRequest("Nome e data de nascimento obrigatórios")
+		}
+		clienteReq := models.Cliente{
+			Telefone:       request.Telefone,
+			Nome:           nome,
+			Cidade:         cidade,
+			Endereco:       "N/A",
+			Bairro:         "N/A",
+			DataNascimento: nascimento,
+		}
+		if _, err := uc.clienteUC.repo.CreateCliente(clienteReq); err != nil {
+			return 0, apperror.Internal("Erro ao cadastrar novo cliente")
+		}
+	}
+
+	data := models.OcorrenciaData{
+		Telefone:   request.Telefone,
+		Categoria:  "outros",
+		Reclamacao: fmt.Sprintf("Atendimento encerrado. Motivo: outra cidade (%s).", cidade),
+		Observacao: "Outra cidade",
+		Detalhes:   models.DetalhesReclamacao{Regiao: "Outros"},
+	}
+	id, err := uc.repository.CreateOcorrenciaComStatus(data, "aprovado", "outros")
+	if err != nil {
+		return 0, apperror.Internal(err.Error())
+	}
+	return id, nil
+}
+
 func (uc ReclamacaoUseCases) GetAllOcorrencias(telefone string, limit, offset int) ([]models.Ocorrencia, int, error) {
 	if telefone != "" {
 		telefone = normalizeTelefone(telefone)

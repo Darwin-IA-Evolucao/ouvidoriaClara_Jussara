@@ -11,7 +11,7 @@ import PageHeader from '../components/PageHeader'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { inputSx, dialogSx } from '../utils/inputSx'
 import {
-  getAllOcorrencias, createOcorrencia, deleteOcorrencia, aprovarInquerito, aprovarRequerimento, aprovarCausaAnimal, reprovarInquerito, finalizarReclamacao, updateOcorrencia, colocarEmAnalise, colocarComoCriado,
+  getAllOcorrencias, createOcorrencia, deleteOcorrencia, aprovarInquerito, aprovarRequerimento, aprovarCausaAnimal, aprovarOutros, reprovarInquerito, updateOcorrencia, colocarEmAnalise, colocarComoCriado,
 } from '../services/reclamacaoService'
 import { getAllClientes, clienteExiste } from '../services/clienteService'
 import { getAllEnderecos } from '../services/enderecoService'
@@ -19,6 +19,7 @@ import { formatPhoneDisplay, normalizeTelefone } from '../utils/phone'
 import { uploadMidia } from '../services/midiaService'
 import { formatDate, toUTCDate } from '../utils/date'
 import { fetchCategorias, formatCategoryName } from '../utils/categories'
+import { isNA, displayField, editValue } from '../utils/display'
 import { getSession } from '../utils/session'
 import { statusDisplay } from '../components/StatusChip'
 import KanbanSkeleton from '../components/KanbanSkeleton'
@@ -39,12 +40,11 @@ const COLUMNS: ColumnDef[] = [
   { id: 'aprovar-requerimento', label: 'Concluído como Requerimento', color: '#E89E70', headerBg: 'hsl(var(--accent) / 0.12)' },
   { id: 'aprovar-indicacao', label: 'Concluído como Indicação', color: '#66BB80', headerBg: 'hsl(var(--success) / 0.12)' },
   { id: 'aprovar-causa-animal', label: 'Concluído como Causa Animal', color: '#B98CE8', headerBg: 'hsl(var(--primary) / 0.12)' },
-  { id: 'desqualificar', label: 'Desqualificar', color: '#D16670', headerBg: 'hsl(var(--error) / 0.12)' },
-  { id: 'finalizado', label: 'Finalizado', color: '#5B8FE0', headerBg: 'hsl(var(--info) / 0.12)' },
+  { id: 'aprovar-outros', label: 'Concluído (Outros)', color: '#5B8FE0', headerBg: 'hsl(var(--info) / 0.12)' },
+  { id: 'desqualificar', label: 'Desqualificado', color: '#D16670', headerBg: 'hsl(var(--error) / 0.12)' },
 ]
 
-/* Colunas visíveis no Kanban — Finalizado fica oculto da UI */
-const VISIBLE_COLUMNS = COLUMNS.filter((c) => c.id !== 'finalizado')
+const VISIBLE_COLUMNS = COLUMNS
 
 /* ── helpers visuais do modal de detalhes ── */
 const DetailSectionHeader: React.FC<{ icon: React.ElementType; label: string; colorVar?: string }> = ({ icon: Icon, label, colorVar = 'accent' }) => (
@@ -71,7 +71,9 @@ const DetailField: React.FC<{ label: string; value: React.ReactNode; span?: bool
     }}
   >
     <Typography sx={{ fontSize: 10.5, color: 'hsl(var(--text-secondary))', mb: 0.3 }}>{label}</Typography>
-    <Typography sx={{ fontSize: 13, color: 'hsl(var(--text-primary))', fontWeight: 500, wordBreak: 'break-word' }}>{value ?? '-'}</Typography>
+    <Typography sx={{ fontSize: 13, color: 'hsl(var(--text-primary))', fontWeight: 500, wordBreak: 'break-word' }}>
+      {value == null ? '-' : typeof value === 'string' ? displayField(value) : value}
+    </Typography>
   </Box>
 )
 
@@ -93,7 +95,7 @@ const DetailMessageBox: React.FC<{ icon: React.ElementType; label: string; value
       </Typography>
     </Box>
     <Typography sx={{ fontSize: 13, color: 'hsl(var(--text-primary))', lineHeight: 1.5, whiteSpace: 'pre-wrap', fontStyle: italic ? 'italic' : 'normal' }}>
-      {value}
+      {typeof value === 'string' ? displayField(value) : value}
     </Typography>
   </Box>
 )
@@ -159,13 +161,13 @@ const MidiaUploadField: React.FC<{
   onImageClick?: (urls: string[], index: number) => void
 }> = ({ form, setForm, onImageClick }) => {
   const [items, setItems] = React.useState<MidiaItem[]>(() => {
-    const urls = form.midiasAnimal ? form.midiasAnimal.split(',').map((m) => m.trim()).filter(Boolean) : []
+    const urls = form.midiasAnimal ? form.midiasAnimal.split(',').map((m) => m.trim()).filter((m) => m !== '' && !isNA(m)) : []
     return urls.map((url, i) => ({ id: `s-${i}`, url, isUploading: false, isVideo: /\.(mp4|avi|mov|webm)($|\?)/i.test(url) }))
   })
   const fileInputRef = React.useRef<HTMLInputElement>(null)
 
   React.useEffect(() => {
-    const urls = form.midiasAnimal ? form.midiasAnimal.split(',').map((m) => m.trim()).filter(Boolean) : []
+    const urls = form.midiasAnimal ? form.midiasAnimal.split(',').map((m) => m.trim()).filter((m) => m !== '' && !isNA(m)) : []
     setItems((prev) => {
       const uploading = prev.filter((p) => p.isUploading)
       const saved = urls.map((url, i) => {
@@ -301,17 +303,17 @@ const FormFields: React.FC<{
               clearOnBlur={false}
               handleHomeEndKeys
               options={[...new Set(enderecos.map((e) => e.logradouro))].sort()}
-              value={form.enderecoOcorrencia}
+              value={editValue(form.enderecoOcorrencia)}
               onInputChange={(_, v) => setForm((prev) => ({ ...prev, enderecoOcorrencia: v ?? '' }))}
               onChange={(_, v) => setForm((prev) => ({ ...prev, enderecoOcorrencia: v ?? '' }))}
-              renderInput={(params) => <TextField {...params} label="Endereço da Ocorrência" variant="filled" sx={inputSx} />}
+              renderInput={(params) => <TextField {...params} label="Endereço da Ocorrência" variant="filled" sx={inputSx} placeholder="Não informado" />}
             />
           )}
           {showField('conheceTutor', cat) && (
             <FormControl fullWidth variant="filled" sx={inputSx}>
               <InputLabel shrink>Conhece o Tutor</InputLabel>
               <Select
-                value={form.conheceTutor || ''}
+                value={editValue(form.conheceTutor)}
                 onChange={(e) => setForm((prev) => ({ ...prev, conheceTutor: e.target.value }))}
                 displayEmpty
                 renderValue={(val) => {
@@ -325,8 +327,8 @@ const FormFields: React.FC<{
               </Select>
             </FormControl>
           )}
-          {showField('detalhesDenuncia', cat) && <TextField label="Detalhes Denúncia" fullWidth multiline rows={2} value={form.detalhesDenuncia} onChange={(e) => setForm({ ...form, detalhesDenuncia: e.target.value })} variant="filled" sx={inputSx} inputProps={{ autoComplete: 'off' }} />}
-          {showField('protocoloDenuncia', cat) && <TextField label="Protocolo Denúncia" fullWidth type="number" value={form.protocoloDenuncia} onChange={(e) => setForm({ ...form, protocoloDenuncia: e.target.value.replace(/\D/g, '') })} variant="filled" sx={inputSx} inputProps={{ autoComplete: 'off' }} />}
+          {showField('detalhesDenuncia', cat) && <TextField label="Detalhes Denúncia" fullWidth multiline rows={2} value={editValue(form.detalhesDenuncia)} onChange={(e) => setForm({ ...form, detalhesDenuncia: e.target.value })} variant="filled" sx={inputSx} placeholder="Não informado" inputProps={{ autoComplete: 'off' }} />}
+          {showField('protocoloDenuncia', cat) && <TextField label="Protocolo Denúncia" fullWidth type="number" value={editValue(form.protocoloDenuncia)} onChange={(e) => setForm({ ...form, protocoloDenuncia: e.target.value.replace(/\D/g, '') })} variant="filled" sx={inputSx} placeholder="Não informado" inputProps={{ autoComplete: 'off' }} />}
         </>
       )}
 
@@ -334,13 +336,13 @@ const FormFields: React.FC<{
         <>
           <Typography sx={{ fontSize: 12, color: 'hsl(var(--text-secondary))', textTransform: 'uppercase', letterSpacing: '0.05em', mt: 1, fontWeight: 600 }}>Dados do Animal</Typography>
           <Box sx={{ display: 'flex', gap: 2 }}>
-            {showField('nomeAnimal', cat) && <TextField label="Nome" fullWidth value={form.nomeAnimal} onChange={(e) => setForm({ ...form, nomeAnimal: e.target.value })} variant="filled" sx={inputSx} inputProps={{ autoComplete: 'off' }} />}
-            {showField('especieAnimal', cat) && <TextField label="Espécie" fullWidth value={form.especieAnimal} onChange={(e) => setForm({ ...form, especieAnimal: e.target.value })} variant="filled" sx={inputSx} inputProps={{ autoComplete: 'off' }} />}
+            {showField('nomeAnimal', cat) && <TextField label="Nome" fullWidth value={editValue(form.nomeAnimal)} onChange={(e) => setForm({ ...form, nomeAnimal: e.target.value })} variant="filled" sx={inputSx} placeholder="Não informado" inputProps={{ autoComplete: 'off' }} />}
+            {showField('especieAnimal', cat) && <TextField label="Espécie" fullWidth value={editValue(form.especieAnimal)} onChange={(e) => setForm({ ...form, especieAnimal: e.target.value })} variant="filled" sx={inputSx} placeholder="Não informado" inputProps={{ autoComplete: 'off' }} />}
           </Box>
           <Box sx={{ display: 'flex', gap: 2 }}>
-            {showField('idadeAnimal', cat) && <TextField label="Idade" fullWidth type="number" value={form.idadeAnimal} onChange={(e) => setForm({ ...form, idadeAnimal: e.target.value })} variant="filled" sx={inputSx} inputProps={{ autoComplete: 'off' }} />}
+            {showField('idadeAnimal', cat) && <TextField label="Idade" fullWidth type="number" value={editValue(form.idadeAnimal)} onChange={(e) => setForm({ ...form, idadeAnimal: e.target.value })} variant="filled" sx={inputSx} placeholder="Não informado" inputProps={{ autoComplete: 'off' }} />}
             {showField('sexoAnimal', cat) && (
-              <TextField select fullWidth label="Sexo" variant="filled" value={form.sexoAnimal} onChange={(e) => setForm({ ...form, sexoAnimal: e.target.value })} sx={inputSx}>
+              <TextField select fullWidth label="Sexo" variant="filled" value={editValue(form.sexoAnimal)} onChange={(e) => setForm({ ...form, sexoAnimal: e.target.value })} sx={inputSx}>
                 <MenuItem value="">Não informado</MenuItem>
                 <MenuItem value="MACHO">Macho</MenuItem>
                 <MenuItem value="FEMEA">Fêmea</MenuItem>
@@ -356,13 +358,13 @@ const FormFields: React.FC<{
                 clearOnBlur={false}
                 handleHomeEndKeys
                 options={[...new Set(enderecos.map((e) => e.bairro))].sort()}
-                value={form.bairroAnimal}
+                value={editValue(form.bairroAnimal)}
                 onInputChange={(_, v) => setForm((prev) => ({ ...prev, bairroAnimal: v ?? '' }))}
                 onChange={(_, v) => setForm((prev) => ({ ...prev, bairroAnimal: v ?? '' }))}
-                renderInput={(params) => <TextField {...params} label="Bairro do Animal" variant="filled" sx={inputSx} />}
+                renderInput={(params) => <TextField {...params} label="Bairro do Animal" variant="filled" sx={inputSx} placeholder="Não informado" />}
               />
             )}
-            {showField('condicoesAnimal', cat) && <TextField label="Condições" fullWidth value={form.condicoesAnimal} onChange={(e) => setForm({ ...form, condicoesAnimal: e.target.value })} variant="filled" sx={inputSx} inputProps={{ autoComplete: 'off' }} />}
+            {showField('condicoesAnimal', cat) && <TextField label="Condições" fullWidth value={editValue(form.condicoesAnimal)} onChange={(e) => setForm({ ...form, condicoesAnimal: e.target.value })} variant="filled" sx={inputSx} placeholder="Não informado" inputProps={{ autoComplete: 'off' }} />}
           </Box>
         </>
       )}
@@ -375,10 +377,10 @@ const FormFields: React.FC<{
         <>
           <Typography sx={{ fontSize: 12, color: 'hsl(var(--text-secondary))', textTransform: 'uppercase', letterSpacing: '0.05em', mt: 1, fontWeight: 600 }}>Dados do Responsável</Typography>
           <Box sx={{ display: 'flex', gap: 2 }}>
-            {showField('nomeResponsavelAnimal', cat) && <TextField label="Nome do Responsável" fullWidth value={form.nomeResponsavelAnimal} onChange={(e) => setForm({ ...form, nomeResponsavelAnimal: e.target.value })} variant="filled" sx={inputSx} inputProps={{ autoComplete: 'off' }} />}
+            {showField('nomeResponsavelAnimal', cat) && <TextField label="Nome do Responsável" fullWidth value={editValue(form.nomeResponsavelAnimal)} onChange={(e) => setForm({ ...form, nomeResponsavelAnimal: e.target.value })} variant="filled" sx={inputSx} placeholder="Não informado" inputProps={{ autoComplete: 'off' }} />}
             {showField('telefoneResponsavelAnimal', cat) && (
               <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
-                <TextField label="Telefone do Responsável" fullWidth value={form.telefoneResponsavelAnimal} onChange={(e) => handleTelResp(e.target.value)} variant="filled" sx={inputSx} placeholder="(XX) XXXXX-XXXX" inputProps={{ autoComplete: 'off' }} />
+                <TextField label="Telefone do Responsável" fullWidth value={editValue(form.telefoneResponsavelAnimal)} onChange={(e) => handleTelResp(e.target.value)} variant="filled" sx={inputSx} placeholder="(XX) XXXXX-XXXX" inputProps={{ autoComplete: 'off' }} />
                 {autoFilledResp && (
                   <Tooltip title="Nome do responsável preenchido automaticamente">
                     <Box sx={{ mt: 1.5, color: '#66BB80', display: 'flex', alignItems: 'center' }}>
@@ -389,7 +391,7 @@ const FormFields: React.FC<{
               </Box>
             )}
           </Box>
-          {showField('historicoAnimal', cat) && <TextField label="Histórico" fullWidth multiline rows={3} value={form.historicoAnimal} onChange={(e) => setForm({ ...form, historicoAnimal: e.target.value })} variant="filled" sx={inputSx} inputProps={{ autoComplete: 'off' }} />}
+          {showField('historicoAnimal', cat) && <TextField label="Histórico" fullWidth multiline rows={3} value={editValue(form.historicoAnimal)} onChange={(e) => setForm({ ...form, historicoAnimal: e.target.value })} variant="filled" sx={inputSx} placeholder="Não informado" inputProps={{ autoComplete: 'off' }} />}
         </>
       )}
 
@@ -397,17 +399,17 @@ const FormFields: React.FC<{
         <>
           <Typography sx={{ fontSize: 12, color: 'hsl(var(--text-secondary))', textTransform: 'uppercase', letterSpacing: '0.05em', mt: 1, fontWeight: 600 }}>Outros Detalhes</Typography>
           <Box sx={{ display: 'flex', gap: 2 }}>
-            {showField('frequenciaMausTratos', cat) && <TextField label="Frequência Maus Tratos" fullWidth value={form.frequenciaMausTratos} onChange={(e) => setForm({ ...form, frequenciaMausTratos: e.target.value })} variant="filled" sx={inputSx} inputProps={{ autoComplete: 'off' }} />}
-            {showField('situacaoAnimal', cat) && <TextField label="Situação Animal" fullWidth value={form.situacaoAnimal} onChange={(e) => setForm({ ...form, situacaoAnimal: e.target.value })} variant="filled" sx={inputSx} inputProps={{ autoComplete: 'off' }} />}
+            {showField('frequenciaMausTratos', cat) && <TextField label="Frequência Maus Tratos" fullWidth value={editValue(form.frequenciaMausTratos)} onChange={(e) => setForm({ ...form, frequenciaMausTratos: e.target.value })} variant="filled" sx={inputSx} placeholder="Não informado" inputProps={{ autoComplete: 'off' }} />}
+            {showField('situacaoAnimal', cat) && <TextField label="Situação Animal" fullWidth value={editValue(form.situacaoAnimal)} onChange={(e) => setForm({ ...form, situacaoAnimal: e.target.value })} variant="filled" sx={inputSx} placeholder="Não informado" inputProps={{ autoComplete: 'off' }} />}
           </Box>
           <Box sx={{ display: 'flex', gap: 2 }}>
-            {showField('tempoAnimalLocal', cat) && <TextField label="Tempo no Local" fullWidth value={form.tempoAnimalLocal} onChange={(e) => setForm({ ...form, tempoAnimalLocal: e.target.value })} variant="filled" sx={inputSx} inputProps={{ autoComplete: 'off' }} />}
-            {showField('ferimentosAnimal', cat) && <TextField label="Ferimentos" fullWidth value={form.ferimentosAnimal} onChange={(e) => setForm({ ...form, ferimentosAnimal: e.target.value })} variant="filled" sx={inputSx} inputProps={{ autoComplete: 'off' }} />}
+            {showField('tempoAnimalLocal', cat) && <TextField label="Tempo no Local" fullWidth value={editValue(form.tempoAnimalLocal)} onChange={(e) => setForm({ ...form, tempoAnimalLocal: e.target.value })} variant="filled" sx={inputSx} placeholder="Não informado" inputProps={{ autoComplete: 'off' }} />}
+            {showField('ferimentosAnimal', cat) && <TextField label="Ferimentos" fullWidth value={editValue(form.ferimentosAnimal)} onChange={(e) => setForm({ ...form, ferimentosAnimal: e.target.value })} variant="filled" sx={inputSx} placeholder="Não informado" inputProps={{ autoComplete: 'off' }} />}
           </Box>
           <Box sx={{ display: 'flex', gap: 2 }}>
-            {showField('providenciasAnimal', cat) && <TextField label="Providências" fullWidth value={form.providenciasAnimal} onChange={(e) => setForm({ ...form, providenciasAnimal: e.target.value })} variant="filled" sx={inputSx} inputProps={{ autoComplete: 'off' }} />}
+            {showField('providenciasAnimal', cat) && <TextField label="Providências" fullWidth value={editValue(form.providenciasAnimal)} onChange={(e) => setForm({ ...form, providenciasAnimal: e.target.value })} variant="filled" sx={inputSx} placeholder="Não informado" inputProps={{ autoComplete: 'off' }} />}
             {showField('temCadUnico', cat) && (
-              <TextField select fullWidth label="Cad. Único" variant="filled" value={form.temCadUnico} onChange={(e) => setForm({ ...form, temCadUnico: e.target.value })} sx={inputSx}>
+              <TextField select fullWidth label="Cad. Único" variant="filled" value={editValue(form.temCadUnico)} onChange={(e) => setForm({ ...form, temCadUnico: e.target.value })} sx={inputSx}>
                 <MenuItem value="">Não informado</MenuItem>
                 <MenuItem value="sim">Sim</MenuItem>
                 <MenuItem value="nao">Não</MenuItem>
@@ -415,11 +417,11 @@ const FormFields: React.FC<{
             )}
           </Box>
           <Box sx={{ display: 'flex', gap: 2 }}>
-            {showField('quandoCruzou', cat) && <TextField label="Quando Cruzou" fullWidth value={form.quandoCruzou} onChange={(e) => setForm({ ...form, quandoCruzou: e.target.value })} variant="filled" sx={inputSx} inputProps={{ autoComplete: 'off' }} />}
-            {showField('infoSaudeAnimal', cat) && <TextField label="Info Saúde" fullWidth value={form.infoSaudeAnimal} onChange={(e) => setForm({ ...form, infoSaudeAnimal: e.target.value })} variant="filled" sx={inputSx} inputProps={{ autoComplete: 'off' }} />}
+            {showField('quandoCruzou', cat) && <TextField label="Quando Cruzou" fullWidth value={editValue(form.quandoCruzou)} onChange={(e) => setForm({ ...form, quandoCruzou: e.target.value })} variant="filled" sx={inputSx} placeholder="Não informado" inputProps={{ autoComplete: 'off' }} />}
+            {showField('infoSaudeAnimal', cat) && <TextField label="Info Saúde" fullWidth value={editValue(form.infoSaudeAnimal)} onChange={(e) => setForm({ ...form, infoSaudeAnimal: e.target.value })} variant="filled" sx={inputSx} placeholder="Não informado" inputProps={{ autoComplete: 'off' }} />}
           </Box>
           {showField('ehProtetorIndependente', cat) && (
-            <TextField select fullWidth label="É Protetor Independente/ONG" variant="filled" value={form.ehProtetorIndependente} onChange={(e) => setForm({ ...form, ehProtetorIndependente: e.target.value })} sx={inputSx}>
+            <TextField select fullWidth label="É Protetor Independente/ONG" variant="filled" value={editValue(form.ehProtetorIndependente)} onChange={(e) => setForm({ ...form, ehProtetorIndependente: e.target.value })} sx={inputSx}>
               <MenuItem value="">Não informado</MenuItem>
               <MenuItem value="sim">Sim</MenuItem>
               <MenuItem value="nao">Não</MenuItem>
@@ -435,12 +437,12 @@ const FormFields: React.FC<{
 
 function getColumnId(r: Ocorrencia): string {
   if (r.status === 'reprovado') return 'desqualificar'
-  if (r.status === 'finalizado') return 'finalizado'
   if (r.status === 'aprovado') {
+    if (r.tipo === 'indicacao' || r.tipo === 'ambos') return 'aprovar-indicacao'
     if (r.tipo === 'requerimento') return 'aprovar-requerimento'
     if (r.tipo === 'causa animal') return 'aprovar-causa-animal'
-    if (r.tipo === 'indicacao') return 'aprovar-indicacao'
-    return 'aprovar-indicacao'
+    if (r.tipo === 'outros') return 'aprovar-outros'
+    return 'aprovado-desconhecido' // tipo não reconhecido pelo CRM — sem coluna, fica oculto
   }
   if (r.status === 'em análise') return 'em-analise'
   return 'sem-tratativa'
@@ -476,7 +478,8 @@ function calcAge(birthDate?: string): number | null {
 function filterRows(
   rows: Ocorrencia[],
   clientesMap: Record<string, Cliente>,
-  search: string,
+  searchNome: string,
+  searchTelefone: string,
   dateFrom: string,
   dateTo: string,
   endereco: string,
@@ -487,15 +490,12 @@ function filterRows(
   categoria: string[],
   regiao: string,
 ): Ocorrencia[] {
-  const s = search.trim().toLowerCase()
-  const phoneDigits = s.replace(/\D/g, '')
+  const nome = searchNome.trim().toLowerCase()
+  const phoneDigits = searchTelefone.replace(/\D/g, '')
   return rows.filter((r) => {
     const cliente = clientesMap[r.telefone]
-    if (s) {
-      const matchName = cliente?.nome?.toLowerCase().includes(s) ?? false
-      const matchPhone = phoneDigits ? r.telefone.replace(/\D/g, '').includes(phoneDigits) : false
-      if (!matchName && !matchPhone) return false
-    }
+    if (nome && !(cliente?.nome?.toLowerCase().includes(nome) ?? false)) return false
+    if (phoneDigits && !r.telefone.replace(/\D/g, '').includes(phoneDigits)) return false
     if (dateFrom) {
       const dc = toUTCDate(r.dataCriacao)
       const from = new Date(dateFrom + 'T00:00:00')
@@ -770,8 +770,10 @@ const ReclamacoesPage: React.FC = () => {
   }, [createForm.telefone])
 
   /* filters */
-  const [searchText, setSearchText] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [searchNome, setSearchNome] = useState('')
+  const [searchTelefone, setSearchTelefone] = useState('')
+  const [debouncedNome, setDebouncedNome] = useState('')
+  const [debouncedTelefone, setDebouncedTelefone] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [enderecoFilter, setEnderecoFilter] = useState('')
@@ -790,9 +792,12 @@ const ReclamacoesPage: React.FC = () => {
   const [clientesMap, setClientesMap] = useState<Record<string, Cliente>>({})
 
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(searchText), 300)
+    const timer = setTimeout(() => {
+      setDebouncedNome(searchNome)
+      setDebouncedTelefone(searchTelefone)
+    }, 300)
     return () => clearTimeout(timer)
-  }, [searchText])
+  }, [searchNome, searchTelefone])
 
   const regiaoCounts = useMemo(() => {
     const counts: Record<string, number> = Object.fromEntries(REGIOES_FILTRO.map((r) => [r, 0]))
@@ -804,9 +809,9 @@ const ReclamacoesPage: React.FC = () => {
   }, [rows])
 
   const filteredRows = useMemo(() =>
-    filterRows(Array.isArray(rows) ? rows : [], clientesMap, debouncedSearch, dateFrom, dateTo, enderecoFilter, bairroFilter, cidadeFilter, ageMin, ageMax, catFilter, regiaoFilter)
-      .sort((a, b) => new Date(b.dataAtualizacao).getTime() - new Date(a.dataAtualizacao).getTime()),
-    [rows, clientesMap, debouncedSearch, dateFrom, dateTo, enderecoFilter, bairroFilter, cidadeFilter, ageMin, ageMax, catFilter, regiaoFilter]
+    filterRows(Array.isArray(rows) ? rows : [], clientesMap, debouncedNome, debouncedTelefone, dateFrom, dateTo, enderecoFilter, bairroFilter, cidadeFilter, ageMin, ageMax, catFilter, regiaoFilter)
+      .sort((a, b) => toUTCDate(b.dataAtualizacao).getTime() - toUTCDate(a.dataAtualizacao).getTime()),
+    [rows, clientesMap, debouncedNome, debouncedTelefone, dateFrom, dateTo, enderecoFilter, bairroFilter, cidadeFilter, ageMin, ageMax, catFilter, regiaoFilter]
   )
 
   useEffect(() => {
@@ -1187,6 +1192,7 @@ const ReclamacoesPage: React.FC = () => {
 
   /* ── drag & drop ── */
   const handleDragStart = (e: React.DragEvent, id: number) => {
+    if (isMobile) return
     e.dataTransfer.setData('text/plain', String(id))
     e.dataTransfer.effectAllowed = 'move'
     updateScrollState()
@@ -1282,9 +1288,9 @@ const ReclamacoesPage: React.FC = () => {
       openActionDialog(title, false, async (mensagem) => {
         await reprovarInquerito(row.id, mensagem, idUsuario)
       })
-    } else if (targetCol === 'finalizado') {
+    } else if (targetCol === 'aprovar-outros') {
       openActionDialog(title, false, async (mensagem) => {
-        await finalizarReclamacao(row.id, mensagem, idUsuario)
+        await aprovarOutros(row.id, mensagem, idUsuario)
       })
     }
   }
@@ -1322,9 +1328,9 @@ const ReclamacoesPage: React.FC = () => {
       openActionDialog(title, false, async (mensagem) => {
         await reprovarInquerito(row.id, mensagem, idUsuario)
       })
-    } else if (targetCol === 'finalizado') {
+    } else if (targetCol === 'aprovar-outros') {
       openActionDialog(title, false, async (mensagem) => {
-        await finalizarReclamacao(row.id, mensagem, idUsuario)
+        await aprovarOutros(row.id, mensagem, idUsuario)
       })
     }
   }
@@ -1336,7 +1342,7 @@ const ReclamacoesPage: React.FC = () => {
     'aprovar-indicacao': '#66BB80',
     'aprovar-causa-animal': '#B98CE8',
     'desqualificar': '#D16670',
-    'finalizado': '#5B8FE0',
+    'aprovar-outros': '#5B8FE0',
   }
 
   const handleTelefoneChange = (value: string) => {
@@ -1506,9 +1512,9 @@ const ReclamacoesPage: React.FC = () => {
                 size="small"
                 label="De"
                 InputLabelProps={{ shrink: true }}
-                inputProps={{ style: { textAlign: isMobile ? 'center' : 'left' } }}
+                inputProps={{ style: { textAlign: isMobile ? 'center' : 'left' }, max: dateTo || undefined }}
                 value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
+                onChange={(e) => { const v = e.target.value; setDateFrom(v && dateTo && v > dateTo ? dateTo : v) }}
                 sx={{ ...inputSx, minWidth: 150 }}
               />
               <TextField
@@ -1516,9 +1522,9 @@ const ReclamacoesPage: React.FC = () => {
                 size="small"
                 label="Até"
                 InputLabelProps={{ shrink: true }}
-                inputProps={{ style: { textAlign: isMobile ? 'center' : 'left' } }}
+                inputProps={{ style: { textAlign: isMobile ? 'center' : 'left' }, min: dateFrom || undefined }}
                 value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
+                onChange={(e) => { const v = e.target.value; setDateTo(v && dateFrom && v < dateFrom ? dateFrom : v) }}
                 sx={{ ...inputSx, minWidth: 150 }}
               />
               <Button
@@ -1665,12 +1671,20 @@ const ReclamacoesPage: React.FC = () => {
               }}
             >
               <TextField
-                label="Buscar nome ou telefone"
+                label="Nome"
                 size="small"
                 inputProps={{ style: { textAlign: isMobile ? 'center' : 'left' } }}
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                sx={{ ...inputSx, minWidth: 220 }}
+                value={searchNome}
+                onChange={(e) => setSearchNome(e.target.value)}
+                sx={{ ...inputSx, minWidth: 160 }}
+              />
+              <TextField
+                label="Telefone"
+                size="small"
+                inputProps={{ inputMode: 'numeric', style: { textAlign: isMobile ? 'center' : 'left' } }}
+                value={searchTelefone}
+                onChange={(e) => setSearchTelefone(e.target.value)}
+                sx={{ ...inputSx, minWidth: 160 }}
               />
               <TextField
                 label="Endereço"
@@ -1699,7 +1713,8 @@ const ReclamacoesPage: React.FC = () => {
               <Button
                 size="small"
                 onClick={() => {
-                  setSearchText('')
+                  setSearchNome('')
+                  setSearchTelefone('')
                   setEnderecoFilter('')
                   setBairroFilter('')
                   setCidadeFilter('')
@@ -1888,7 +1903,7 @@ const ReclamacoesPage: React.FC = () => {
         onDragLeave={onKanbanDragLeave}
         sx={{
           display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : `repeat(${VISIBLE_COLUMNS.length}, minmax(300px, 1fr))`,
+          gridTemplateColumns: isMobile ? 'minmax(0, 1fr)' : `repeat(${VISIBLE_COLUMNS.length}, minmax(300px, 1fr))`,
           gap: 2,
           pb: 2,
           pt: 1,
@@ -1940,18 +1955,18 @@ const ReclamacoesPage: React.FC = () => {
                     <Typography sx={{ color: 'hsl(var(--text-secondary) / 0.5)', fontSize: 13, fontWeight: 500 }}>
                       {col.id === 'sem-tratativa' && 'Nenhuma solicitação sem tratativa'}
                       {col.id === 'em-analise' && 'Nada em análise no momento'}
-                      {col.id === 'aprovar-requerimento' && 'Nenhum requerimento aprovado'}
-                      {col.id === 'aprovar-indicacao' && 'Nenhuma indicação aprovada'}
-                      {col.id === 'aprovar-causa-animal' && 'Nenhuma causa animal aprovada'}
+                      {col.id === 'aprovar-requerimento' && 'Nenhuma solicitação concluída como requerimento'}
+                      {col.id === 'aprovar-indicacao' && 'Nenhuma solicitação concluída como indicação'}
+                      {col.id === 'aprovar-causa-animal' && 'Nenhuma solicitação concluída como causa animal'}
                       {col.id === 'desqualificar' && 'Nenhuma solicitação desqualificada'}
-                      {col.id === 'finalizado' && 'Nenhuma solicitação finalizada'}
+                      {col.id === 'aprovar-outros' && 'Nenhuma solicitação concluída como outros'}
                     </Typography>
                     {col.id === 'sem-tratativa' && (
                       <Typography sx={{ color: 'hsl(var(--text-secondary) / 0.3)', fontSize: 11 }}>
                         Novas solicitações aparecerão aqui
                       </Typography>
                     )}
-                    {(col.id === 'em-analise' || col.id === 'aprovar-requerimento' || col.id === 'aprovar-indicacao' || col.id === 'aprovar-causa-animal' || col.id === 'desqualificar' || col.id === 'finalizado') && (
+                    {(col.id === 'em-analise' || col.id === 'aprovar-requerimento' || col.id === 'aprovar-indicacao' || col.id === 'aprovar-causa-animal' || col.id === 'aprovar-outros' || col.id === 'desqualificar') && (
                       <Typography sx={{ color: 'hsl(var(--text-secondary) / 0.3)', fontSize: 11 }}>
                         Arraste uma solicitação aqui
                       </Typography>
@@ -1966,7 +1981,7 @@ const ReclamacoesPage: React.FC = () => {
                     <Box
                       key={row.id}
                       data-card-row={cardIdx}
-                      draggable
+                      draggable={!isMobile}
                       onDragStart={(e) => handleDragStart(e, row.id)}
                       onDragEnd={handleDragEnd}
                       onClick={(e) => {
@@ -1987,7 +2002,7 @@ const ReclamacoesPage: React.FC = () => {
                         transform: draggingId === row.id ? 'scale(0.96)' : 'none',
                         boxShadow: draggingId === row.id ? '0 16px 40px rgba(0,0,0,0.4)' : 'none',
                         transition: draggingId === row.id ? 'none' : 'all 0.2s ease',
-                        cursor: draggingId === row.id ? 'grabbing' : 'grab',
+                        cursor: isMobile ? 'pointer' : draggingId === row.id ? 'grabbing' : 'grab',
                         minHeight: 360,
                         display: 'flex',
                         flexDirection: 'column',
@@ -2022,7 +2037,7 @@ const ReclamacoesPage: React.FC = () => {
                           </Typography>
                           {clientesMap[row.telefone]?.nome && (
                             <Typography sx={{ fontSize: 12, color: 'hsl(var(--accent))', mt: 0.3 }}>
-                              {clientesMap[row.telefone].nome}
+                              {displayField(clientesMap[row.telefone].nome)}
                             </Typography>
                           )}
                         </Box>
@@ -2146,7 +2161,7 @@ const ReclamacoesPage: React.FC = () => {
                       {/* actions */}
                       <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', pt: 1, borderTop: '1px solid hsl(var(--surface-2))', flexWrap: 'wrap', flexShrink: 0 }}>
                         {isMobile && (
-                          <FormControl fullWidth size="small" variant="filled" sx={{ ...inputSx, minWidth: 200 }}>
+                          <FormControl fullWidth size="small" variant="filled" sx={{ ...inputSx, minWidth: 0 }}>
                             <Select
                               value=""
                               displayEmpty
@@ -2367,12 +2382,12 @@ const ReclamacoesPage: React.FC = () => {
                   <DetailSectionHeader icon={User} label="Dados do Cliente" colorVar="accent" />
                   <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
                     <DetailField label="Telefone" value={formatPhoneDisplay(r.telefone)} />
-                    <DetailField label="Nome" value={r.nomeCliente || c?.nome} />
+                    <DetailField label="Nome" value={(isNA(r.nomeCliente) ? '' : r.nomeCliente) || c?.nome} />
                     <DetailField label="Data Nasc." value={c?.dataNascimento ? formatDate(c.dataNascimento) : undefined} />
                     <DetailField label="Idade" value={calcAge(c?.dataNascimento) !== null ? `${calcAge(c!.dataNascimento)} anos` : undefined} />
-                    <DetailField span label="Endereço" value={r.enderecoCliente || c?.endereco} />
-                    <DetailField label="Bairro" value={r.bairroCliente || c?.bairro} />
-                    <DetailField label="Cidade" value={r.cidadeCliente || c?.cidade} />
+                    <DetailField span label="Endereço" value={(isNA(r.enderecoCliente) ? '' : r.enderecoCliente) || c?.endereco} />
+                    <DetailField label="Bairro" value={(isNA(r.bairroCliente) ? '' : r.bairroCliente) || c?.bairro} />
+                    <DetailField label="Cidade" value={(isNA(r.cidadeCliente) ? '' : r.cidadeCliente) || c?.cidade} />
                   </Box>
                 </Box>
 
@@ -2393,13 +2408,13 @@ const ReclamacoesPage: React.FC = () => {
                   <Box>
                     <DetailSectionHeader icon={FileText} label="Situação Resumida" colorVar="text-secondary" />
                     <Typography sx={{ fontSize: 13, color: 'hsl(var(--text-primary))', lineHeight: 1.5, bgcolor: 'hsl(var(--surface-2) / 0.6)', border: '1px solid hsl(var(--border) / 0.6)', borderRadius: 1.5, px: 1.6, py: 1.1 }}>
-                      {r.situacaoResumida}
+                      {displayField(r.situacaoResumida)}
                     </Typography>
                   </Box>
                 )}
 
                 {/* Mídias */}
-                {r.detalhes?.midiasAnimal && (
+                {r.detalhes?.midiasAnimal && parseMidiaUrls(r.detalhes.midiasAnimal).length > 0 && (
                   <>
                     <Box>
                       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
@@ -2500,7 +2515,7 @@ const ReclamacoesPage: React.FC = () => {
                           protocoloDenuncia: 'Protocolo da Denúncia',
                         }
                         const valueMap: Record<string, string> = { sim: 'Sim', nao: 'Não', SIM: 'Sim', NAO: 'Não' }
-                        const displayValue = (k === 'conheceTutor' && !v) ? 'Não Informado' : (valueMap[String(v)] ?? String(v))
+                        const displayValue = (k === 'conheceTutor' && !v) ? 'Não Informado' : (valueMap[String(v)] ?? displayField(String(v)))
                         return (
                           <DetailField key={k} label={detailLabels[k] ?? k.replace(/([A-Z])/g, ' $1').trim()} value={displayValue} />
                         )
@@ -2613,7 +2628,7 @@ const ReclamacoesPage: React.FC = () => {
               </Tooltip>
             )}
           </Box>
-          <TextField label="Nome do Cliente" fullWidth value={createForm.nomeCliente} onChange={(e) => setCreateForm({ ...createForm, nomeCliente: e.target.value })} variant="filled" sx={inputSx} inputProps={{ autoComplete: 'off' }} />
+          <TextField label="Nome do Cliente" fullWidth value={editValue(createForm.nomeCliente)} onChange={(e) => setCreateForm({ ...createForm, nomeCliente: e.target.value })} variant="filled" sx={inputSx} placeholder="Não informado" inputProps={{ autoComplete: 'off' }} />
           <Autocomplete
             fullWidth
             freeSolo
@@ -2623,10 +2638,10 @@ const ReclamacoesPage: React.FC = () => {
             clearOnBlur={false}
             handleHomeEndKeys
             options={enderecos.map((e) => e.logradouro)}
-            value={createForm.enderecoCliente}
+            value={editValue(createForm.enderecoCliente)}
             onInputChange={(_, v) => setCreateForm((prev) => ({ ...prev, enderecoCliente: v ?? '' }))}
             onChange={(_, v) => setCreateForm((prev) => ({ ...prev, enderecoCliente: v ?? '' }))}
-            renderInput={(params) => <TextField {...params} label="Endereço" variant="filled" sx={inputSx} />}
+            renderInput={(params) => <TextField {...params} label="Endereço" variant="filled" sx={inputSx} placeholder="Não informado" />}
             sx={{ '& .MuiAutocomplete-root': { width: '100%' } }}
           />
           <Box sx={{ display: 'flex', gap: 2 }}>
@@ -2639,7 +2654,7 @@ const ReclamacoesPage: React.FC = () => {
               clearOnBlur={false}
               handleHomeEndKeys
               options={[...new Set(enderecos.map((e) => e.bairro))].sort()}
-              value={createForm.bairroCliente}
+              value={editValue(createForm.bairroCliente)}
               onInputChange={(_, v) => {
                 setCreateForm((prev) => ({ ...prev, bairroCliente: v ?? '' }))
               }}
@@ -2647,15 +2662,15 @@ const ReclamacoesPage: React.FC = () => {
                 const bairro = v ?? ''
                 setCreateForm((prev) => ({ ...prev, bairroCliente: bairro }))
               }}
-              renderInput={(params) => <TextField {...params} label="Bairro" variant="filled" sx={inputSx} />}
+              renderInput={(params) => <TextField {...params} label="Bairro" variant="filled" sx={inputSx} placeholder="Não informado" />}
             />
-            <TextField label="Cidade" fullWidth value={createForm.cidadeCliente} onChange={(e) => setCreateForm({ ...createForm, cidadeCliente: e.target.value })} variant="filled" sx={inputSx} inputProps={{ autoComplete: 'off' }} />
+            <TextField label="Cidade" fullWidth value={editValue(createForm.cidadeCliente)} onChange={(e) => setCreateForm({ ...createForm, cidadeCliente: e.target.value })} variant="filled" sx={inputSx} placeholder="Não informado" inputProps={{ autoComplete: 'off' }} />
           </Box>
           <TextField label="Data de Nascimento" fullWidth type="date" value={createForm.dataNascimentoCliente} onChange={(e) => setCreateForm({ ...createForm, dataNascimentoCliente: e.target.value })} variant="filled" sx={inputSx} InputLabelProps={{ shrink: true }} inputProps={{ autoComplete: 'off' }} />
 
-          <TextField label="Região" fullWidth value={createForm.regiao} variant="filled" sx={inputSx} InputProps={{ readOnly: true }} helperText={!createForm.regiao ? 'Preenchida automaticamente ao selecionar endereço' : ''} />
+          <TextField label="Região" fullWidth value={editValue(createForm.regiao)} variant="filled" sx={inputSx} InputProps={{ readOnly: true }} helperText={!createForm.regiao ? 'Preenchida automaticamente ao selecionar endereço' : ''} />
 
-          <TextField label="Situação Resumida" fullWidth multiline rows={3} value={createForm.situacaoResumida} onChange={(e) => setCreateForm({ ...createForm, situacaoResumida: e.target.value })} variant="filled" sx={inputSx} inputProps={{ autoComplete: 'off' }} />
+          <TextField label="Situação Resumida" fullWidth multiline rows={3} value={editValue(createForm.situacaoResumida)} onChange={(e) => setCreateForm({ ...createForm, situacaoResumida: e.target.value })} variant="filled" sx={inputSx} placeholder="Não informado" inputProps={{ autoComplete: 'off' }} />
 
           <TextField
             fullWidth
@@ -2663,7 +2678,7 @@ const ReclamacoesPage: React.FC = () => {
             minRows={2}
             label="Observação"
             variant="filled"
-            value={createForm.observacao || ''}
+            value={editValue(createForm.observacao)}
             onChange={(e) => setCreateForm({ ...createForm, observacao: e.target.value })}
             sx={inputSx}
           />
@@ -2673,7 +2688,7 @@ const ReclamacoesPage: React.FC = () => {
             fullWidth
             label="Categoria"
             variant="filled"
-            value={createForm.categoria}
+            value={editValue(createForm.categoria)}
             onChange={(e) => setCreateForm({ ...createForm, categoria: e.target.value })}
             sx={inputSx}
           >

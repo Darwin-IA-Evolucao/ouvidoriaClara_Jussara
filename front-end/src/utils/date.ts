@@ -2,11 +2,10 @@ export const toUTCDate = (value: string | Date | null | undefined): Date => {
   if (!value) return new Date(NaN)
   if (value instanceof Date) return value
   const str = value.trim()
-  if (str && !str.endsWith('Z') && !str.endsWith('z') && !/[+-]\d{2}:?\d{2}$/.test(str) && !str.includes('T')) {
-    return new Date(str + 'T00:00:00Z')
-  }
-  if (str && str.includes('T') && !str.endsWith('Z') && !str.endsWith('z') && !/[+-]\d{2}:?\d{2}$/.test(str)) {
-    return new Date(str + 'Z')
+  if (str && !str.endsWith('Z') && !str.endsWith('z') && !/[+-]\d{2}:?\d{2}$/.test(str)) {
+    const iso = str.replace(' ', 'T')
+    if (!iso.includes('T')) return new Date(iso + 'T00:00:00')
+    return new Date(iso + 'Z')
   }
   return new Date(str)
 }

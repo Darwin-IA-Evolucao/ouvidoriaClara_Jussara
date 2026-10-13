@@ -33,6 +33,16 @@ const AudioPlayer: React.FC<{ src: string; isCliente: boolean }> = ({ src, isCli
   const [playing, setPlaying] = React.useState(false)
   const [current, setCurrent] = React.useState(0)
   const [duration, setDuration] = React.useState(0)
+  const [speed, setSpeed] = React.useState(1)
+
+  const SPEEDS = [1, 1.5, 2]
+
+  const cycleSpeed = () => {
+    const a = audioRef.current
+    const next = SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length]
+    setSpeed(next)
+    if (a) a.playbackRate = next
+  }
 
   const togglePlay = () => {
     const a = audioRef.current
@@ -54,7 +64,7 @@ const AudioPlayer: React.FC<{ src: string; isCliente: boolean }> = ({ src, isCli
   const timeColor = isCliente ? 'hsl(var(--text-secondary))' : 'rgba(255,255,255,0.9)'
 
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.75, px: 0.25, minWidth: 200, maxWidth: 240 }}>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.75, px: 0.25, minWidth: 200, maxWidth: 240, position: 'relative' }}>
       <audio
         ref={audioRef}
         src={src}
@@ -134,6 +144,35 @@ const AudioPlayer: React.FC<{ src: string; isCliente: boolean }> = ({ src, isCli
         <Typography sx={{ fontSize: 12, fontWeight: 500, color: timeColor, minWidth: 32, textAlign: 'right' }}>
           {formatDuration(playing ? current : duration || current)}
         </Typography>
+      </Box>
+
+      {/* Botão de velocidade — círculo escuro estilo WhatsApp que cicla 1x → 1.5x → 2x */}
+      <Box
+        component="button"
+        onClick={cycleSpeed}
+        title="Velocidade de reprodução"
+        sx={{
+          flexShrink: 0,
+          width: 28,
+          height: 28,
+          border: 'none',
+          borderRadius: '50%',
+          p: 0,
+          cursor: 'pointer',
+          fontSize: 10,
+          fontWeight: 700,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          bgcolor: 'rgba(0,0,0,0.55)',
+          color: '#fff',
+          transition: 'background-color 0.15s',
+          '&:hover': {
+            bgcolor: 'rgba(0,0,0,0.75)',
+          },
+        }}
+      >
+        {speed}x
       </Box>
     </Box>
   )

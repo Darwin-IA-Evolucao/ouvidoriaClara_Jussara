@@ -14,6 +14,9 @@ const tipoColors: Record<string, { bg: string; color: string; border: string }> 
   'inquerito': { bg: 'hsl(var(--primary) / 0.15)', color: 'hsl(var(--accent))', border: '1px solid hsl(var(--primary) / 0.3)' },
   'requerimento': { bg: 'hsl(var(--accent) / 0.15)', color: 'hsl(var(--accent))', border: '1px solid hsl(var(--accent) / 0.3)' },
   'indicreq': { bg: 'hsl(var(--info) / 0.15)', color: 'hsl(var(--info))', border: '1px solid hsl(var(--info) / 0.3)' },
+  'outros': { bg: 'hsl(var(--info) / 0.15)', color: 'hsl(var(--info))', border: '1px solid hsl(var(--info) / 0.3)' },
+  'causa animal': { bg: 'hsl(var(--primary) / 0.15)', color: 'hsl(var(--primary))', border: '1px solid hsl(var(--primary) / 0.3)' },
+  'indicacao': { bg: 'hsl(var(--success) / 0.15)', color: 'hsl(var(--success))', border: '1px solid hsl(var(--success) / 0.3)' },
 }
 
 export const statusDisplay: Record<string, string> = {
@@ -30,6 +33,9 @@ const tipoDisplay: Record<string, string> = {
   'inquerito': 'Inquérito',
   'requerimento': 'Requerimento',
   'indicreq': 'Indicação/Requerimento',
+  'outros': 'Outros',
+  'causa animal': 'Causa Animal',
+  'indicacao': 'Indicação',
 }
 
 interface StatusChipProps {

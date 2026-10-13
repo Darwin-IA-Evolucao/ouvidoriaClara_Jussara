@@ -7,6 +7,7 @@ import ConversationList from '../components/ConversationList'
 import ConversationChat from '../components/ConversationChat'
 import { listConversas } from '../services/difyService'
 import { getAllClientes } from '../services/clienteService'
+import { isNA } from '../utils/display'
 import type { ConversaResumo, Cliente } from '../types'
 
 const LIST_POLL_INTERVAL = 15000 // 15s — atualiza a lista silenciosamente
@@ -51,7 +52,7 @@ const ConversasPage: React.FC = () => {
       // senão string vazia (o frontend mostra só o telefone).
       // O backend pode retornar "?" quando o nome não existe — tratamos como vazio.
       const isNomeValido = (n: string | undefined | null): boolean =>
-        !!n && n.trim() !== '' && n.trim() !== '?' && n.trim() !== 'null'
+        !!n && n.trim() !== '' && n.trim() !== '?' && n.trim() !== 'null' && !isNA(n)
 
       const enriched = (Array.isArray(data) ? data : []).map((c) => ({
         ...c,
